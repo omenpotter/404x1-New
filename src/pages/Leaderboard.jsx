@@ -3,7 +3,6 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Trophy, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from './utils';
 
 export default function Leaderboard() {
     const [leaderboard, setLeaderboard] = useState([]);
@@ -42,7 +41,7 @@ export default function Leaderboard() {
             <header className="border-b border-purple-500/30 bg-black/20 backdrop-blur-sm p-4">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link to={createPageUrl('Home')}>
+                        <Link to="/">
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Back

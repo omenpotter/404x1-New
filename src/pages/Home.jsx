@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Wallet, MessageSquare, Gamepad2, Trophy } from 'lucide-react';
-import { createPageUrl } from './utils';
 import { Link } from 'react-router-dom';
 
 export default function Home() {
@@ -121,7 +120,7 @@ export default function Home() {
 
                 {user ? (
                     <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                        <Link to={createPageUrl('Chat')}>
+                        <Link to="/Chat">
                             <div className="bg-purple-900/30 border border-purple-500/50 rounded-lg p-6 hover:bg-purple-900/50 transition cursor-pointer">
                                 <MessageSquare className="w-12 h-12 mx-auto mb-4 text-purple-400" />
                                 <h3 className="text-xl font-semibold mb-2">Chat</h3>
@@ -129,7 +128,7 @@ export default function Home() {
                             </div>
                         </Link>
 
-                        <Link to={createPageUrl('Game')}>
+                        <Link to="/Game">
                             <div className="bg-pink-900/30 border border-pink-500/50 rounded-lg p-6 hover:bg-pink-900/50 transition cursor-pointer">
                                 <Gamepad2 className="w-12 h-12 mx-auto mb-4 text-pink-400" />
                                 <h3 className="text-xl font-semibold mb-2">Game</h3>
@@ -137,7 +136,7 @@ export default function Home() {
                             </div>
                         </Link>
 
-                        <Link to={createPageUrl('Leaderboard')}>
+                        <Link to="/Leaderboard">
                             <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-6 hover:bg-blue-900/50 transition cursor-pointer">
                                 <Trophy className="w-12 h-12 mx-auto mb-4 text-blue-400" />
                                 <h3 className="text-xl font-semibold mb-2">Leaderboard</h3>

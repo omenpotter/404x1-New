@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from './utils';
 
 export default function Chat() {
     const [user, setUser] = useState(null);
@@ -19,7 +18,7 @@ export default function Chat() {
             setUser(JSON.parse(savedUser));
             loadMessages();
         } else {
-            window.location.href = createPageUrl('Home');
+            window.location.href = '/';
         }
     }, []);
 
@@ -78,7 +77,7 @@ export default function Chat() {
             <header className="border-b border-purple-500/30 bg-black/20 backdrop-blur-sm p-4">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link to={createPageUrl('Home')}>
+                        <Link to="/">
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Back
