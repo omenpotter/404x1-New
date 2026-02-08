@@ -27,8 +27,8 @@ export default function Leaderboard() {
         }
     };
 
-    const getRoleColor = (role) => {
-        switch (role) {
+    const getRoleColor = (user_role) => {
+        switch (user_role) {
             case 'admin': return 'text-red-400';
             case 'trusted': return 'text-yellow-400';
             default: return 'text-slate-400';
@@ -108,8 +108,8 @@ export default function Leaderboard() {
                                         <td className="p-4">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-semibold">{player.username}</span>
-                                                <span className={`text-xs ${getRoleColor(player.role)}`}>
-                                                    {player.role}
+                                                <span className={`text-xs ${getRoleColor(player.user_role)}`}>
+                                                    {player.user_role}
                                                 </span>
                                             </div>
                                         </td>

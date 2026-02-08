@@ -50,9 +50,9 @@ Deno.serve(async (req) => {
 
         // Check if toUser reached 10,000 RP for trusted role
         const updatedToUser = await base44.asServiceRole.entities.User.get(to_user_id);
-        if (updatedToUser.reputation_points >= 10000 && updatedToUser.role === 'member') {
+        if (updatedToUser.reputation_points >= 10000 && updatedToUser.user_role === 'member') {
             await base44.asServiceRole.entities.User.update(to_user_id, {
-                role: 'trusted'
+                user_role: 'trusted'
             });
         }
 

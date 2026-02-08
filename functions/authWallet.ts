@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
                 reputation_points: 0,
                 total_score: 0,
                 games_played: 0,
-                role: 'member',
+                user_role: 'member',
                 last_seen: new Date().toISOString()
             });
         }
