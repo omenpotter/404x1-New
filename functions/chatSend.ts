@@ -14,23 +14,23 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Get user info
-        const user = await base44.asServiceRole.entities.User.get(user_id);
-        
-        if (!user) {
-            return Response.json({ error: 'User not found' }, { status: 404 });
+        // Get player info
+        const player = await base44.asServiceRole.entities.Player.get(user_id);
+
+        if (!player) {
+            return Response.json({ error: 'Player not found' }, { status: 404 });
         }
 
         // Create message
         const newMessage = await base44.asServiceRole.entities.Message.create({
-            user_id: user_id,
-            username: user.username,
+            player_id: user_id,
+            username: player.username,
             message: message
         });
 
         // Award 1 RP for sending a message
-        await base44.asServiceRole.entities.User.update(user_id, {
-            reputation_points: user.reputation_points + 1,
+        await base44.asServiceRole.entities.Player.update(user_id, {
+            reputation_points: player.reputation_points + 1,
             last_seen: new Date().toISOString()
         });
 

@@ -18,40 +18,40 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Get both users
-        const fromUser = await base44.asServiceRole.entities.User.get(from_user_id);
-        const toUser = await base44.asServiceRole.entities.User.get(to_user_id);
+        // Get both players
+        const fromPlayer = await base44.asServiceRole.entities.Player.get(from_user_id);
+        const toPlayer = await base44.asServiceRole.entities.Player.get(to_user_id);
 
-        if (!fromUser || !toUser) {
-            return Response.json({ error: 'User not found' }, { status: 404 });
+        if (!fromPlayer || !toPlayer) {
+            return Response.json({ error: 'Player not found' }, { status: 404 });
         }
 
-        // Check if from_user has enough RP to give
-        if (fromUser.reputation_points < amount) {
+        // Check if from_player has enough RP to give
+        if (fromPlayer.reputation_points < amount) {
             return Response.json({ error: 'Insufficient RP to award' }, { status: 400 });
         }
 
         // Create RP award record
         await base44.asServiceRole.entities.RpAward.create({
-            from_user_id: from_user_id,
-            to_user_id: to_user_id,
+            from_player_id: from_user_id,
+            to_player_id: to_user_id,
             amount: amount,
             reason: reason || 'No reason provided'
         });
 
-        // Update both users' RP
-        await base44.asServiceRole.entities.User.update(from_user_id, {
-            reputation_points: fromUser.reputation_points - amount
+        // Update both players' RP
+        await base44.asServiceRole.entities.Player.update(from_user_id, {
+            reputation_points: fromPlayer.reputation_points - amount
         });
 
-        await base44.asServiceRole.entities.User.update(to_user_id, {
-            reputation_points: toUser.reputation_points + amount
+        await base44.asServiceRole.entities.Player.update(to_user_id, {
+            reputation_points: toPlayer.reputation_points + amount
         });
 
-        // Check if toUser reached 10,000 RP for trusted role
-        const updatedToUser = await base44.asServiceRole.entities.User.get(to_user_id);
-        if (updatedToUser.reputation_points >= 10000 && updatedToUser.user_role === 'member') {
-            await base44.asServiceRole.entities.User.update(to_user_id, {
+        // Check if toPlayer reached 10,000 RP for trusted role
+        const updatedToPlayer = await base44.asServiceRole.entities.Player.get(to_user_id);
+        if (updatedToPlayer.reputation_points >= 10000 && updatedToPlayer.user_role === 'member') {
+            await base44.asServiceRole.entities.Player.update(to_user_id, {
                 user_role: 'trusted'
             });
         }
