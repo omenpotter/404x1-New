@@ -7,19 +7,17 @@ export default function Home() {
         {
             method: 'POST',
             path: '/api/authWallet',
-            description: 'Authenticate wallet and create/login user',
+            description: 'Simple Web3 auth - just wallet + username (no signature needed)',
             request: {
-                wallet_address: "0x1234...",
-                signature: "0xabcd...",
-                message: "Sign in to 404x1",
-                username: "player123" // Required for new users
+                wallet_address: "4o4BGwEg5DgCyc89TK2qXaaYRTb3FCtqLbvFyr4w8ddT",
+                username: "crypto_king" // 4-12 chars, alphanumeric + underscore
             },
             response: {
                 success: true,
                 user: {
                     id: "user_id",
-                    wallet_address: "0x1234...",
-                    username: "player123",
+                    wallet_address: "4o4BGwEg5DgCyc89TK2qXaaYRTb3FCtqLbvFyr4w8ddT",
+                    username: "crypto_king",
                     reputation_points: 0,
                     total_score: 0,
                     games_played: 0,
