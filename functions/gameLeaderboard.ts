@@ -8,17 +8,17 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Get all users sorted by requested field
+        // Get all players sorted by requested field
         const sortField = sortBy === 'reputation_points' ? '-reputation_points' : '-total_score';
-        const users = await base44.asServiceRole.entities.User.list(sortField, limit);
+        const players = await base44.asServiceRole.entities.Player.list(sortField, limit);
 
-        const leaderboard = users.map((user, index) => ({
+        const leaderboard = players.map((player, index) => ({
             rank: index + 1,
-            username: user.username,
-            reputation_points: user.reputation_points,
-            total_score: user.total_score,
-            games_played: user.games_played,
-            user_role: user.user_role
+            username: player.username,
+            reputation_points: player.reputation_points,
+            total_score: player.total_score,
+            games_played: player.games_played,
+            user_role: player.user_role
         }));
 
         return Response.json({

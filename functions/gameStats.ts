@@ -11,15 +11,15 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Get user
-        const user = await base44.asServiceRole.entities.User.get(user_id);
+        // Get player
+        const player = await base44.asServiceRole.entities.Player.get(user_id);
         
-        if (!user) {
-            return Response.json({ error: 'User not found' }, { status: 404 });
+        if (!player) {
+            return Response.json({ error: 'Player not found' }, { status: 404 });
         }
 
-        // Get user's recent scores
-        const allScores = await base44.asServiceRole.entities.Score.filter({ user_id: user_id });
+        // Get player's recent scores
+        const allScores = await base44.asServiceRole.entities.Score.filter({ player_id: user_id });
         const recentScores = allScores.slice(0, 10);
 
         // Calculate average score
@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
         return Response.json({
             success: true,
             stats: {
-                username: user.username,
-                total_score: user.total_score,
-                games_played: user.games_played,
-                reputation_points: user.reputation_points,
-                user_role: user.user_role,
+                username: player.username,
+                total_score: player.total_score,
+                games_played: player.games_played,
+                reputation_points: player.reputation_points,
+                user_role: player.user_role,
                 average_score: avgScore,
                 high_score: highScore,
                 recent_scores: recentScores

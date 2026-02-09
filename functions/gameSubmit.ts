@@ -14,28 +14,28 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Get user
-        const user = await base44.asServiceRole.entities.User.get(user_id);
+        // Get player
+        const player = await base44.asServiceRole.entities.Player.get(user_id);
         
-        if (!user) {
-            return Response.json({ error: 'User not found' }, { status: 404 });
+        if (!player) {
+            return Response.json({ error: 'Player not found' }, { status: 404 });
         }
 
         // Create score record
         const scoreRecord = await base44.asServiceRole.entities.Score.create({
-            user_id: user_id,
-            username: user.username,
+            player_id: user_id,
+            username: player.username,
             score: score
         });
 
         // Calculate RP reward (1 RP per 100 points)
         const rpReward = Math.floor(score / 100);
 
-        // Update user stats
-        await base44.asServiceRole.entities.User.update(user_id, {
-            total_score: user.total_score + score,
-            games_played: user.games_played + 1,
-            reputation_points: user.reputation_points + rpReward,
+        // Update player stats
+        await base44.asServiceRole.entities.Player.update(user_id, {
+            total_score: player.total_score + score,
+            games_played: player.games_played + 1,
+            reputation_points: player.reputation_points + rpReward,
             last_seen: new Date().toISOString()
         });
 
