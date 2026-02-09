@@ -154,7 +154,7 @@ export default function Home() {
                     <h2 className="text-2xl font-bold text-green-400 mb-4">📦 Database Entities</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-slate-900 p-4 rounded">
-                            <span className="text-green-400 font-mono">User</span>
+                            <span className="text-green-400 font-mono">Player</span>
                             <p className="text-xs text-slate-400 mt-1">Wallet auth & profiles</p>
                         </div>
                         <div className="bg-slate-900 p-4 rounded">

@@ -63,15 +63,15 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
 
         // Check if wallet already exists
-        const existingUsers = await base44.asServiceRole.entities.User.filter({
+        const existingPlayers = await base44.asServiceRole.entities.Player.filter({
             wallet_address: wallet_address.toLowerCase()
         });
 
-        let user;
+        let player;
 
-        if (existingUsers.length > 0) {
-            // Wallet exists - update last seen and return existing user
-            user = await base44.asServiceRole.entities.User.update(existingUsers[0].id, {
+        if (existingPlayers.length > 0) {
+            // Wallet exists - update last seen and return existing player
+            player = await base44.asServiceRole.entities.Player.update(existingPlayers[0].id, {
                 last_seen: new Date().toISOString()
             });
 
@@ -79,13 +79,13 @@ Deno.serve(async (req) => {
                 JSON.stringify({
                     success: true,
                     user: {
-                        id: user.id,
-                        wallet_address: user.wallet_address,
-                        username: user.username,
-                        reputation_points: user.reputation_points,
-                        total_score: user.total_score,
-                        games_played: user.games_played,
-                        user_role: user.user_role
+                        id: player.id,
+                        wallet_address: player.wallet_address,
+                        username: player.username,
+                        reputation_points: player.reputation_points,
+                        total_score: player.total_score,
+                        games_played: player.games_played,
+                        user_role: player.user_role
                     }
                 }),
                 { status: 200, headers }
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
         }
 
         // Check if username is taken
-        const usernameCheck = await base44.asServiceRole.entities.User.filter({
+        const usernameCheck = await base44.asServiceRole.entities.Player.filter({
             username: username
         });
 
@@ -107,8 +107,8 @@ Deno.serve(async (req) => {
             );
         }
 
-        // Create new user
-        user = await base44.asServiceRole.entities.User.create({
+        // Create new player
+        player = await base44.asServiceRole.entities.Player.create({
             wallet_address: wallet_address.toLowerCase(),
             username: username,
             reputation_points: 0,
@@ -122,13 +122,13 @@ Deno.serve(async (req) => {
             JSON.stringify({
                 success: true,
                 user: {
-                    id: user.id,
-                    wallet_address: user.wallet_address,
-                    username: user.username,
-                    reputation_points: user.reputation_points,
-                    total_score: user.total_score,
-                    games_played: user.games_played,
-                    user_role: user.user_role
+                    id: player.id,
+                    wallet_address: player.wallet_address,
+                    username: player.username,
+                    reputation_points: player.reputation_points,
+                    total_score: player.total_score,
+                    games_played: player.games_played,
+                    user_role: player.user_role
                 }
             }),
             { status: 200, headers }
