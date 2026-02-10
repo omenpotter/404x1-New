@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     try {
         const { wallet_address, username } = await req.json();
 
-        // Validate inputs
+        // Validate wallet address
         if (!wallet_address) {
             return new Response(
                 JSON.stringify({ success: false, error: 'wallet_address is required' }),
@@ -31,6 +31,37 @@ Deno.serve(async (req) => {
             );
         }
 
+        const base44 = createClientFromRequest(req);
+
+        // ✅ STEP 1: CHECK IF WALLET EXISTS FIRST (returning user)
+        const existingPlayers = await base44.asServiceRole.entities.Player.filter({
+            wallet_address: wallet_address.toLowerCase()
+        });
+
+        if (existingPlayers.length > 0) {
+            // ✅ STEP 2: Wallet exists - auto-login (ignore username parameter)
+            const player = await base44.asServiceRole.entities.Player.update(existingPlayers[0].id, {
+                last_seen: new Date().toISOString()
+            });
+
+            return new Response(
+                JSON.stringify({
+                    success: true,
+                    user: {
+                        id: player.id,
+                        wallet_address: player.wallet_address,
+                        username: player.username,
+                        reputation_points: player.reputation_points,
+                        total_score: player.total_score,
+                        games_played: player.games_played,
+                        user_role: player.user_role
+                    }
+                }),
+                { status: 200, headers }
+            );
+        }
+
+        // ✅ STEP 3: New wallet - validate username
         if (!username) {
             return new Response(
                 JSON.stringify({ success: false, error: 'username is required' }),
@@ -60,39 +91,7 @@ Deno.serve(async (req) => {
             );
         }
 
-        const base44 = createClientFromRequest(req);
-
-        // Check if wallet already exists
-        const existingPlayers = await base44.asServiceRole.entities.Player.filter({
-            wallet_address: wallet_address.toLowerCase()
-        });
-
-        let player;
-
-        if (existingPlayers.length > 0) {
-            // Wallet exists - update last seen and return existing player
-            player = await base44.asServiceRole.entities.Player.update(existingPlayers[0].id, {
-                last_seen: new Date().toISOString()
-            });
-
-            return new Response(
-                JSON.stringify({
-                    success: true,
-                    user: {
-                        id: player.id,
-                        wallet_address: player.wallet_address,
-                        username: player.username,
-                        reputation_points: player.reputation_points,
-                        total_score: player.total_score,
-                        games_played: player.games_played,
-                        user_role: player.user_role
-                    }
-                }),
-                { status: 200, headers }
-            );
-        }
-
-        // Check if username is taken
+        // ✅ STEP 4: Check username uniqueness
         const usernameCheck = await base44.asServiceRole.entities.Player.filter({
             username: username
         });
@@ -107,8 +106,8 @@ Deno.serve(async (req) => {
             );
         }
 
-        // Create new player
-        player = await base44.asServiceRole.entities.Player.create({
+        // ✅ STEP 5: Create new player
+        const player = await base44.asServiceRole.entities.Player.create({
             wallet_address: wallet_address.toLowerCase(),
             username: username,
             reputation_points: 0,
