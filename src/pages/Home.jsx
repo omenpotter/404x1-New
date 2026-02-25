@@ -129,6 +129,101 @@ export default function Home() {
                     recent_scores: [5000, 3000, 2500]
                 }
             }
+        },
+        {
+            method: 'POST',
+            path: '/api/createConversation',
+            description: 'Create or retrieve a private conversation between two players',
+            request: {
+                from_player_id: "player_id_1",
+                to_player_id: "player_id_2"
+            },
+            response: {
+                success: true,
+                conversation: {
+                    id: "conv_id",
+                    participant_ids: ["player_id_1", "player_id_2"],
+                    participant_usernames: ["alice", "bob"],
+                    last_message: null,
+                    last_message_at: "2026-02-25T..."
+                },
+                is_existing: false
+            }
+        },
+        {
+            method: 'POST',
+            path: '/api/sendPrivateMessage',
+            description: 'Send a private message in a conversation',
+            request: {
+                conversation_id: "conv_id",
+                sender_id: "player_id_1",
+                content: "Hey, how are you?",
+                message_type: "text"
+            },
+            response: {
+                success: true,
+                message: {
+                    id: "msg_id",
+                    conversation_id: "conv_id",
+                    sender_id: "player_id_1",
+                    sender_username: "alice",
+                    content: "Hey, how are you?",
+                    delivered_to: ["player_id_1"],
+                    read_by: ["player_id_1"]
+                }
+            }
+        },
+        {
+            method: 'GET',
+            path: '/api/getPrivateHistory?conversation_id=conv_id&player_id=player_id_1&limit=50&offset=0',
+            description: 'Get private message history (auto-marks delivered)',
+            response: {
+                success: true,
+                messages: [
+                    {
+                        id: "msg_id",
+                        sender_username: "alice",
+                        content: "Hey!",
+                        read_by: ["player_id_1"],
+                        delivered_to: ["player_id_1", "player_id_2"]
+                    }
+                ],
+                total: 10,
+                conversation: {}
+            }
+        },
+        {
+            method: 'POST',
+            path: '/api/privateReadReceipt',
+            description: 'Mark messages as read (blue double tick)',
+            request: {
+                player_id: "player_id_2",
+                conversation_id: "conv_id",
+                message_ids: ["msg_id_1", "msg_id_2"]
+            },
+            response: {
+                success: true,
+                marked_read: 2
+            }
+        },
+        {
+            method: 'POST',
+            path: '/api/privateTyping',
+            description: 'Fire-and-forget typing indicator',
+            request: {
+                player_id: "player_id_1",
+                conversation_id: "conv_id",
+                is_typing: true
+            },
+            response: {
+                success: true,
+                typing_event: {
+                    player_id: "player_id_1",
+                    conversation_id: "conv_id",
+                    is_typing: true,
+                    timestamp: "2026-02-25T..."
+                }
+            }
         }
     ];
 
