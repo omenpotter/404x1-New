@@ -264,6 +264,14 @@ export default function Home() {
                             <span className="text-green-400 font-mono">RpAward</span>
                             <p className="text-xs text-slate-400 mt-1">RP transfers</p>
                         </div>
+                        <div className="bg-slate-900 p-4 rounded">
+                            <span className="text-green-400 font-mono">Conversation</span>
+                            <p className="text-xs text-slate-400 mt-1">Private chat threads</p>
+                        </div>
+                        <div className="bg-slate-900 p-4 rounded">
+                            <span className="text-green-400 font-mono">PrivateMessage</span>
+                            <p className="text-xs text-slate-400 mt-1">DM messages + receipts</p>
+                        </div>
                     </div>
                 </div>
 
