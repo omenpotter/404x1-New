@@ -101,6 +101,8 @@ export default function Layout({ children, currentPageName }) {
         }
         .nav-link:hover, .nav-link.active { color: var(--green); border-color: var(--border); }
         .nav-link.active { color: var(--green); border-color: var(--green); }
+        .nav-link[data-page="ModPanel"] { color: var(--red) !important; }
+        .nav-link[data-page="ModPanel"]:hover, .nav-link[data-page="ModPanel"].active { border-color: var(--red) !important; }
         .nav-right { display: flex; align-items: center; gap: 12px; }
         .nav-user { font-size: 11px; color: var(--text-dim); }
         .nav-rp { color: var(--green); font-size: 12px; }
