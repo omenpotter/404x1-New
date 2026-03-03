@@ -50,6 +50,8 @@
 import Home from './pages/Home';
 import Chat from './pages/Chat';
 import Leaderboard from './pages/Leaderboard';
+import Messages from './pages/Messages';
+import Profile from './pages/Profile';
 import __Layout from './Layout.jsx';
 
 
@@ -57,6 +59,8 @@ export const PAGES = {
     "Home": Home,
     "Chat": Chat,
     "Leaderboard": Leaderboard,
+    "Messages": Messages,
+    "Profile": Profile,
 }
 
 export const pagesConfig = {
