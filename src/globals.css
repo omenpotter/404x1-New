@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --green: #7dff7d;
+  --cyan: #5fffff;
+  --dark: #0a0a0a;
+  --dark2: #111111;
+  --dark3: #1a1a1a;
+  --dark4: #222222;
+  --border: #2a2a2a;
+  --text: #e0e0e0;
+  --text-dim: #888888;
+  --red: #ff4444;
+  --orange: #ffaa00;
+  --purple: #aa44ff;
+
+  --role-member: #888888;
+  --role-trusted: var(--cyan);
+  --role-moderator: var(--orange);
+  --role-admin: var(--red);
+  --role-superuser: var(--purple);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .title-font {
+  font-family: 'Rubik Mono One', monospace;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--dark2); }
+::-webkit-scrollbar-thumb { background: var(--green); border-radius: 2px; }
+
+/* Scanlines overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Utility */
+.text-green { color: var(--green); }
+.text-cyan { color: var(--cyan); }
+.text-dim { color: var(--text-dim); }
+.text-red { color: var(--red); }
+.text-orange { color: var(--orange); }
+.text-purple { color: var(--purple); }
+
+.role-member { color: var(--role-member); }
+.role-trusted { color: var(--role-trusted); }
+.role-moderator { color: var(--role-moderator); }
+.role-admin { color: var(--role-admin); }
+.role-superuser { color: var(--role-superuser); }
+
+.btn {
+  font-family: 'Share Tech Mono', monospace;
+  padding: 8px 16px;
+  border: 1px solid var(--green);
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+.btn:hover { background: var(--green); color: var(--dark); }
+.btn-cyan { border-color: var(--cyan); color: var(--cyan); }
+.btn-cyan:hover { background: var(--cyan); color: var(--dark); }
+.btn-red { border-color: var(--red); color: var(--red); }
+.btn-red:hover { background: var(--red); color: white; }
+
+.card {
+  background: var(--dark2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+input, textarea, select {
+  font-family: 'Share Tech Mono', monospace;
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+  border-radius: 2px;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--green); }
+
+/* Glitch animation */
+@keyframes glitch {
+  0% { text-shadow: 2px 0 var(--cyan), -2px 0 var(--red); }
+  25% { text-shadow: -2px 0 var(--cyan), 2px 0 var(--red); }
+  50% { text-shadow: 2px 2px var(--cyan), -2px -2px var(--red); }
+  75% { text-shadow: 0 0 0; }
+  100% { text-shadow: 2px 0 var(--cyan), -2px 0 var(--red); }
+}
+.glitch { animation: glitch 3s infinite; }
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 5px var(--green); }
+  50% { box-shadow: 0 0 20px var(--green), 0 0 40px var(--green); }
+}
+.pulse-green { animation: pulse-green 2s infinite; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.blink { animation: blink 1s step-end infinite; }
