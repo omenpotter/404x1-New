@@ -37,6 +37,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Leaderboard', page: 'Leaderboard', label: 'RANKS' },
     { name: 'Messages', page: 'Messages', label: 'DMs' },
     { name: 'Profile', page: 'Profile', label: 'PROFILE' },
+    { name: 'ModPanel', page: 'ModPanel', label: 'MOD' },
   ];
 
   return (
