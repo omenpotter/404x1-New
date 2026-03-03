@@ -52,6 +52,8 @@ import Chat from './pages/Chat';
 import Leaderboard from './pages/Leaderboard';
 import Messages from './pages/Messages';
 import Profile from './pages/Profile';
+import Game from './pages/Game';
+import ModPanel from './pages/ModPanel';
 import __Layout from './Layout.jsx';
 
 
@@ -61,6 +63,8 @@ export const PAGES = {
     "Leaderboard": Leaderboard,
     "Messages": Messages,
     "Profile": Profile,
+    "Game": Game,
+    "ModPanel": ModPanel,
 }
 
 export const pagesConfig = {
