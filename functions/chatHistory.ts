@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
         const url = new URL(req.url);
         const limit = parseInt(url.searchParams.get('limit') || '100');
         const offset = parseInt(url.searchParams.get('offset') || '0');
+        const userId = url.searchParams.get('user_id') || null;
 
         const base44 = createClientFromRequest(req);
 
@@ -41,6 +42,7 @@ Deno.serve(async (req) => {
             myReactions.filter(r => r.message_id === msg.id).forEach(r => {
                 if (!rxMap[r.emoji]) rxMap[r.emoji] = { emoji: r.emoji, count: 0, user_reacted: false };
                 rxMap[r.emoji].count++;
+                if (userId && r.from_player_id === userId) rxMap[r.emoji].user_reacted = true;
             });
 
             return {
@@ -54,7 +56,7 @@ Deno.serve(async (req) => {
                 reactions: Object.values(rxMap),
                 reply_to: msg.reply_to_message_id ? {
                     player: { chat_username: msg.reply_to_username },
-                    content: msg.reply_to_message_id
+                    content: msg.reply_to_message || ''
                 } : null,
             };
         });

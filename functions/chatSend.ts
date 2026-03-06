@@ -6,7 +6,8 @@ Deno.serve(async (req) => {
             user_id, 
             message, 
             reply_to_message_id, 
-            reply_to_username, 
+            reply_to_username,
+            reply_to_message,
             image_url 
         } = await req.json();
 
@@ -66,6 +67,7 @@ Deno.serve(async (req) => {
             is_reply: is_reply,
             reply_to_message_id: reply_to_message_id || null,
             reply_to_username: reply_to_username || null,
+            reply_to_message: reply_to_message || null,
             has_image: has_image,
             image_url: image_url || null,
             is_deleted: false,

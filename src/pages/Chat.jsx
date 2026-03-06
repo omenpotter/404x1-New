@@ -43,7 +43,9 @@ export default function Chat() {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch(BASE + 'chatHistory?limit=100&offset=0');
+      const u = getUser();
+      const uid = u?.id ? '&user_id=' + u.id : '';
+      const res = await fetch(BASE + 'chatHistory?limit=100&offset=0' + uid);
       const data = await res.json();
       if (data.success) {
         setMessages(data.messages || []);
@@ -75,7 +77,8 @@ export default function Chat() {
           user_id: u.id,
           message: input.trim(),
           reply_to_message_id: replyTo?.id || null,
-          reply_to_username: replyTo?.username || null
+          reply_to_username: replyTo?.username || null,
+          reply_to_message: replyTo?.content || null
         })
       });
       const data = await res.json();
