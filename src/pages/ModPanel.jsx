@@ -223,7 +223,7 @@ export default function ModPanel() {
                 <input className="field-input" placeholder="Reason for deletion..." value={reason} onChange={e => setReason(e.target.value)} />
               </div>
               <div className="action-row">
-                <button className="mod-btn danger" onClick={handleDeleteMsg} disabled={!messageId || loading}>
+                <button className="mod-btn danger" onClick={handleDeleteMsg} disabled={!messageId || !targetId || loading}>
                   {loading ? '...' : '🗑 DELETE MESSAGE'}
                 </button>
               </div>
