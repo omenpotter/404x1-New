@@ -32,7 +32,7 @@ const sections = [
       },
       {
         heading: 'Earning RP',
-        body: '• Send a chat message → +1 RP\n• Send a reply → +2 RP\n• Post an image (trusted+) → +3 RP\n• Receive a reaction on your message → +1 RP\n• Score points in the game → variable RP\n• Receive a tip from another user → tip amount in RP\n• Moderation award (mod/admin) → variable'
+        body: '• Send a chat message → +2 RP\n• Send a reply → +2 RP\n• Post an image (trusted+) → +3 RP\n• Receive a reaction on your message → +1 RP\n• Score points in the game → variable RP\n• Receive a tip from another user → tip amount in RP\n• Moderation award (mod/admin) → variable'
       },
       {
         heading: 'Losing RP',

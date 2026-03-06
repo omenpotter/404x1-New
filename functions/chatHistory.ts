@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
         // 7. Online count (last 5 min)
         const fiveMinAgo = new Date(Date.now() - 300000).toISOString();
-        const onlineCount = allPlayers.filter(p => p.last_seen >= fiveMinAgo).length;
+        const onlineCount = allPlayers.filter(p => p.last_seen && p.last_seen >= fiveMinAgo).length;
 
         return Response.json({
             success: true,
