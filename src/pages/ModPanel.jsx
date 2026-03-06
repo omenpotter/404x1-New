@@ -55,29 +55,31 @@ export default function ModPanel() {
 
   const handleMute = () => callAPI('moderateUser', {
     moderator_id: user.id,
-    action: 'mute',
+    action_type: 'mute',
     target_player_id: targetId,
-    duration_minutes: duration,
+    duration_hours: Math.max(1, Math.round(duration / 60)),
     reason
   });
 
   const handleUnmute = () => callAPI('moderateUser', {
     moderator_id: user.id,
-    action: 'unmute',
+    action_type: 'unmute',
     target_player_id: targetId,
     reason
   });
 
   const handleSpamPenalty = () => callAPI('moderateUser', {
     moderator_id: user.id,
-    action: 'spam_penalty',
+    action_type: 'spam_penalty',
     target_player_id: targetId,
+    rp_penalty: 10,
     reason
   });
 
   const handleDeleteMsg = () => callAPI('moderateUser', {
     moderator_id: user.id,
-    action: 'delete_message',
+    action_type: 'delete_message',
+    target_player_id: targetId,
     message_id: messageId,
     reason
   });
@@ -89,8 +91,8 @@ export default function ModPanel() {
   });
 
   const handleGrantRp = () => callAPI('awardRp', {
-    admin_id: user.id,
-    target_player_id: targetId,
+    from_player_id: user.id,
+    to_player_id: targetId,
     amount: rpAmount,
     reason: rpReason
   });
