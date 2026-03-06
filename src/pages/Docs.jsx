@@ -54,8 +54,8 @@ const sections = [
         body: 'Default role. Can send messages, react, reply, and play the game. Earn RP to advance.'
       },
       {
-        heading: 'Trusted (cyan) — 100+ RP',
-        body: 'Unlocked at 100 RP. Can post images in chat, earn slightly more RP per action. Trusted badge shown next to username.'
+        heading: 'Trusted (cyan) — 10,000+ RP',
+        body: 'Unlocked at 10,000 RP. Can post images in chat, earn slightly more RP per action. Trusted badge shown next to username.'
       },
       {
         heading: 'Moderator (orange) — Assigned',

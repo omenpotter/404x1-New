@@ -73,8 +73,9 @@ export default function Chat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: u.id,
-          content: input.trim(),
-          reply_to_id: replyTo?.id || null
+          message: input.trim(),
+          reply_to_message_id: replyTo?.id || null,
+          reply_to_username: replyTo?.username || null
         })
       });
       const data = await res.json();

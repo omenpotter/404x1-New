@@ -200,7 +200,7 @@ export default function Layout({ children, currentPageName }) {
         {user ? (
           <button className="mobile-nav-link" style={{background:'none',border:'none',textAlign:'left',cursor:'pointer',color:'var(--red)'}} onClick={logout}>LOGOUT</button>
         ) : (
-          <Link to={createPageUrl('Login')} className="mobile-nav-link" onClick={() => setMenuOpen(false)}>CONNECT WALLET</Link>
+          <Link to={createPageUrl('Home')} className="mobile-nav-link" onClick={() => setMenuOpen(false)}>CONNECT WALLET</Link>
         )}
       </div>
 

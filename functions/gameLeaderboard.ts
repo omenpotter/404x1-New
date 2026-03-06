@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
             reputation_points: player.reputation_points,
             total_score: player.total_score,
             games_played: player.games_played,
+            messages_sent: player.messages_sent || 0,
             user_role: player.user_role
         }));
 

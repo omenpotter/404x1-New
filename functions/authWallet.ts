@@ -61,20 +61,20 @@ Deno.serve(async (req) => {
             );
         }
 
-        // ✅ STEP 3: New wallet - validate username
+        // ✅ STEP 3: New wallet - if no username provided, signal frontend to show form
         if (!username) {
             return new Response(
-                JSON.stringify({ success: false, error: 'username is required' }),
-                { status: 400, headers }
+                JSON.stringify({ success: true, is_new_user: true }),
+                { status: 200, headers }
             );
         }
 
-        // Validate username length (4-12 characters)
-        if (username.length < 4 || username.length > 12) {
+        // Validate username length (3-16 characters, matching frontend)
+        if (username.length < 3 || username.length > 16) {
             return new Response(
                 JSON.stringify({ 
                     success: false, 
-                    error: 'Username must be 4-12 characters' 
+                    error: 'Username must be 3-16 characters' 
                 }),
                 { status: 400, headers }
             );
@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
         return new Response(
             JSON.stringify({
                 success: true,
+                is_new_user: true,
                 user: {
                     id: player.id,
                     wallet_address: player.wallet_address,
