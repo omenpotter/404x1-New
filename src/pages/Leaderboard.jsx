@@ -83,7 +83,7 @@ export default function Leaderboard() {
                 <th>PLAYER</th>
                 <th>ROLE</th>
                 <th>MESSAGES</th>
-                <th>REACTIONS</th>
+                <th>GAMES</th>
                 <th>RP</th>
               </tr>
             </thead>
@@ -103,8 +103,8 @@ export default function Leaderboard() {
                         {(p.user_role || 'member').toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ color: '#888' }}>{(p.total_messages || p.messages_sent || 0).toLocaleString()}</td>
-                    <td style={{ color: '#888' }}>{(p.total_reactions || 0).toLocaleString()}</td>
+                    <td style={{ color: '#888' }}>{(p.messages_sent || 0).toLocaleString()}</td>
+                    <td style={{ color: '#888' }}>{(p.games_played || 0).toLocaleString()}</td>
                     <td className="rp-val">{(p.reputation_points || 0).toLocaleString()}</td>
                   </tr>
                 );
