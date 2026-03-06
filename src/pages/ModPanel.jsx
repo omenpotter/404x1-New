@@ -215,6 +215,10 @@ export default function ModPanel() {
                 <input className="field-input" placeholder="Message ID to delete..." value={messageId} onChange={e => setMessageId(e.target.value)} />
               </div>
               <div className="field">
+                <label className="field-label">AUTHOR PLAYER ID *</label>
+                <input className="field-input" placeholder="Player ID of message author..." value={targetId} onChange={e => setTargetId(e.target.value)} />
+              </div>
+              <div className="field">
                 <label className="field-label">REASON</label>
                 <input className="field-input" placeholder="Reason for deletion..." value={reason} onChange={e => setReason(e.target.value)} />
               </div>
