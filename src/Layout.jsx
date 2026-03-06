@@ -27,7 +27,7 @@ export default function Layout({ children, currentPageName }) {
 
   const logout = () => {
     localStorage.removeItem('404x1_user');
-    window.location.href = createPageUrl('Login');
+    window.location.href = createPageUrl('Home');
   };
 
   const navLinks = [
@@ -37,6 +37,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Leaderboard', page: 'Leaderboard', label: 'RANKS' },
     { name: 'Messages', page: 'Messages', label: 'DMs' },
     { name: 'Profile', page: 'Profile', label: 'PROFILE' },
+    { name: 'Docs', page: 'Docs', label: 'DOCS' },
     { name: 'ModPanel', page: 'ModPanel', label: 'MOD' },
   ];
 
@@ -174,7 +175,7 @@ export default function Layout({ children, currentPageName }) {
               <button className="nav-btn" onClick={logout}>LOGOUT</button>
             </>
           ) : (
-            <Link to={createPageUrl('Login')}>
+            <Link to={createPageUrl('Home')}>
               <button className="nav-btn">CONNECT</button>
             </Link>
           )}

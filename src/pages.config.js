@@ -47,24 +47,24 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Home from './pages/Home';
 import Chat from './pages/Chat';
+import Game from './pages/Game';
+import Home from './pages/Home';
 import Leaderboard from './pages/Leaderboard';
 import Messages from './pages/Messages';
-import Profile from './pages/Profile';
-import Game from './pages/Game';
 import ModPanel from './pages/ModPanel';
+import Profile from './pages/Profile';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
     "Chat": Chat,
+    "Game": Game,
+    "Home": Home,
     "Leaderboard": Leaderboard,
     "Messages": Messages,
-    "Profile": Profile,
-    "Game": Game,
     "ModPanel": ModPanel,
+    "Profile": Profile,
 }
 
 export const pagesConfig = {

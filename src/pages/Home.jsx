@@ -64,11 +64,13 @@ const CHART_IFRAME_SRC = `
 <div id="chart"></div>
 <script>
 (async function() {
-  const src = await fetch('https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js').then(r=>r.text());
-  const s = document.createElement('script');
-  s.textContent = src;
-  document.head.appendChild(s);
-  await new Promise(r => { if(window.LightweightCharts) return r(); s.onload=r; setTimeout(r,5000); });
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Chart library failed to load'));
+    document.head.appendChild(s);
+  });
 
   const chart = window.LightweightCharts.createChart(document.getElementById('chart'), {
     width: window.innerWidth,
@@ -154,6 +156,7 @@ export default function Home() {
   const [chartChange, setChartChange] = useState('');
   const [ohlcv, setOhlcv] = useState({ o: 0, h: 0, l: 0, c: 0, v: 0 });
   const [currentTF, setCurrentTF] = useState(60);
+  const [showVol, setShowVol] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [holderList, setHolderList] = useState([]);
   const [feedTab, setFeedTab] = useState('transactions');
@@ -729,7 +732,7 @@ export default function Home() {
                     {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
                   </button>
                 ))}
-                <button className="tf-btn404" onClick={() => iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: true }, '*')}>Vol</button>
+                <button className={`tf-btn404${showVol ? ' active' : ''}`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
               </div>
               <div className="ohlcv404">
                 <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>

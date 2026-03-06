@@ -52,12 +52,10 @@ export default function Messages() {
   }, []);
 
   useEffect(() => {
-    if (activeConv) {
-      loadHistory(activeConv.id);
-      clearInterval(pollRef.current);
-      pollRef.current = setInterval(() => loadHistory(activeConv.id), 2000);
-    }
-    return () => clearInterval(pollRef.current);
+    if (!activeConv?.id) return;
+    loadHistory(activeConv.id);
+    const intervalId = setInterval(() => loadHistory(activeConv.id), 2000);
+    return () => clearInterval(intervalId);
   }, [activeConv?.id]);
 
   useEffect(() => {

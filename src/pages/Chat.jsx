@@ -51,7 +51,7 @@ export default function Chat() {
         setPinnedMsg(data.pinned_message || null);
         setTypingUsers((data.typing_users || []).filter(u2 => {
           const me = getUser();
-          return !me || u2 !== me.username;
+          return !me || u2 !== (me.chat_username || me.username);
         }));
       }
     } catch {}
@@ -133,6 +133,19 @@ export default function Chat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: u.id, message_id: msgId })
+      });
+      fetchMessages();
+    } catch {}
+  };
+
+  const pinMessage = async (msgId, action) => {
+    const u = getUser();
+    if (!u) return;
+    try {
+      await fetch(BASE + 'chatPin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: u.id, message_id: msgId, action })
       });
       fetchMessages();
     } catch {}
@@ -333,7 +346,16 @@ export default function Chat() {
                       {!isDeleted && msg.player_id !== user?.id && user && (
                         <button className="action-btn" onClick={() => setTipTarget({ player_id: msg.player?.id || msg.player_id, username })}>💎 TIP</button>
                       )}
+                      {!isDeleted && user && msg.player?.id !== user?.id && (
+                        <button className="action-btn" onClick={() => window.location.href = createPageUrl('Messages') + '?with=' + (msg.player?.id || msg.player_id)}>💬 DM</button>
+                      )}
                       {!isDeleted && <button className="action-btn" onClick={() => setShowEmoji(showEmoji === msg.id ? null : msg.id)}>😀</button>}
+                      {!isDeleted && canModerate && !msg.is_pinned && (
+                        <button className="action-btn" onClick={() => pinMessage(msg.id, 'pin')}>📌 PIN</button>
+                      )}
+                      {!isDeleted && canModerate && msg.is_pinned && (
+                        <button className="action-btn" onClick={() => pinMessage(msg.id, 'unpin')}>📌 UNPIN</button>
+                      )}
                       {!isDeleted && (isOwn || canModerate) && (
                         <button className="action-btn" style={{ color: '#ff4444' }} onClick={() => deleteMessage(msg.id)}>🗑</button>
                       )}
