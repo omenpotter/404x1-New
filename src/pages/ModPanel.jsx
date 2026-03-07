@@ -30,6 +30,7 @@ export default function ModPanel() {
 
   const canAccess = user && ['moderator', 'admin', 'superuser'].includes(user.user_role);
   const isAdmin = user && ['admin', 'superuser'].includes(user.user_role);
+  const isSuperuser = user && user.user_role === 'superuser';
 
   const callAPI = async (endpoint, body) => {
     setLoading(true);
@@ -169,7 +170,7 @@ export default function ModPanel() {
         <div className="tabs">
           <button className={`tab-btn${tab === 'mute' ? ' active' : ''}`} onClick={() => setTab('mute')}>🔇 MUTE</button>
           <button className={`tab-btn${tab === 'message' ? ' active' : ''}`} onClick={() => setTab('message')}>🗑 MESSAGE</button>
-          <button className={`tab-btn${tab === 'role' ? ' active' : ''}`} onClick={() => setTab('role')} disabled={!isAdmin}>👑 ROLES {!isAdmin && '🔒'}</button>
+          <button className={`tab-btn${tab === 'role' ? ' active' : ''}`} onClick={() => setTab('role')} disabled={!isSuperuser}>👑 ROLES {!isSuperuser && '🔒'}</button>
           <button className={`tab-btn${tab === 'rp' ? ' active' : ''}`} onClick={() => setTab('rp')} disabled={!isAdmin}>💎 GRANT RP {!isAdmin && '🔒'}</button>
         </div>
 
@@ -233,7 +234,7 @@ export default function ModPanel() {
             </>
           )}
 
-          {tab === 'role' && isAdmin && (
+          {tab === 'role' && isSuperuser && (
             <>
               <div className="field">
                 <label className="field-label">TARGET PLAYER ID *</label>
@@ -248,8 +249,8 @@ export default function ModPanel() {
                 </select>
               </div>
               <div style={{ padding: '10px', background: '#1a1a1a', border: '1px solid #2a2a2a', fontSize: '11px', color: '#666', marginBottom: '16px' }}>
-                Role hierarchy: member → trusted → moderator → admin
-                <br />⚠ You cannot promote to superuser through this panel.
+                Role hierarchy: member → trusted → moderator → admin → superuser
+                <br />⚠ Only superusers can assign roles.
               </div>
               <div className="action-row">
                 <button className="mod-btn info" onClick={handleChangeRole} disabled={!targetId || loading}>

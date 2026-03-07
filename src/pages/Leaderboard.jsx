@@ -103,13 +103,12 @@ export default function Leaderboard() {
                       </span>
                     </td>
                     <td style={{ color: '#888' }}>{(p.messages_sent || 0).toLocaleString()}</td>
-                    <td style={{ color: '#888' }}>{(p.games_played || 0).toLocaleString()}</td>
                     <td className="rp-val">{(p.reputation_points || 0).toLocaleString()}</td>
                   </tr>
                 );
               })}
               {chatBoard.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#444' }}>No players yet</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#444' }}>No players yet</td></tr>
               )}
             </tbody>
           </table>
