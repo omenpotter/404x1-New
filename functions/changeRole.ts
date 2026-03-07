@@ -18,11 +18,11 @@ Deno.serve(async (req) => {
         // Get admin
         const admin = await base44.asServiceRole.entities.Player.get(admin_id);
 
-        // Only admin and superuser can change roles
-        if (!admin || (admin.user_role !== 'admin' && admin.user_role !== 'superuser')) {
+        // ONLY superuser can change roles
+        if (!admin || admin.user_role !== 'superuser') {
             return Response.json({ 
                 success: false, 
-                error: 'Only admins can change roles' 
+                error: 'Only superuser can assign or change roles' 
             }, { status: 403 });
         }
 
@@ -41,17 +41,6 @@ Deno.serve(async (req) => {
             'admin': 4,
             'superuser': 5
         };
-
-        // Admins can only assign up to moderator
-        // Superuser can assign any role
-        const maxAssignableRole = admin.user_role === 'superuser' ? 5 : 3;
-
-        if (roleHierarchy[new_role] > maxAssignableRole) {
-            return Response.json({ 
-                success: false, 
-                error: 'You cannot assign this role' 
-            }, { status: 403 });
-        }
 
         // Cannot change role of someone with equal or higher role
         if (roleHierarchy[targetPlayer.user_role] >= roleHierarchy[admin.user_role]) {
