@@ -225,45 +225,95 @@ export default function Home() {
     if (typeof obj === 'string') { const n = parseFloat(obj); if (!isNaN(n) && n >= 10 && n <= 999999) return n; }
     if (typeof obj !== 'object') return null;
     const priority = ['estimatedOutputAmount', 'output_amount', 'outputAmount', 'estimated_output_amount', 'result', 'amount', 'out'];
-    for (const k of priority) { if (obj[k] != null) { const v = findOutputAmount(typeof obj[k] === 'object' ? obj[k] : obj[k], depth + 1); if (v != null) return v; } }
+    for (const k of priority) { if (obj[k] != null) { const v = findOutputAmount(obj[k], depth + 1); if (v != null) return v; } }
     for (const k of Object.keys(obj)) { if (priority.includes(k)) continue; const v = findOutputAmount(obj[k], depth + 1); if (v != null) return v; }
     return null;
   }
 
-  // Fetch price via xDEX swap/prepare (1 XNT → 404, price = 1/outputAmount)
+  const applyPrice = (p) => {
+    if (!p || p <= 0) return;
+    currentPriceRef.current = p;
+    setPrice(p.toFixed(6) + ' XNT');
+    setChartPrice(p.toFixed(6));
+    const cap = p * TOTAL_SUPPLY;
+    if (cap >= 1_000_000) setMarketCap((cap / 1_000_000).toFixed(2) + 'M XNT');
+    else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(1) + 'k XNT');
+    else setMarketCap(cap.toFixed(2) + ' XNT');
+  };
+
+  // Fetch price: try GET endpoint first, then swap/quote, then swap/prepare
   const fetchPrice = async () => {
     try {
-      const res = await fetch('https://api.xdex.xyz/api/xendex/swap/prepare', {
+      // Method 1: direct GET price endpoint
+      const r1 = await fetch(`https://api.xdex.xyz/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
+      const d1 = await r1.json();
+      const p1 = parseFloat(d1.price || d1.usdPrice || d1.data?.price || 0);
+      if (p1 > 0) { applyPrice(p1); return; }
+    } catch {}
+    try {
+      // Method 2: swap quote GET (simpler, no wallet needed)
+      const r2 = await fetch(`https://api.xdex.xyz/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
+      const d2 = await r2.json();
+      const out2 = findOutputAmount(d2);
+      if (out2 && out2 > 0) { applyPrice(1 / out2); return; }
+    } catch {}
+    try {
+      // Method 3: swap/prepare POST
+      const r3 = await fetch('https://api.xdex.xyz/api/xendex/swap/prepare', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          network: 'X1 Mainnet',
-          wallet: '11111111111111111111111111111111',
-          token_in: WXNT_ADDRESS,
-          token_out: TOKEN_CA,
-          token_in_amount: 1,
-          is_exact_amount_in: true
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ network: 'X1 Mainnet', wallet: '11111111111111111111111111111111', token_in: WXNT_ADDRESS, token_out: TOKEN_CA, token_in_amount: 1, is_exact_amount_in: true })
       });
-      const data = await res.json();
-      const outputNum = findOutputAmount(data);
-      if (outputNum && outputNum > 0) {
-        const p = 1 / outputNum;
-        currentPriceRef.current = p;
-        setPrice(p.toFixed(6) + ' XNT');
-        setChartPrice(p.toFixed(6));
-        const cap = p * TOTAL_SUPPLY;
-        if (cap >= 1_000_000) setMarketCap((cap / 1_000_000).toFixed(2) + 'M XNT');
-        else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(1) + 'k XNT');
-        else setMarketCap(cap.toFixed(2) + ' XNT');
-      }
+      const d3 = await r3.json();
+      const out3 = findOutputAmount(d3);
+      if (out3 && out3 > 0) { applyPrice(1 / out3); }
     } catch (e) {
       console.warn('Price fetch failed:', e.message);
     }
   };
 
-  // Fetch trades + chart
+  // Fetch chart data from xDEX chart/history endpoint
   const fetchTrades = async () => {
+    try {
+      const res = await fetch(`https://api.xdex.xyz/api/xendex/chart/history?network=X1%20Mainnet`);
+      const data = await res.json();
+      // xDEX chart/history returns OHLCV candles — convert to trade-like objects for our chart
+      const candles = data?.data || data?.candles || data?.history || (Array.isArray(data) ? data : []);
+      if (candles.length > 0) {
+        // Send raw candles directly to chart if they have OHLC shape
+        const ohlcCandles = candles
+          .filter(c => c.time || c.timestamp || c.t)
+          .map(c => ({
+            time: c.time || c.timestamp || c.t,
+            open: parseFloat(c.open || c.o || 0),
+            high: parseFloat(c.high || c.h || 0),
+            low: parseFloat(c.low || c.l || 0),
+            close: parseFloat(c.close || c.c || 0),
+            volume: parseFloat(c.volume || c.v || 0),
+          }))
+          .filter(c => c.open > 0)
+          .sort((a, b) => a.time - b.time);
+
+        if (ohlcCandles.length > 0) {
+          sendCandlesToChart(ohlcCandles);
+          const last = ohlcCandles[ohlcCandles.length - 1];
+          if (last.close > 0) applyPrice(last.close);
+          // Build transactions from candles
+          setTransactions(ohlcCandles.slice().reverse().slice(0, 50).map(c => ({
+            time: c.time, side: c.close >= c.open ? 'BUY' : 'SELL',
+            xnt: c.volume, tok: c.volume / (c.close || 1), price: c.close, maker: ''
+          })));
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('xDEX chart fetch failed, falling back to RPC:', e.message);
+    }
+    // Fallback: RPC-based trades
+    fetchTradesFromRpc();
+  };
+
+  const fetchTradesFromRpc = async () => {
     const cacheKey = 'chart_trades_cache';
     const cacheTs = 'chart_trades_ts';
     const now = Date.now();
@@ -273,15 +323,14 @@ export default function Home() {
       const trades = JSON.parse(cached);
       sendTradesToChart(trades);
       buildTransactions(trades);
-      if (trades.length > 0) updatePriceFromTrade(trades[trades.length - 1]);
       return;
     }
     try {
-      const sigs = await rpc('getSignaturesForAddress', [TOKEN_CA, { limit: 1000 }]);
+      const sigs = await rpc('getSignaturesForAddress', [TOKEN_CA, { limit: 200 }]);
       if (!sigs?.length) return;
       const trades = [];
-      for (let i = 0; i < Math.min(sigs.length, 300); i += 20) {
-        const batch = sigs.slice(i, i + 20);
+      for (let i = 0; i < Math.min(sigs.length, 100); i += 10) {
+        const batch = sigs.slice(i, i + 10);
         const txs = await Promise.all(batch.map(s =>
           rpc('getTransaction', [s.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }])
         ));
@@ -296,9 +345,17 @@ export default function Home() {
       localStorage.setItem(cacheTs, String(now));
       sendTradesToChart(trades);
       buildTransactions(trades);
-      if (trades.length > 0) updatePriceFromTrade(trades[trades.length - 1]);
     } catch (e) {
-      console.warn('Trades fetch failed:', e.message);
+      console.warn('RPC trades fetch failed:', e.message);
+    }
+  };
+
+  const sendCandlesToChart = (candles) => {
+    const msg = { type: 'candles', candles, tf: currentTF };
+    if (chartReadyRef.current && iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(msg, '*');
+    } else {
+      pendingTradesRef.current = msg;
     }
   };
 
@@ -311,34 +368,30 @@ export default function Home() {
     }
   };
 
-  const updatePriceFromTrade = (trade) => {
-    if (!trade) return;
-    setChartPrice(trade.price.toFixed(6));
-  };
-
   const buildTransactions = (trades) => {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // Fetch holders via xDEX token-price/prices (bulk) — holders count still via RPC
+  // Fetch holders: use xDEX pool info to get token data, RPC as fallback
   const fetchHolders = async () => {
+    try {
+      const res = await fetch(`https://api.xdex.xyz/api/xendex/pool/tokens/${TOKEN_CA}/${WXNT_ADDRESS}?network=X1%20Mainnet`);
+      const data = await res.json();
+      const pool = data?.data || data?.pool || data;
+      // Pool gives us liquidity info; holders still needs RPC but we can show liquidity instead
+      if (pool && (pool.token_a_amount || pool.reserve_a || pool.liquidity)) {
+        // Pool exists — fetch holders count via RPC in background
+      }
+    } catch {}
+    // Always try RPC for actual holder list
     try {
       const res = await rpc('getProgramAccounts', [
         'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-        {
-          encoding: 'jsonParsed',
-          filters: [
-            { dataSize: 165 },
-            { memcmp: { offset: 0, bytes: TOKEN_CA } }
-          ]
-        }
+        { encoding: 'jsonParsed', filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }] }
       ]);
       if (!res?.length) return;
       const accts = res
-        .map(a => ({
-          wallet: a.pubkey,
-          balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0
-        }))
+        .map(a => ({ wallet: a.pubkey, balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0 }))
         .filter(a => a.balance > 0)
         .sort((a, b) => b.balance - a.balance);
       setHolders(accts.length.toLocaleString());
