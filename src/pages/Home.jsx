@@ -84,7 +84,9 @@ const CHART_IFRAME_SRC = `
   const candles = chart.addCandlestickSeries({
     upColor: '#7dff7d', downColor: '#ff4444',
     borderUpColor: '#7dff7d', borderDownColor: '#ff4444',
-    wickUpColor: '#7dff7d', wickDownColor: '#ff4444'
+    wickUpColor: '#7dff7d', wickDownColor: '#ff4444',
+    lastValueVisible: false,
+    priceLineVisible: false,
   });
   let volSeries = null;
   let currentTF = 60;
