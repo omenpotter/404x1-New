@@ -14,23 +14,41 @@ export default function Profile() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('overview');
+  const [viewedPlayer, setViewedPlayer] = useState(null);
+
+  // Read ?id= from URL
+  const params = new URLSearchParams(window.location.search);
+  const viewId = params.get('id');
+  const isOwnProfile = !viewId || viewId === getUser()?.id;
 
   useEffect(() => {
     const u = getUser();
     setUser(u);
-    if (u) fetchStats(u.id);
-  }, []);
+    const targetId = viewId || u?.id;
+    if (targetId) fetchStats(targetId);
+  }, [viewId]);
 
   const fetchStats = async (userId) => {
     try {
       const res = await fetch(BASE + `gameStats?user_id=${userId}`);
       const data = await res.json();
-      if (data.success) setStats(data.stats);
+      if (data.success) {
+        setStats(data.stats);
+        // If viewing another player, use stats for display
+        if (viewId && viewId !== getUser()?.id) {
+          setViewedPlayer({
+            username: data.stats.username,
+            user_role: data.stats.user_role,
+            reputation_points: data.stats.reputation_points,
+            messages_sent: data.stats.messages_sent || 0,
+          });
+        }
+      }
     } catch {}
     setLoading(false);
   };
 
-  if (!user) {
+  if (!user && isOwnProfile) {
     return (
       <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
         <div style={{ textAlign: 'center', fontFamily: "'Share Tech Mono', monospace" }}>
@@ -41,11 +59,12 @@ export default function Profile() {
     );
   }
 
-  const role = user.user_role || 'member';
+  const displayUser = (viewId && viewedPlayer) ? viewedPlayer : user;
+  const role = displayUser?.user_role || 'member';
   const roleColor = ROLE_COLORS[role] || '#888';
   const roleIdx = ROLE_ORDER.indexOf(role);
   const nextRole = ROLE_ORDER[roleIdx + 1];
-  const rp = user.reputation_points || 0;
+  const rp = displayUser?.reputation_points || 0;
 
   // RP thresholds for role display
   const RP_THRESHOLD = 10000;
@@ -86,25 +105,27 @@ export default function Profile() {
         <div className="profile-hero">
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div className="profile-avatar-large" style={{ color: roleColor, borderColor: roleColor, background: roleColor + '11' }}>
-              {(user.username || user.chat_username || 'U')[0].toUpperCase()}
+              {(displayUser?.username || 'U')[0].toUpperCase()}
             </div>
             <div className="profile-info">
               <div className="profile-username" style={{ color: roleColor }}>
-                {user.username || user.chat_username || 'Unknown'}
+                {displayUser?.username || 'Unknown'}
               </div>
               <div className="profile-role-badge" style={{ color: roleColor, borderColor: roleColor + '66' }}>
                 {role.toUpperCase()}
               </div>
-              <div className="profile-wallet" style={{ color: '#444' }}>
-                {user.wallet_address || 'No wallet connected'}
-              </div>
-              {user.game_username && user.game_username !== user.username && (
+              {isOwnProfile && (
+                <div className="profile-wallet" style={{ color: '#444' }}>
+                  {user?.wallet_address || 'No wallet connected'}
+                </div>
+              )}
+              {isOwnProfile && user?.game_username && user.game_username !== user.username && (
                 <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
                   Game: {user.game_username}
                 </div>
               )}
 
-              {role === 'member' && (
+              {isOwnProfile && role === 'member' && (
                 <div className="rp-bar-wrap">
                   <div className="rp-bar-label">
                     <span>Progress to TRUSTED</span>
@@ -126,7 +147,7 @@ export default function Profile() {
             <div className="stat-lbl">REPUTATION POINTS</div>
           </div>
           <div className="stat-card">
-            <div className="stat-val" style={{ color: '#5fffff' }}>{(user.messages_sent || user.total_messages || 0).toLocaleString()}</div>
+            <div className="stat-val" style={{ color: '#5fffff' }}>{(displayUser?.messages_sent || 0).toLocaleString()}</div>
             <div className="stat-lbl">MESSAGES SENT</div>
           </div>
           <div className="stat-card">
@@ -151,12 +172,12 @@ export default function Profile() {
             <div className="section-title">ACCOUNT INFO</div>
             <div style={{ display: 'grid', gap: '12px' }}>
               {[
-                { label: 'Username', value: user.username || user.chat_username },
+                { label: 'Username', value: displayUser?.username },
                 { label: 'Role', value: role.toUpperCase(), color: roleColor },
                 { label: 'Reputation Points', value: rp.toLocaleString(), color: '#7dff7d' },
-                { label: 'Messages Sent', value: (user.messages_sent || 0).toLocaleString() },
-                { label: 'Total Score', value: (user.total_score || stats?.total_score || 0).toLocaleString(), color: '#5fffff' },
-                { label: 'Member Since', value: user.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A' },
+                { label: 'Messages Sent', value: (displayUser?.messages_sent || 0).toLocaleString() },
+                { label: 'Total Score', value: (stats?.total_score || 0).toLocaleString(), color: '#5fffff' },
+                ...(isOwnProfile ? [{ label: 'Member Since', value: user?.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A' }] : []),
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #111', fontSize: '13px' }}>
                   <span style={{ color: '#888' }}>{item.label}</span>
@@ -211,8 +232,8 @@ export default function Profile() {
               {rp >= 100 && <div className="badge-chip">⭐ 100 RP Club</div>}
               {rp >= 1000 && <div className="badge-chip">🌟 1K RP Club</div>}
               {rp >= 10000 && <div className="badge-chip">💎 10K RP — Trusted</div>}
-              {(user.messages_sent || 0) >= 1 && <div className="badge-chip">💬 First Message</div>}
-              {(user.messages_sent || 0) >= 100 && <div className="badge-chip">🗣 100 Messages</div>}
+              {(displayUser?.messages_sent || 0) >= 1 && <div className="badge-chip">💬 First Message</div>}
+              {(displayUser?.messages_sent || 0) >= 100 && <div className="badge-chip">🗣 100 Messages</div>}
               {(stats?.games_played || 0) >= 1 && <div className="badge-chip">🎮 First Game</div>}
               {(stats?.games_played || 0) >= 10 && <div className="badge-chip">🕹 10 Games</div>}
               {(stats?.high_score || 0) >= 1000 && <div className="badge-chip">🏆 1K Score</div>}

@@ -27,10 +27,8 @@ Deno.serve(async (req) => {
             ? Math.round(allScores.reduce((sum, s) => sum + s.score, 0) / allScores.length)
             : 0;
 
-        // Find highest score
-        const highScore = allScores.length > 0
-            ? Math.max(...allScores.map(s => s.score))
-            : 0;
+        // Use Player.high_score (written by gameSubmit)
+        const highScore = player.high_score || 0;
 
         return Response.json({
             success: true,
@@ -42,7 +40,9 @@ Deno.serve(async (req) => {
                 user_role: player.user_role,
                 average_score: avgScore,
                 high_score: highScore,
-                recent_scores: recentScores
+                best_level: player.best_level || 1,
+                recent_scores: recentScores,
+                recent_games: recentScores
             }
         });
 

@@ -30,6 +30,7 @@ export default function Chat() {
   const [tipAmount, setTipAmount] = useState(5);
   const [imageUrl, setImageUrl] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -41,6 +42,12 @@ export default function Chat() {
     fetchMessages();
     pollRef.current = setInterval(fetchMessages, 3000);
     return () => clearInterval(pollRef.current);
+  }, []);
+
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
   }, []);
 
   const fetchMessages = async () => {
@@ -260,6 +267,52 @@ export default function Chat() {
 
       {notification && <div className="notification-toast">{notification}</div>}
 
+      {contextMenu && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            zIndex: 500,
+            minWidth: '160px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
+          }}
+        >
+          <div style={{ padding: '8px 12px', fontSize: '11px', color: '#888',
+            borderBottom: '1px solid #2a2a2a', fontFamily: "'Share Tech Mono', monospace" }}>
+            {contextMenu.username}
+          </div>
+          <div
+            className='action-btn'
+            style={{ display: 'block', padding: '10px 12px', cursor: 'pointer',
+              fontFamily: "'Share Tech Mono', monospace", fontSize: '12px',
+              color: '#e0e0e0', borderBottom: '1px solid #1a1a1a' }}
+            onClick={() => {
+              window.location.href = createPageUrl('Profile') + '?id=' + contextMenu.playerId;
+              setContextMenu(null);
+            }}
+          >
+            👤 View Profile
+          </div>
+          {user && contextMenu.playerId !== user?.id && (
+            <div
+              className='action-btn'
+              style={{ display: 'block', padding: '10px 12px', cursor: 'pointer',
+                fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', color: '#e0e0e0' }}
+              onClick={() => {
+                window.location.href = createPageUrl('Messages') + '?with=' + contextMenu.playerId;
+                setContextMenu(null);
+              }}
+            >
+              💬 Send DM
+            </div>
+          )}
+        </div>
+      )}
+
       {tipTarget && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 250 }} onClick={() => setTipTarget(null)}>
           <div className="tip-modal" onClick={e => e.stopPropagation()}>
@@ -344,7 +397,21 @@ export default function Chat() {
                 </div>
                 <div className="msg-body">
                   <div className="msg-header">
-                    <span className="msg-username" style={{ color: roleColor }}>{username}</span>
+                     <span
+                       className="msg-username"
+                       style={{ color: roleColor, cursor: 'pointer' }}
+                       onClick={e => {
+                         e.stopPropagation();
+                         setContextMenu({
+                           x: e.clientX,
+                           y: e.clientY,
+                           playerId: msg.player?.id || msg.player_id,
+                           username: username
+                         });
+                       }}
+                     >
+                       {username}
+                     </span>
                     {playerRole !== 'member' && (
                       <span className="msg-role-badge" style={{ color: roleColor, borderColor: roleColor + '66' }}>
                         {playerRole.toUpperCase()}
