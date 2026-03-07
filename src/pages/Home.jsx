@@ -275,9 +275,9 @@ export default function Home() {
       const p1 = parseFloat(d1.data?.price || d1.price || d1.usdPrice || 0);
       if (p1 > 0) {
         applyPrice(p1);
-        if (d1.change_24h != null) {
-          const isPos = d1.change_24h >= 0;
-          setChartChange((isPos ? '+' : '') + parseFloat(d1.change_24h).toFixed(2) + '%');
+        const ch = d1.change_24h ?? d1.data?.change_24h;
+        if (ch != null) {
+          setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
         }
         return;
       }
