@@ -464,8 +464,8 @@ export default function Home() {
         .hero-sub404 { text-align:center;color:#888;font-size:14px;margin-top:8px;letter-spacing:4px; }
 
         /* Error list */
-        .error-list404 { margin:24px auto;max-width:500px;display:flex;flex-direction:column;gap:8px; }
-        .error-item404 { display:flex;gap:12px;align-items:center;opacity:0;animation:fadeIn404 0.5s forwards;font-size:13px; }
+        .error-list404 { margin:24px auto;max-width:500px;display:flex;flex-direction:column;gap:8px;align-items:center; }
+        .error-item404 { display:flex;gap:12px;align-items:center;opacity:0;animation:fadeIn404 0.5s forwards;font-size:13px;justify-content:center; }
         @keyframes fadeIn404 { to { opacity:1; } }
         .error-code404 { color:#ff4444;flex-shrink:0; }
         .error-text404 { color:#888; }
