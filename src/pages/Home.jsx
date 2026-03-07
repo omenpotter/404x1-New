@@ -381,32 +381,21 @@ export default function Home() {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // Fetch holders via RPC getProgramAccounts with correct SPL mint filter
+  // Fetch holders via xDEX pool data
   const fetchHolders = async () => {
     try {
-      const res = await rpc('getProgramAccounts', [
-        'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-        {
-          encoding: 'jsonParsed',
-          filters: [
-            { dataSize: 165 },
-            { memcmp: { offset: 0, bytes: TOKEN_CA } }
-          ]
-        }
-      ]);
-      if (!res?.length) {
-        setHolders('N/A');
-        return;
+      const res = await fetch(`https://api.xdex.xyz/api/xendex/pool/tokens/${TOKEN_CA}/${WXNT_ADDRESS}?network=X1%20Mainnet`);
+      const data = await res.json();
+      const pool = data?.data;
+      if (pool) {
+        // Use lp_token_holder_count as proxy for holders, or txns as activity
+        const holderCount = pool.lp_token_holder_count || '—';
+        setHolders(String(holderCount));
+        // Build a holder-like list from pool data for the holders tab
+        setHolderList([
+          { wallet: pool.pool_address || 'Pool', balance: pool.amount2_without_fee || 0, label: 'Liquidity Pool' },
+        ]);
       }
-      const accts = res
-        .map(a => {
-          const info = a.account?.data?.parsed?.info;
-          return { wallet: a.pubkey, balance: info?.tokenAmount?.uiAmount || 0 };
-        })
-        .filter(a => a.balance > 0)
-        .sort((a, b) => b.balance - a.balance);
-      setHolders(accts.length > 0 ? accts.length.toLocaleString() : 'N/A');
-      setHolderList(accts.slice(0, 50));
     } catch (e) {
       console.warn('Holders fetch failed:', e.message);
       setHolders('N/A');
