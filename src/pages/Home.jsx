@@ -785,7 +785,7 @@ export default function Home() {
             </div>
 
             {/* Action buttons */}
-            <div className="action-btns404">
+            <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Bridge</div>
                 <div className="action-sub404">Solana ↔ X1</div>
@@ -797,10 +797,6 @@ export default function Home() {
               <a href="https://xdex.xyz/liquidity" target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Liquidity Pool</div>
                 <div className="action-sub404">Add/Remove</div>
-              </a>
-              <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="action-btn404">
-                <div className="action-title404">Telegram</div>
-                <div className="action-sub404">Join Community</div>
               </a>
             </div>
 
