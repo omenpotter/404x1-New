@@ -271,8 +271,8 @@ export default function Home() {
   // Fetch price via backend proxy (avoids CORS)
   const fetchPrice = async () => {
     try {
-      const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
-      const p1 = parseFloat(d1.price || d1.usdPrice || d1.data?.price || 0);
+      const d1 = await xdex(`/api/token-price/price?network=X1 Mainnet&token_address=${TOKEN_CA}`);
+      const p1 = parseFloat(d1.data?.price || d1.price || d1.usdPrice || 0);
       if (p1 > 0) {
         applyPrice(p1);
         if (d1.change_24h != null) {
