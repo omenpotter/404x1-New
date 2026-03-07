@@ -28,6 +28,8 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [tipTarget, setTipTarget] = useState(null);
   const [tipAmount, setTipAmount] = useState(5);
+  const [imageUrl, setImageUrl] = useState('');
+  const [showImageInput, setShowImageInput] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -78,13 +80,16 @@ export default function Chat() {
           message: input.trim(),
           reply_to_message_id: replyTo?.id || null,
           reply_to_username: replyTo?.username || null,
-          reply_to_message: replyTo?.content || null
+          reply_to_message: replyTo?.content || null,
+          image_url: imageUrl || null
         })
       });
       const data = await res.json();
       if (data.success) {
         setInput('');
         setReplyTo(null);
+        setImageUrl('');
+        setShowImageInput(false);
         if (data.rp_earned) showNotif(`+${data.rp_earned} RP`);
         // Update stored user RP
         const updated = { ...u, reputation_points: data.total_rp || u.reputation_points };
@@ -187,6 +192,7 @@ export default function Chat() {
   };
 
   const canModerate = user && ['moderator','admin','superuser'].includes(user.user_role);
+  const canUploadImage = user && ['trusted','moderator','admin','superuser'].includes(user.user_role);
 
   const formatTime = (ts) => {
     if (!ts) return '';
@@ -418,7 +424,19 @@ export default function Chat() {
               <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
             </div>
           )}
+          {showImageInput && (
+            <input
+              className="chat-input"
+              style={{ marginBottom: '6px', display: 'block' }}
+              placeholder="Paste image URL..."
+              value={imageUrl}
+              onChange={e => setImageUrl(e.target.value)}
+            />
+          )}
           <div className="input-row">
+            {canUploadImage && (
+              <button className="action-btn" onClick={() => setShowImageInput(!showImageInput)} title="Attach image URL" style={{ color: showImageInput ? '#7dff7d' : '#888', borderColor: showImageInput ? '#7dff7d' : '#2a2a2a', padding: '10px 10px' }}>🖼</button>
+            )}
             <textarea
               ref={inputRef}
               className="chat-input"
