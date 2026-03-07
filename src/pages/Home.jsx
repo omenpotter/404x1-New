@@ -320,7 +320,7 @@ export default function Home() {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // Fetch holders
+  // Fetch holders via xDEX token-price/prices (bulk) — holders count still via RPC
   const fetchHolders = async () => {
     try {
       const res = await rpc('getProgramAccounts', [
