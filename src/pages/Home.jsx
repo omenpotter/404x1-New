@@ -205,8 +205,8 @@ export default function Home() {
       const msg = e.data;
       if (msg.type === 'chartReady') {
         chartReadyRef.current = true;
-        if (pendingTradesRef.current) {
-          iframeRef.current?.contentWindow?.postMessage(pendingTradesRef.current, '*');
+        if (pendingTradesRef.current && iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage(pendingTradesRef.current, '*');
           pendingTradesRef.current = null;
         }
       } else if (msg.type === 'ohlcv') {
