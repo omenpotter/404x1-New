@@ -3,7 +3,7 @@ import { createPageUrl } from '@/utils';
 
 const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
-const ROLES = ['member', 'trusted', 'moderator', 'admin'];
+const ROLES = ['member', 'trusted', 'moderator', 'admin', 'superuser'];
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }

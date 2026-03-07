@@ -83,7 +83,6 @@ export default function Leaderboard() {
                 <th>PLAYER</th>
                 <th>ROLE</th>
                 <th>MESSAGES</th>
-                <th>GAMES</th>
                 <th>RP</th>
               </tr>
             </thead>
