@@ -381,32 +381,35 @@ export default function Home() {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // Fetch holders: use xDEX pool info to get token data, RPC as fallback
+  // Fetch holders via RPC getProgramAccounts with correct SPL mint filter
   const fetchHolders = async () => {
-    try {
-      const res = await fetch(`https://api.xdex.xyz/api/xendex/pool/tokens/${TOKEN_CA}/${WXNT_ADDRESS}?network=X1%20Mainnet`);
-      const data = await res.json();
-      const pool = data?.data || data?.pool || data;
-      // Pool gives us liquidity info; holders still needs RPC but we can show liquidity instead
-      if (pool && (pool.token_a_amount || pool.reserve_a || pool.liquidity)) {
-        // Pool exists — fetch holders count via RPC in background
-      }
-    } catch {}
-    // Always try RPC for actual holder list
     try {
       const res = await rpc('getProgramAccounts', [
         'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-        { encoding: 'jsonParsed', filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }] }
+        {
+          encoding: 'jsonParsed',
+          filters: [
+            { dataSize: 165 },
+            { memcmp: { offset: 0, bytes: TOKEN_CA } }
+          ]
+        }
       ]);
-      if (!res?.length) return;
+      if (!res?.length) {
+        setHolders('N/A');
+        return;
+      }
       const accts = res
-        .map(a => ({ wallet: a.pubkey, balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0 }))
+        .map(a => {
+          const info = a.account?.data?.parsed?.info;
+          return { wallet: a.pubkey, balance: info?.tokenAmount?.uiAmount || 0 };
+        })
         .filter(a => a.balance > 0)
         .sort((a, b) => b.balance - a.balance);
-      setHolders(accts.length.toLocaleString());
+      setHolders(accts.length > 0 ? accts.length.toLocaleString() : 'N/A');
       setHolderList(accts.slice(0, 50));
     } catch (e) {
       console.warn('Holders fetch failed:', e.message);
+      setHolders('N/A');
     }
   };
 
