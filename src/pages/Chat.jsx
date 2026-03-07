@@ -425,14 +425,20 @@ export default function Chat() {
               rows={1}
               placeholder={user ? (user.is_muted ? 'You are muted...' : 'Type a message... (Enter to send)') : 'Login to chat...'}
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={e => { if (e.target.value.length <= 5000) setInput(e.target.value); }}
               onKeyDown={handleKeyDown}
               disabled={!user || user.is_muted}
+              maxLength={5000}
             />
             <button className="send-btn" onClick={sendMessage} disabled={!input.trim() || sending || !user || user.is_muted}>
               {sending ? '...' : 'SEND'}
             </button>
           </div>
+          {input.length > 0 && (
+            <div style={{ textAlign: 'right', fontSize: '10px', color: input.length > 4800 ? '#ff4444' : '#444', marginTop: '4px' }}>
+              {input.length}/5000
+            </div>
+          )}
           {!user && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: '#666', textAlign: 'center' }}>
               <a href={createPageUrl('Home')} style={{ color: '#7dff7d' }}>Connect wallet</a> to participate
