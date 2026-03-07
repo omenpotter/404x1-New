@@ -218,13 +218,37 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Fetch price
+  // Deep-scan for output amount regardless of xDEX field naming
+  function findOutputAmount(obj, depth = 0) {
+    if (depth > 4 || obj == null) return null;
+    if (typeof obj === 'number' && obj >= 10 && obj <= 999999) return obj;
+    if (typeof obj === 'string') { const n = parseFloat(obj); if (!isNaN(n) && n >= 10 && n <= 999999) return n; }
+    if (typeof obj !== 'object') return null;
+    const priority = ['estimatedOutputAmount', 'output_amount', 'outputAmount', 'estimated_output_amount', 'result', 'amount', 'out'];
+    for (const k of priority) { if (obj[k] != null) { const v = findOutputAmount(typeof obj[k] === 'object' ? obj[k] : obj[k], depth + 1); if (v != null) return v; } }
+    for (const k of Object.keys(obj)) { if (priority.includes(k)) continue; const v = findOutputAmount(obj[k], depth + 1); if (v != null) return v; }
+    return null;
+  }
+
+  // Fetch price via xDEX swap/prepare (1 XNT → 404, price = 1/outputAmount)
   const fetchPrice = async () => {
     try {
-      const res = await fetch(`https://api.xdex.xyz/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
-      const d = await res.json();
-      const p = parseFloat(d.price || d.usdPrice || 0);
-      if (p > 0) {
+      const res = await fetch('https://api.xdex.xyz/api/xendex/swap/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          network: 'X1 Mainnet',
+          wallet: '11111111111111111111111111111111',
+          token_in: WXNT_ADDRESS,
+          token_out: TOKEN_CA,
+          token_in_amount: 1,
+          is_exact_amount_in: true
+        })
+      });
+      const data = await res.json();
+      const outputNum = findOutputAmount(data);
+      if (outputNum && outputNum > 0) {
+        const p = 1 / outputNum;
         currentPriceRef.current = p;
         setPrice(p.toFixed(6) + ' XNT');
         setChartPrice(p.toFixed(6));
