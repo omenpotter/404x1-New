@@ -15,8 +15,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        if (message.length > 500) {
-            return Response.json({ error: 'Message too long (max 500 characters)' }, { status: 400 });
+        if (message.length > 5000) {
+            return Response.json({ error: 'Message too long (max 5000 characters)' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
