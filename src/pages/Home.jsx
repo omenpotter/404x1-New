@@ -291,11 +291,10 @@ export default function Home() {
     }
   };
 
-  // Fetch chart data from xDEX chart/history endpoint
+  // Fetch chart data via backend proxy
   const fetchTrades = async () => {
     try {
-      const res = await fetch(`https://api.xdex.xyz/api/xendex/chart/history?network=X1%20Mainnet`);
-      const data = await res.json();
+      const data = await xdex(`/api/xendex/chart/history?network=X1%20Mainnet&from_token=${WXNT_ADDRESS}&to_token=${TOKEN_CA}`);
       // xDEX chart/history returns OHLCV candles — convert to trade-like objects for our chart
       const candles = data?.data || data?.candles || data?.history || (Array.isArray(data) ? data : []);
       if (candles.length > 0) {
