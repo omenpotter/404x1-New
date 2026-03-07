@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
+
+async function xdex(endpoint) {
+  const res = await base44.functions.invoke('xdexProxy', { endpoint });
+  return res.data;
+}
 
 const TOKEN_CA = '4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2';
 const WXNT_ADDRESS = 'So11111111111111111111111111111111111111112';
