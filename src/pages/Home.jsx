@@ -291,14 +291,16 @@ export default function Home() {
         const ohlcCandles = candles
           .filter(c => c.time || c.timestamp || c.t)
           .map(c => ({
-            time: c.time || c.timestamp || c.t,
+            time: Math.floor((c.time || c.timestamp || c.t) / 1000) > 9999999999
+              ? Math.floor((c.time || c.timestamp || c.t) / 1000)
+              : (c.time || c.timestamp || c.t),
             open: parseFloat(c.open || c.o || 0),
             high: parseFloat(c.high || c.h || 0),
             low: parseFloat(c.low || c.l || 0),
             close: parseFloat(c.close || c.c || 0),
             volume: parseFloat(c.volume || c.v || 0),
           }))
-          .filter(c => c.open > 0)
+          .filter(c => c.open > 0.000001 && c.high > 0.000001 && c.close > 0.000001)
           .sort((a, b) => a.time - b.time);
 
         if (ohlcCandles.length > 0) {
