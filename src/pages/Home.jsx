@@ -23,28 +23,37 @@ async function rpc(method, params) {
   return d.result;
 }
 
+// FIX 3: helper to read token amount, falling back to raw amount / 10^decimals when uiAmount is null
+function getUiAmount(entry) {
+  if (!entry?.uiTokenAmount) return 0;
+  if (entry.uiTokenAmount.uiAmount != null) return entry.uiTokenAmount.uiAmount;
+  const decimals = entry.uiTokenAmount.decimals ?? 9;
+  const raw = entry.uiTokenAmount.amount || '0';
+  return parseFloat(raw) / Math.pow(10, decimals);
+}
+
 function parseTrade(tx) {
   try {
-    const pre = tx.meta?.preTokenBalances || [];
+    const pre  = tx.meta?.preTokenBalances  || [];
     const post = tx.meta?.postTokenBalances || [];
     let xntChange = 0, tokChange = 0;
     for (const p of post) {
       const pr = pre.find(x => x.accountIndex === p.accountIndex);
       if (!pr) continue;
       const mint = p.mint;
-      const diff = (p.uiTokenAmount?.uiAmount || 0) - (pr.uiTokenAmount?.uiAmount || 0);
+      const diff = getUiAmount(p) - getUiAmount(pr);
       if (mint === WXNT_ADDRESS) xntChange = diff;
-      if (mint === TOKEN_CA) tokChange = diff;
+      if (mint === TOKEN_CA)     tokChange = diff;
     }
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
     const price = Math.abs(xntChange / tokChange);
     if (price < 0.0001 || price > 0.1) return null;
     return {
-      time: tx.blockTime,
-      xnt: Math.abs(xntChange),
-      tok: Math.abs(tokChange),
+      time:  tx.blockTime,
+      xnt:   Math.abs(xntChange),
+      tok:   Math.abs(tokChange),
       price,
-      side: xntChange < 0 ? 'SELL' : 'BUY',
+      side:  xntChange < 0 ? 'SELL' : 'BUY',
       maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || ''
     };
   } catch { return null; }
@@ -260,7 +269,15 @@ export default function Home() {
       const r1 = await fetch(`https://api.xdex.xyz/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
       const d1 = await r1.json();
       const p1 = parseFloat(d1.price || d1.usdPrice || d1.data?.price || 0);
-      if (p1 > 0) { applyPrice(p1); return; }
+      if (p1 > 0) {
+        applyPrice(p1);
+        // FIX 1: set 24h change display
+        if (d1.change_24h != null) {
+          const isPos = d1.change_24h >= 0;
+          setChartChange((isPos ? '+' : '') + parseFloat(d1.change_24h).toFixed(2) + '%');
+        }
+        return;
+      }
     } catch {}
     try {
       // Method 2: swap quote GET (simpler, no wallet needed)
@@ -386,21 +403,33 @@ export default function Home() {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // Fetch holders via xDEX pool data
+  // FIX 2: Fetch holders — query both legacy SPL and Token-2022 programs
   const fetchHolders = async () => {
     try {
-      const res = await fetch(`https://api.xdex.xyz/api/xendex/pool/tokens/${TOKEN_CA}/${WXNT_ADDRESS}?network=X1%20Mainnet`);
-      const data = await res.json();
-      const pool = data?.data;
-      if (pool) {
-        // Use lp_token_holder_count as proxy for holders, or txns as activity
-        const holderCount = pool.lp_token_holder_count || '—';
-        setHolders(String(holderCount));
-        // Build a holder-like list from pool data for the holders tab
-        setHolderList([
-          { wallet: pool.pool_address || 'Pool', balance: pool.amount2_without_fee || 0, label: 'Liquidity Pool' },
-        ]);
-      }
+      const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+      const T2022  = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+      const [legacyRes, t2022Res] = await Promise.all([
+        rpc('getProgramAccounts', [LEGACY, {
+          encoding: 'jsonParsed',
+          filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }]
+        }]).catch(() => []),
+        rpc('getProgramAccounts', [T2022, {
+          encoding: 'jsonParsed',
+          filters: [{ memcmp: { offset: 0, bytes: TOKEN_CA } }]
+        }]).catch(() => []),
+      ]);
+      const combined = [...(legacyRes || []), ...(t2022Res || [])];
+      if (!combined.length) { setHolders('N/A'); return; }
+      const accts = combined
+        .map(a => ({
+          wallet: a.account?.data?.parsed?.info?.owner || a.pubkey,
+          tokenAccount: a.pubkey,
+          balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0
+        }))
+        .filter(a => a.balance > 0)
+        .sort((a, b) => b.balance - a.balance);
+      setHolders(accts.length.toLocaleString());
+      setHolderList(accts.slice(0, 50));
     } catch (e) {
       console.warn('Holders fetch failed:', e.message);
       setHolders('N/A');
