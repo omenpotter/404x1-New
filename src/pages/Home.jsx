@@ -291,45 +291,8 @@ export default function Home() {
     }
   };
 
-  // Fetch chart data via backend proxy
+  // Fetch chart data from X1 RPC
   const fetchTrades = async () => {
-    try {
-      const data = await xdex(`/api/xendex/chart/history?network=X1%20Mainnet&from_token=${WXNT_ADDRESS}&to_token=${TOKEN_CA}`);
-      // xDEX chart/history returns OHLCV candles — convert to trade-like objects for our chart
-      const candles = data?.data || data?.candles || data?.history || (Array.isArray(data) ? data : []);
-      if (candles.length > 0) {
-        // Send raw candles directly to chart if they have OHLC shape
-        const ohlcCandles = candles
-          .filter(c => c.time || c.timestamp || c.t)
-          .map(c => ({
-            time: Math.floor((c.time || c.timestamp || c.t) / 1000) > 9999999999
-              ? Math.floor((c.time || c.timestamp || c.t) / 1000)
-              : (c.time || c.timestamp || c.t),
-            open: parseFloat(c.open || c.o || 0),
-            high: parseFloat(c.high || c.h || 0),
-            low: parseFloat(c.low || c.l || 0),
-            close: parseFloat(c.close || c.c || 0),
-            volume: parseFloat(c.volume || c.v || 0),
-          }))
-          .filter(c => c.open > 0.000001 && c.high > 0.000001 && c.close > 0.000001)
-          .sort((a, b) => a.time - b.time);
-
-        if (ohlcCandles.length > 0) {
-          sendCandlesToChart(ohlcCandles);
-          const last = ohlcCandles[ohlcCandles.length - 1];
-          if (last.close > 0) applyPrice(last.close);
-          // Build transactions from candles
-          setTransactions(ohlcCandles.slice().reverse().slice(0, 50).map(c => ({
-            time: c.time, side: c.close >= c.open ? 'BUY' : 'SELL',
-            xnt: c.volume, tok: c.volume / (c.close || 1), price: c.close, maker: ''
-          })));
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('xDEX chart fetch failed, falling back to RPC:', e.message);
-    }
-    // Fallback: RPC-based trades
     fetchTradesFromRpc();
   };
 
