@@ -123,7 +123,14 @@ const CHART_IFRAME_SRC = `
 
   window.addEventListener('message', e => {
     const msg = e.data;
-    if (msg.type === 'trades') {
+    if (msg.type === 'candles') {
+      // Direct OHLCV candles from xDEX chart/history
+      const c = (msg.candles || []).filter(x => x.open > 0);
+      if (c.length) {
+        candles.setData(c);
+        if (volSeries && showVol) volSeries.setData(c.map(x => ({ time: x.time, value: x.volume || 0, color: x.close >= x.open ? 'rgba(125,255,125,0.3)' : 'rgba(255,68,68,0.3)' })));
+      }
+    } else if (msg.type === 'trades') {
       allTrades = msg.trades || [];
       currentTF = msg.tf || 60;
       render();
