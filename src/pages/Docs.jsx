@@ -77,16 +77,64 @@ const sections = [
     icon: '💬',
     content: [
       {
-        heading: 'General Rules',
-        body: '1. No spam or flooding — you will be muted\n2. No hate speech or harassment\n3. No scam links or phishing attempts\n4. Keep it relevant — this is a token community chat\n5. Respect all role levels'
+        heading: 'Welcome',
+        body: '404x1 chat is a free, open space for the global crypto community. Talk about any chain, any token, any protocol. Share alpha, discuss markets, ask questions, debate ideas.\n\nOne requirement: keep it civil and keep it crypto. Break the rules and you get muted. Keep breaking them and you get banned.'
+      },
+      {
+        heading: '✓ What Is Allowed',
+        body: '• Any cryptocurrency topic — Bitcoin, Ethereum, Solana, X1, DeFi, NFTs, L2s, wallets, trading, tokenomics, on-chain data\n• Market discussion — price talk, chart analysis, macro crypto trends, exchange news, on-chain metrics\n• Project discussion — new launches, protocol updates, token analysis (be clear it is your own view)\n• Questions and learning — no question is too basic\n• Memes and culture — crypto memes and reaction gifs welcome, keep them clean and on-theme'
+      },
+      {
+        heading: 'Rule 1 — Stay On Topic',
+        body: 'This is a crypto chat. All conversations must relate to cryptocurrency, blockchain, and web3.\n\n✗ No general news or current events (unless it directly impacts crypto)\n✗ No sports, entertainment, or lifestyle content'
+      },
+      {
+        heading: 'Rule 2 — No Politics',
+        body: 'Political discussion is strictly prohibited. No exceptions.\n\n✗ No political parties or politicians\n✗ No elections or voting\n✗ No government policy debates\n✗ No political ideologies\n✗ No political memes or propaganda\n\nCrypto regulation can be discussed factually but not as a political debate.'
+      },
+      {
+        heading: 'Rule 3 — No Religion',
+        body: 'Religious discussion has no place in a crypto chat.\n\n✗ No religious debate\n✗ No proselytising\n✗ No religious commentary on other members\n✗ No religious imagery or symbols used to provoke'
+      },
+      {
+        heading: 'Rule 4 — No Spam',
+        body: '✗ No message flooding — do not send the same message multiple times\n✗ No excessive caps or symbols — TYPING LIKE THIS is treated as spam\n✗ No copy-paste walls — summarise or use DMs\n✗ No bot-like behaviour — automated posting is banned immediately\n✗ No emoji spam — a few emojis are fine, rows of 20 are not'
+      },
+      {
+        heading: 'Rule 5 — No Scams or Financial Manipulation',
+        body: 'Zero tolerance — first offence is a permanent ban.\n\n✗ No phishing links or fake sites\n✗ No fake giveaways\n✗ No guaranteed return claims ("100x guaranteed", "risk-free profit")\n✗ No coordinated pump and dump\n✗ No raw contract address drops without token name, chain, and context\n✗ No unsolicited DM solicitation ("DM me for alpha")'
+      },
+      {
+        heading: 'Rule 6 — No NSFW Content',
+        body: 'This is a public community with members of all ages.\n\n✗ No sexual or pornographic content\n✗ No graphic violence\n✗ No shock content'
+      },
+      {
+        heading: 'Rule 7 — Respect Everyone',
+        body: 'Debate is fine. Aggression, hate, and harassment are not.\n\n✗ No hate speech or slurs\n✗ No personal attacks — disagree with the idea, not the person\n✗ No harassment or threatening language\n✗ No doxxing — never share real names, locations, or personal info\n✗ No impersonation of developers, mods, or other members'
+      },
+      {
+        heading: 'Rule 8 — No Unsolicited Self-Promotion',
+        body: 'Sharing knowledge is encouraged. Advertising is not.\n\n✗ No shilling unrelated projects repeatedly\n✗ No advertising paid groups or channels without mod approval\n✗ No begging for tokens, loans, airdrops, or tips'
+      },
+      {
+        heading: 'Rule 9 — Language',
+        body: '→ English in main chat — so moderators can keep the community safe. Use DMs for other languages.\n→ No excessive profanity — casual language is fine, directing profanity at members is not.'
+      },
+      {
+        heading: 'Rule 10 — Moderation',
+        body: '→ Mod decisions are final in chat. If you disagree, DM a moderator — do not argue in public chat.\n→ Report bad behaviour — use the report function or DM a mod. Do not engage or retaliate.\n→ Mods are volunteers — treat them with respect.'
+      },
+      {
+        heading: 'Message Limits',
+        body: 'Max 5,000 characters per message. Image URLs must be direct links. You earn RP per message, but rate limiting prevents spam farming.'
+      },
+      {
+        heading: 'Disclaimer',
+        body: 'Nothing posted in this chat is financial advice. All discussion is for informational and entertainment purposes only. Always DYOR before making any investment decision. 404x1 and its moderators are not responsible for any trading decisions made based on chat content.'
       },
       {
         heading: 'Features',
         body: '• Reply to any message with ↩ REPLY\n• React with emoji using 😀\n• Tip RP to any user with 💎 TIP\n• Send a DM with 💬 DM\n• Search message history with 🔍 SEARCH\n• Post images (Trusted+ only)\n• Pinned messages shown at the top (mods only)'
-      },
-      {
-        heading: 'Message Limits',
-        body: 'Max 500 characters per message. Image URLs must be direct links. You earn RP per message, but rate limiting prevents spam farming.'
       }
     ]
   },
