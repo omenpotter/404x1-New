@@ -838,12 +838,12 @@ export default function Home() {
                     <div>Rank</div><div>Wallet</div><div>Balance</div><div>Share</div>
                   </div>
                   <div className="feed-list404">
-                    {holderList.length === 0 && <div className="loading-row404">Loading holders from X1 RPC...</div>}
+                    {holderList.length === 0 && <div className="loading-row404">Loading holder data from xDEX...</div>}
                     {holderList.map((h, i) => (
                       <div key={i} className="hld-row404">
                         <span style={{ color: '#888' }}>#{i + 1}</span>
-                        <span style={{ color: '#5fffff' }}>{truncWallet(h.wallet)}</span>
-                        <span style={{ color: '#e0e0e0' }}>{h.balance.toLocaleString()}</span>
+                        <span style={{ color: '#5fffff' }}>{h.label || truncWallet(h.wallet)}</span>
+                        <span style={{ color: '#e0e0e0' }}>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         <span style={{ color: '#7dff7d' }}>{((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%</span>
                       </div>
                     ))}
