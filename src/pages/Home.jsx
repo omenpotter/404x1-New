@@ -457,29 +457,6 @@ export default function Home() {
         .scanlines404 { position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); }
         .page-content { position:relative;z-index:2; }
 
-        /* Navbar */
-        .navbar404 { position:sticky;top:0;z-index:100;background:rgba(10,14,20,0.95);border-bottom:1px solid #1a2a1a;backdrop-filter:blur(10px); }
-        .nav-inner { max-width:1200px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between; }
-        .nav-logo404 { font-family:'Rubik Mono One',monospace;font-size:22px;color:#7dff7d;text-decoration:none;letter-spacing:3px;text-shadow:0 0 15px #7dff7d;animation:glitch404 3s infinite; }
-        @keyframes glitch404 {
-          0%{text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 15px #7dff7d}
-          25%{text-shadow:-2px 0 #5fffff,2px 0 #ff4444,0 0 15px #7dff7d}
-          50%{text-shadow:0 0 15px #7dff7d}
-          100%{text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 15px #7dff7d}
-        }
-        .nav-links404 { display:flex;align-items:center;gap:4px; }
-        .nav-link404 { color:#888;text-decoration:none;padding:6px 12px;font-size:12px;border:1px solid transparent;transition:all 0.2s;font-family:'Share Tech Mono',monospace;position:relative; }
-        .nav-link404:hover,.nav-link404.active { color:#7dff7d;border-color:#2a3a2a; }
-        .nav-link404.active { color:#7dff7d;border-color:#7dff7d; }
-        .unread-badge404 { position:absolute;top:-4px;right:-4px;background:#7dff7d;color:#000;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:bold; }
-        .nav-user404 { display:flex;align-items:center;gap:10px;font-size:11px; }
-        .nav-user-name { color:#7dff7d; }
-        .nav-user-rp { color:#5fffff; }
-        .nav-logout { background:none;border:1px solid #2a2a2a;color:#888;cursor:pointer;padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;transition:all 0.2s; }
-        .nav-logout:hover { border-color:#ff4444;color:#ff4444; }
-        .nav-login-btn { border:1px solid #7dff7d;background:transparent;color:#7dff7d;cursor:pointer;padding:6px 14px;font-family:'Share Tech Mono',monospace;font-size:12px;transition:all 0.2s; }
-        .nav-login-btn:hover { background:#7dff7d;color:#0a0e14; }
-
         /* Hero */
         .hero404 { max-width:1000px;margin:0 auto;padding:40px 20px 20px; }
         .hero-title404 { font-family:'Rubik Mono One',monospace;font-size:clamp(48px,10vw,96px);color:#7dff7d;text-align:center;margin:0;letter-spacing:4px;
