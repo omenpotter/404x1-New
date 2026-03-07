@@ -615,34 +615,6 @@ export default function Home() {
       ].map((f, i) => <div key={i} className="float-item404" style={f.style}>{f.text}</div>)}
 
       <div className="page-content">
-        {/* Navbar */}
-        <nav className="navbar404">
-          <div className="nav-inner">
-            <a href={createPageUrl('Home')} className="nav-logo404">404x1</a>
-            <div className="nav-links404">
-              <a href={createPageUrl('Home')} className="nav-link404 active">HOME</a>
-              <a href={createPageUrl('Chat')} className="nav-link404">CHAT</a>
-              <a href={createPageUrl('Messages')} className="nav-link404" style={{ position: 'relative' }}>
-                MESSAGES
-                {unreadCount > 0 && <span className="unread-badge404">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-              </a>
-              <a href={createPageUrl('Game')} className="nav-link404">GAME</a>
-              <a href={createPageUrl('Leaderboard')} className="nav-link404">LEADERBOARD</a>
-            </div>
-            <div>
-              {user ? (
-                <div className="nav-user404">
-                  <span className="nav-user-name">{user.chat_username || user.username}</span>
-                  <span className="nav-user-rp">{(user.reputation_points || 0).toLocaleString()} RP</span>
-                  <button className="nav-logout" onClick={logout}>LOGOUT</button>
-                </div>
-              ) : (
-                <button className="nav-login-btn" onClick={() => { setShowModal(true); setModalStep('wallets'); setAuthError(''); }}>LOGIN</button>
-              )}
-            </div>
-          </div>
-        </nav>
-
         {/* Hero */}
         <div className="hero404">
           <h1 className="hero-title404">404 ERROR</h1>
