@@ -268,16 +268,13 @@ export default function Home() {
     else setMarketCap(cap.toFixed(2) + ' XNT');
   };
 
-  // Fetch price: try GET endpoint first, then swap/quote, then swap/prepare
+  // Fetch price via backend proxy (avoids CORS)
   const fetchPrice = async () => {
     try {
-      // Method 1: direct GET price endpoint
-      const r1 = await fetch(`https://api.xdex.xyz/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
-      const d1 = await r1.json();
+      const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
       const p1 = parseFloat(d1.price || d1.usdPrice || d1.data?.price || 0);
       if (p1 > 0) {
         applyPrice(p1);
-        // FIX 1: set 24h change display
         if (d1.change_24h != null) {
           const isPos = d1.change_24h >= 0;
           setChartChange((isPos ? '+' : '') + parseFloat(d1.change_24h).toFixed(2) + '%');
@@ -286,22 +283,9 @@ export default function Home() {
       }
     } catch {}
     try {
-      // Method 2: swap quote GET (simpler, no wallet needed)
-      const r2 = await fetch(`https://api.xdex.xyz/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
-      const d2 = await r2.json();
+      const d2 = await xdex(`/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
       const out2 = findOutputAmount(d2);
-      if (out2 && out2 > 0) { applyPrice(1 / out2); return; }
-    } catch {}
-    try {
-      // Method 3: swap/prepare POST
-      const r3 = await fetch('https://api.xdex.xyz/api/xendex/swap/prepare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ network: 'X1 Mainnet', wallet: '11111111111111111111111111111111', token_in: WXNT_ADDRESS, token_out: TOKEN_CA, token_in_amount: 1, is_exact_amount_in: true })
-      });
-      const d3 = await r3.json();
-      const out3 = findOutputAmount(d3);
-      if (out3 && out3 > 0) { applyPrice(1 / out3); }
+      if (out2 && out2 > 0) { applyPrice(1 / out2); }
     } catch (e) {
       console.warn('Price fetch failed:', e.message);
     }
