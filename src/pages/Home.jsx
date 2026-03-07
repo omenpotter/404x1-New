@@ -91,6 +91,9 @@ const CHART_IFRAME_SRC = `
   let allTrades = [];
   let showVol = false;
 
+  // Remove default price line at 0
+  chart.applyOptions({ handleScroll: true, handleScale: true });
+
   function tradesToCandles(trades, tf) {
     const buckets = {};
     for (const t of trades) {
