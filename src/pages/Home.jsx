@@ -804,9 +804,9 @@ export default function Home() {
                 <div className="action-title404">Liquidity Pool</div>
                 <div className="action-sub404">Add/Remove</div>
               </a>
-              <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="action-btn404">
-                <div className="action-title404">Twitter</div>
-                <div className="action-sub404">@rkbehelvi</div>
+              <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="action-btn404">
+                <div className="action-title404">Telegram</div>
+                <div className="action-sub404">Join Community</div>
               </a>
             </div>
 
