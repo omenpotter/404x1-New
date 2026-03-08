@@ -970,6 +970,19 @@ export default function Home() {
                   </div>
                 )}
               </div>
+              {connecting && (
+                <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'10px',fontFamily:"'Share Tech Mono',monospace"}}>Connecting...</div>
+              )}
+              {walletConnectError && (
+                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
+                  ⚠ {walletConnectError}
+                </div>
+              )}
+              {walletConnectSuccess && (
+                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
+                  {walletConnectSuccess}
+                </div>
+              )}
               <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'16px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
                 CANCEL
               </button>
