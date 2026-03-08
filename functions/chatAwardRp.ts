@@ -1,10 +1,16 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
-        const { from_user_id, to_user_id, amount, reason } = await req.json();
+        const { to_user_id, amount, reason } = await req.json();
 
-        if (!from_user_id || !to_user_id || !amount) {
+        const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const from_user_id = authUser.id;
+
+        if (!to_user_id || !amount) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
@@ -15,8 +21,6 @@ Deno.serve(async (req) => {
         if (amount <= 0 || amount > 10) {
             return Response.json({ error: 'RP amount must be between 1 and 10' }, { status: 400 });
         }
-
-        const base44 = createClientFromRequest(req);
 
         // Get both players
         const fromPlayer = await base44.asServiceRole.entities.Player.get(from_user_id);
