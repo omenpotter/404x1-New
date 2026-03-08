@@ -867,55 +867,99 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* Auth Modal */}
-      {showModal && (
-        <div className="modal404" onClick={(e) => { if (e.target.className === 'modal404') setShowModal(false); }}>
-          <div className="modal-content404">
-            <button className="modal-close404" onClick={() => setShowModal(false)}>×</button>
+      {/* Wallet Selection Modal */}
+      {showWalletModal && (() => {
+        const w = detectWallets();
+        return (
+          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+            onClick={() => setShowWalletModal(false)}>
+            <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
+              onClick={e => e.stopPropagation()}>
+              <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
+                CONNECT WALLET
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                {/* X1 Wallet */}
+                {w.x1 ? (
+                  <button onClick={() => connectWallet('x1')} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <span>⭐ X1 Wallet</span>
+                    <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
+                  </button>
+                ) : (
+                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{color:'#444'}}>⭐ X1 Wallet (Not Installed)</span>
+                    <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  </div>
+                )}
+                {/* Phantom */}
+                {w.phantom ? (
+                  <button onClick={() => connectWallet('phantom')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                    👻 Phantom
+                  </button>
+                ) : (
+                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{color:'#444'}}>👻 Phantom (Not Installed)</span>
+                    <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  </div>
+                )}
+                {/* Backpack */}
+                {w.backpack ? (
+                  <button onClick={() => connectWallet('backpack')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                    🎒 Backpack
+                  </button>
+                ) : (
+                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{color:'#444'}}>🎒 Backpack (Not Installed)</span>
+                    <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  </div>
+                )}
+                {/* MetaMask */}
+                {w.metamask ? (
+                  <button onClick={() => connectWallet('metamask')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                    🦊 MetaMask
+                  </button>
+                ) : (
+                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{color:'#444'}}>🦊 MetaMask (Not Installed)</span>
+                    <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'16px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+                CANCEL
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
-            {modalStep === 'wallets' && (
-              <>
-                <div className="modal-title404">CONNECT WALLET</div>
-                <div className="wallet-btns404">
-                  <button className="wallet-btn404 recommended" onClick={() => connectWallet('x1')} disabled={authLoading}>
-                    <span className="wallet-icon404">⭐</span><span>X1 Wallet (Recommended)</span>
-                  </button>
-                  <button className="wallet-btn404" onClick={() => connectWallet('phantom')} disabled={authLoading}>
-                    <span className="wallet-icon404">👻</span><span>Phantom Wallet</span>
-                  </button>
-                  <button className="wallet-btn404" onClick={() => connectWallet('backpack')} disabled={authLoading}>
-                    <span className="wallet-icon404">🎒</span><span>Backpack Wallet</span>
-                  </button>
-                  <button className="wallet-btn404" onClick={() => connectWallet('metamask')} disabled={authLoading}>
-                    <span className="wallet-icon404">🦊</span><span>MetaMask</span>
-                  </button>
-                </div>
-                {authLoading && <div style={{ textAlign: 'center', color: '#7dff7d', fontSize: '12px' }}>Connecting...</div>}
-                {authError && <div className="modal-error404">⚠ {authError}</div>}
-                <div className="wallet-note404">
-                  No X1 Wallet? <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer">Install Here</a>
-                </div>
-              </>
-            )}
-
-            {modalStep === 'username' && (
-              <>
-                <div className="modal-title404">SET USERNAME</div>
-                <div className="warning-txt404">⚠️ Username is PERMANENT and cannot be changed!</div>
-                <div className="form-group404">
-                  <label className="form-label404">CHAT NAME (3-16 chars, permanent)</label>
-                  <input className="form-input404" type="text" placeholder="username" value={chatName} onChange={e => setChatName(e.target.value)} maxLength={16} />
-                </div>
-                <div className="form-group404">
-                  <label className="form-label404">GAME NAME (3-16 chars, permanent)</label>
-                  <input className="form-input404" type="text" placeholder="playername (leave blank = same as chat)" value={gameName} onChange={e => setGameName(e.target.value)} maxLength={16} />
-                </div>
-                <button className="submit-btn404" onClick={confirmUsername} disabled={authLoading}>
-                  {authLoading ? 'CREATING...' : 'CONFIRM & LOCK USERNAME'}
-                </button>
-                {authError && <div className="modal-error404">⚠ {authError}</div>}
-              </>
-            )}
+      {/* Username Setup Modal */}
+      {showUsernameModal && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}>
+            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'8px',textAlign:'center'}}>
+              SET USERNAME
+            </div>
+            <div style={{color:'#ffaa00',fontSize:'11px',textAlign:'center',marginBottom:'20px'}}>
+              ⚠️ Username is PERMANENT and cannot be changed!
+            </div>
+            <div style={{marginBottom:'16px'}}>
+              <label style={{fontSize:'10px',color:'#888',display:'block',marginBottom:'6px',letterSpacing:'1px'}}>USERNAME (3-16 chars)</label>
+              <input
+                style={{width:'100%',padding:'10px 12px',background:'#1a1a2a',border:'1px solid #2a2a4a',color:'#e0e0e0',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',outline:'none',boxSizing:'border-box'}}
+                type="text"
+                placeholder="your_username"
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && submitUsername()}
+                maxLength={16}
+                autoFocus
+              />
+            </div>
+            {usernameError && <div style={{color:'#ff4444',fontSize:'11px',marginBottom:'12px'}}>⚠ {usernameError}</div>}
+            <button onClick={submitUsername} style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
+              CONFIRM & LOCK USERNAME
+            </button>
           </div>
         </div>
       )}
