@@ -198,7 +198,7 @@ export default function Layout({ children, currentPageName }) {
         {user ? (
           <button className="mobile-nav-link" style={{background:'none',border:'none',textAlign:'left',cursor:'pointer',color:'var(--red)'}} onClick={logout}>LOGOUT</button>
         ) : (
-          <Link to={createPageUrl('Home')} className="mobile-nav-link" onClick={() => setMenuOpen(false)}>CONNECT WALLET</Link>
+          <button className="mobile-nav-link" style={{background:'none',border:'none',textAlign:'left',cursor:'pointer',color:'var(--green)'}} onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent('open_wallet_modal')); }}>CONNECT WALLET</button>
         )}
       </div>
 
