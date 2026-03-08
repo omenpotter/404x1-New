@@ -267,7 +267,18 @@ export default function Docs() {
             {current.content.map((item, i) => (
               <div key={i} className="docs-card">
                 <div className="docs-card-heading">{item.heading}</div>
-                <div className="docs-card-body">{item.body}</div>
+                {item.links ? (
+                  <div className="docs-card-body" style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                    {item.links.map((link, j) => (
+                      <a key={j} href={link.url} target="_blank" rel="noopener noreferrer"
+                        style={{color:'#5fffff',textDecoration:'none',fontSize:'12px',fontFamily:"'Share Tech Mono',monospace"}}>
+                        → {link.label}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="docs-card-body">{item.body}</div>
+                )}
               </div>
             ))}
           </>
