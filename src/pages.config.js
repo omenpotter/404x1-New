@@ -53,9 +53,7 @@ import Game from './pages/Game';
 import Home from './pages/Home';
 import Leaderboard from './pages/Leaderboard';
 import Messages from './pages/Messages';
-import ModPanel from './pages/ModPanel';
 import ModerationLogs from './pages/ModerationLogs';
-import Profile from './pages/Profile';
 import __Layout from './Layout.jsx';
 
 
@@ -66,9 +64,7 @@ export const PAGES = {
     "Home": Home,
     "Leaderboard": Leaderboard,
     "Messages": Messages,
-    "ModPanel": ModPanel,
     "ModerationLogs": ModerationLogs,
-    "Profile": Profile,
 }
 
 export const pagesConfig = {
