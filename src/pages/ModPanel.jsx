@@ -171,7 +171,9 @@ export default function ModPanel() {
           <button className={`tab-btn${tab === 'mute' ? ' active' : ''}`} onClick={() => setTab('mute')}>🔇 MUTE</button>
           <button className={`tab-btn${tab === 'message' ? ' active' : ''}`} onClick={() => setTab('message')}>🗑 MESSAGE</button>
           <button className={`tab-btn${tab === 'role' ? ' active' : ''}`} onClick={() => setTab('role')} disabled={!isSuperuser}>👑 ROLES {!isSuperuser && '🔒'}</button>
-          <button className={`tab-btn${tab === 'rp' ? ' active' : ''}`} onClick={() => setTab('rp')} disabled={!isAdmin}>💎 GRANT RP {!isAdmin && '🔒'}</button>
+          {isSuperuser && (
+            <button className={`tab-btn${tab === 'rp' ? ' active' : ''}`} onClick={() => setTab('rp')}>💎 GRANT RP</button>
+          )}
         </div>
 
         <div className="panel">

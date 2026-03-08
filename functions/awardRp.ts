@@ -23,29 +23,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Granter not found' }, { status: 404 });
         }
 
-        // Check permissions and limits
-        const rpLimits = {
-            'member': 0,
-            'trusted': 10,
-            'moderator': 50,
-            'admin': 500,
-            'superuser': Infinity
-        };
-
-        const maxAmount = rpLimits[granter.user_role] || 0;
-
-        if (amount > maxAmount) {
+        // Only superuser can manually award RP
+        if (granter.user_role !== 'superuser') {
             return Response.json({ 
                 success: false, 
-                error: `Your role can only award up to ${maxAmount} RP` 
-            }, { status: 403 });
-        }
-
-        // For bonus grants (10,000 RP), only superuser
-        if (grant_type === 'bonus_grant' && granter.user_role !== 'superuser') {
-            return Response.json({ 
-                success: false, 
-                error: 'Only superuser can grant bonus RP' 
+                error: 'Only superuser can manually award RP' 
             }, { status: 403 });
         }
 
