@@ -417,89 +417,83 @@ export default function Home() {
     iframeRef.current?.contentWindow?.postMessage({ type: 'setTF', tf }, '*');
   };
 
-  const connectWallet = async (type) => {
-    setAuthLoading(true);
-    setAuthError('');
-    let address = '';
+  const detectWallets = () => ({
+    x1: typeof window.x1Wallet !== 'undefined',
+    phantom: typeof window.phantom?.solana !== 'undefined',
+    backpack: typeof window.backpack !== 'undefined',
+    metamask: typeof window.ethereum !== 'undefined',
+  });
+
+  const connectWallet = async (walletType) => {
+    setConnecting(true);
+    setShowWalletModal(false);
     try {
-      if (type === 'x1' && window.x1?.solana) {
-        const resp = await window.x1.solana.connect();
-        address = resp.publicKey.toString();
-      } else if (type === 'phantom' && window.solana?.isPhantom) {
-        const resp = await window.solana.connect();
-        address = resp.publicKey.toString();
-      } else if (type === 'backpack' && window.backpack) {
-        const resp = await window.backpack.connect();
-        address = resp.publicKey.toString();
-      } else if (type === 'metamask' && window.ethereum) {
-        const accts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        address = accts[0];
-      } else {
-        // Demo mode
-        address = `demo_${type}_${Math.random().toString(36).slice(2, 10)}`;
+      let address;
+      if (walletType === 'x1') {
+        const res = await window.x1Wallet.connect();
+        address = res.publicKey.toString();
+      } else if (walletType === 'phantom') {
+        const res = await window.phantom.solana.connect();
+        address = res.publicKey.toString();
+      } else if (walletType === 'backpack') {
+        const res = await window.backpack.connect();
+        address = res.publicKey.toString();
+      } else if (walletType === 'metamask') {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        address = accounts[0];
       }
-      const res = await fetch(AUTH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: address, wallet_type: type })
-      });
-      const data = await res.json();
-      if (data.success) {
-        if (data.is_new_user) {
-          setPendingWallet({ address, type });
-          setModalStep('username');
-        } else {
-          saveUser(data.player || data.user);
-          setUser(data.player || data.user);
-          setShowModal(false);
-        }
-      } else {
-        setAuthError(data.error || 'Authentication failed');
-      }
-    } catch (e) {
-      setAuthError(e.message || 'Connection failed');
+      setTempWalletAddress(address);
+      await attemptAuth(address, 'temp_check_wallet');
+    } catch (err) {
+      console.error('Wallet connect error:', err);
     }
-    setAuthLoading(false);
+    setConnecting(false);
   };
 
-  const confirmUsername = async () => {
-    if (!chatName || chatName.length < 3 || chatName.length > 16) {
-      setAuthError('Chat name must be 3-16 characters');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(chatName)) {
-      setAuthError('Alphanumeric + underscore only');
-      return;
-    }
-    setAuthLoading(true);
-    setAuthError('');
+  const attemptAuth = async (address, username) => {
     try {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet_address: pendingWallet.address,
-          wallet_type: pendingWallet.type,
-          chat_username: chatName,
-          game_username: gameName || chatName,
-          username: chatName
-        })
+        body: JSON.stringify({ wallet_address: address, username })
       });
       const data = await res.json();
       if (data.success) {
-        saveUser(data.player || data.user);
-        setUser(data.player || data.user);
-        setShowModal(false);
-        setModalStep('wallets');
-        setChatName('');
-        setGameName('');
+        const u = data.player || data.user;
+        saveUser(u);
+        setUser(u);
+        setShowUsernameModal(false);
+      } else if (data.error && (
+        data.error.includes('Username must be') ||
+        data.error.includes('Username already taken') ||
+        data.error.includes('Invalid username') ||
+        data.error.includes('already exists') ||
+        data.error.includes('taken')
+      )) {
+        setShowUsernameModal(true);
+      } else if (data.error && data.error.includes('temp_check_wallet')) {
+        setShowUsernameModal(true);
       } else {
-        setAuthError(data.error || 'Registration failed');
+        // Any auth error on temp_check means new user
+        setShowUsernameModal(true);
       }
-    } catch (e) {
-      setAuthError(e.message);
+    } catch (err) {
+      console.error('Auth error:', err);
     }
-    setAuthLoading(false);
+  };
+
+  const submitUsername = async () => {
+    const reserved = ['admin','mod','moderator','system','bot','null','undefined'];
+    if (!/^[a-zA-Z0-9_]{3,16}$/.test(usernameInput)) {
+      setUsernameError('3-16 characters, letters/numbers/underscore only');
+      return;
+    }
+    if (reserved.includes(usernameInput.toLowerCase())) {
+      setUsernameError('This username is reserved. Please choose another.');
+      return;
+    }
+    setUsernameError('');
+    await attemptAuth(tempWalletAddress, usernameInput);
   };
 
   const logout = () => {
