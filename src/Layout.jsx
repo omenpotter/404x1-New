@@ -36,6 +36,8 @@ export default function Layout({ children, currentPageName }) {
     window.location.href = createPageUrl('Home');
   };
 
+  const isMod = user && ['moderator', 'admin', 'superuser'].includes(user.user_role);
+
   const navLinks = [
     { name: 'Home', page: 'Home', label: 'HOME' },
     { name: 'Chat', page: 'Chat', label: 'CHAT' },
@@ -44,8 +46,10 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Messages', page: 'Messages', label: 'DMs' },
     { name: 'Profile', page: 'Profile', label: 'PROFILE' },
     { name: 'Docs', page: 'Docs', label: 'DOCS' },
-    { name: 'ModPanel', page: 'ModPanel', label: 'MOD' },
-    { name: 'ModerationLogs', page: 'ModerationLogs', label: 'LOGS' },
+    ...(isMod ? [
+      { name: 'ModPanel', page: 'ModPanel', label: 'MOD' },
+      { name: 'ModerationLogs', page: 'ModerationLogs', label: 'LOGS' },
+    ] : []),
   ];
 
   return (
