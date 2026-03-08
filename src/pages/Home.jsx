@@ -463,12 +463,12 @@ export default function Home() {
       });
       const data = await res.json();
 
-      if (data.success && data.user) {
+      if (data.success && !data.is_new_user && data.user) {
         // Returning user — log them in directly
         saveUser(data.user);
         setUser(data.user);
         window.dispatchEvent(new Event('userAuthChanged'));
-      } else if (data.success && data.is_new_user) {
+      } else if (data.is_new_user) {
         // New wallet — show username setup
         setShowUsernameModal(true);
       }
