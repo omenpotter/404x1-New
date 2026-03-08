@@ -454,7 +454,24 @@ export default function Home() {
         address = accounts[0];
       }
       setTempWalletAddress(address);
-      await attemptAuth(address, 'temp_check_wallet');
+
+      // First: check if wallet already exists (no username sent)
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: address })
+      });
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        // Returning user — log them in directly
+        saveUser(data.user);
+        setUser(data.user);
+        window.dispatchEvent(new Event('userAuthChanged'));
+      } else if (data.success && data.is_new_user) {
+        // New wallet — show username setup
+        setShowUsernameModal(true);
+      }
     } catch (err) {
       console.error('Wallet connect error:', err);
     }
@@ -469,25 +486,13 @@ export default function Home() {
         body: JSON.stringify({ wallet_address: address, username })
       });
       const data = await res.json();
-      if (data.success) {
-        const u = data.player || data.user;
-        saveUser(u);
-        setUser(u);
+      if (data.success && data.user) {
+        saveUser(data.user);
+        setUser(data.user);
         setShowUsernameModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
-      } else if (data.error && (
-        data.error.includes('Username must be') ||
-        data.error.includes('Username already taken') ||
-        data.error.includes('Invalid username') ||
-        data.error.includes('already exists') ||
-        data.error.includes('taken')
-      )) {
-        setShowUsernameModal(true);
-      } else if (data.error && data.error.includes('temp_check_wallet')) {
-        setShowUsernameModal(true);
-      } else {
-        // Any auth error on temp_check means new user
-        setShowUsernameModal(true);
+      } else if (data.error) {
+        setUsernameError(data.error);
       }
     } catch (err) {
       console.error('Auth error:', err);
