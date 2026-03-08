@@ -479,12 +479,8 @@ export default function Home() {
 
   const attemptAuth = async (address, username) => {
     try {
-      const res = await fetch(AUTH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: address, username })
-      });
-      const data = await res.json();
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address, username });
+      const data = response.data;
       if (data.success && data.user) {
         saveUser(data.user);
         setUser(data.user);
