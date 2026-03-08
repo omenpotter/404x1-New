@@ -832,7 +832,8 @@ export default function Home() {
           {/* CTAs */}
           <div className="cta-section404">
             <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
-            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
+            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{border:'2px solid #7dff7d',cursor:'pointer',background:'transparent'}}>CONNECT WALLET</button>}
+          <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
           </div>
 
           {/* RP Cards */}
