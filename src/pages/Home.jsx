@@ -116,12 +116,12 @@ const CHART_IFRAME_SRC = `
       if (!buckets[k]) buckets[k] = { time: k, open: t.price, high: t.price, low: t.price, close: t.price, volume: t.tok };
       else {
         buckets[k].high = Math.max(buckets[k].high, t.price);
-        buckets[k].low = Math.min(buckets[k].low, t.price);
+        buckets[k].low  = Math.min(buckets[k].low,  t.price);
         buckets[k].close = t.price;
         buckets[k].volume += t.tok;
       }
     }
-    return Object.values(buckets).sort((a,b) => a.time - b.time);
+    return Object.values(buckets).sort((a, b) => a.time - b.time);
   }
 
   function render() {
@@ -186,7 +186,7 @@ export default function Home() {
   const [feedTab, setFeedTab] = useState('transactions');
   const [copyDone, setCopyDone] = useState(false);
 
-  // ── Auth state ───────────────────────────────────────────────────────────
+  // Auth state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [tempWalletAddress, setTempWalletAddress] = useState('');
@@ -195,7 +195,6 @@ export default function Home() {
   const [connecting, setConnecting] = useState(false);
   const [walletConnectError, setWalletConnectError] = useState('');
   const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
-  // ────────────────────────────────────────────────────────────────────────
 
   const [unreadCount, setUnreadCount] = useState(0);
   const iframeRef = useRef(null);
@@ -205,9 +204,7 @@ export default function Home() {
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.get('connect') === '1' && !getUser()) {
-      setShowWalletModal(true);
-    }
+    if (p.get('connect') === '1' && !getUser()) setShowWalletModal(true);
     const handler = () => { if (!getUser()) setShowWalletModal(true); };
     window.addEventListener('open_wallet_modal', handler);
     return () => window.removeEventListener('open_wallet_modal', handler);
@@ -272,8 +269,8 @@ export default function Home() {
     setChartPrice(p.toFixed(6));
     const cap = p * TOTAL_SUPPLY;
     if (cap >= 1_000_000) setMarketCap((cap / 1_000_000).toFixed(2) + 'M XNT');
-    else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(1) + 'k XNT');
-    else setMarketCap(cap.toFixed(2) + ' XNT');
+    else if (cap >= 1000)  setMarketCap((cap / 1000).toFixed(1) + 'k XNT');
+    else                   setMarketCap(cap.toFixed(2) + ' XNT');
   };
 
   const fetchPrice = async () => {
@@ -283,26 +280,20 @@ export default function Home() {
       if (p1 > 0) {
         applyPrice(p1);
         const ch = d1.change_24h ?? d1.data?.change_24h;
-        if (ch != null) {
-          setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
-        }
+        if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
         return;
       }
     } catch {}
     try {
       const d2 = await xdex(`/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
       const out2 = findOutputAmount(d2);
-      if (out2 && out2 > 0) { applyPrice(1 / out2); }
-    } catch (e) {
-      console.warn('Price fetch failed:', e.message);
-    }
+      if (out2 && out2 > 0) applyPrice(1 / out2);
+    } catch (e) { console.warn('Price fetch failed:', e.message); }
   };
-
-  const fetchTrades = async () => { fetchTradesFromRpc(); };
 
   const fetchTradesFromRpc = async () => {
     const cacheKey = 'chart_trades_cache';
-    const cacheTs = 'chart_trades_ts';
+    const cacheTs  = 'chart_trades_ts';
     const now = Date.now();
     const cached = localStorage.getItem(cacheKey);
     const ts = parseInt(localStorage.getItem(cacheTs) || '0');
@@ -321,20 +312,14 @@ export default function Home() {
         const txs = await Promise.all(batch.map(s =>
           rpc('getTransaction', [s.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }])
         ));
-        for (const tx of txs) {
-          if (!tx) continue;
-          const t = parseTrade(tx);
-          if (t) trades.push(t);
-        }
+        for (const tx of txs) { if (!tx) continue; const t = parseTrade(tx); if (t) trades.push(t); }
       }
       trades.sort((a, b) => a.time - b.time);
       localStorage.setItem(cacheKey, JSON.stringify(trades));
       localStorage.setItem(cacheTs, String(now));
       sendTradesToChart(trades);
       buildTransactions(trades);
-    } catch (e) {
-      console.warn('RPC trades fetch failed:', e.message);
-    }
+    } catch (e) { console.warn('RPC trades fetch failed:', e.message); }
   };
 
   const sendTradesToChart = (trades) => {
@@ -346,62 +331,44 @@ export default function Home() {
     }
   };
 
-  const buildTransactions = (trades) => { setTransactions([...trades].reverse().slice(0, 50)); };
+  const buildTransactions = (trades) => setTransactions([...trades].reverse().slice(0, 50));
 
   const fetchHolders = async () => {
     try {
       const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
       const T2022  = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
       const [legacyRes, t2022Res] = await Promise.all([
-        rpc('getProgramAccounts', [LEGACY, {
-          encoding: 'jsonParsed',
-          filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }]
-        }]).catch(() => []),
-        rpc('getProgramAccounts', [T2022, {
-          encoding: 'jsonParsed',
-          filters: [{ memcmp: { offset: 0, bytes: TOKEN_CA } }]
-        }]).catch(() => []),
+        rpc('getProgramAccounts', [LEGACY, { encoding: 'jsonParsed', filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }] }]).catch(() => []),
+        rpc('getProgramAccounts', [T2022,  { encoding: 'jsonParsed', filters: [{ memcmp: { offset: 0, bytes: TOKEN_CA } }] }]).catch(() => []),
       ]);
       const combined = [...(legacyRes || []), ...(t2022Res || [])];
       if (!combined.length) { setHolders('N/A'); return; }
       const accts = combined
-        .map(a => ({
-          wallet: a.account?.data?.parsed?.info?.owner || a.pubkey,
-          tokenAccount: a.pubkey,
-          balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0
-        }))
+        .map(a => ({ wallet: a.account?.data?.parsed?.info?.owner || a.pubkey, balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0 }))
         .filter(a => a.balance > 0)
         .sort((a, b) => b.balance - a.balance);
       setHolders(accts.length.toLocaleString());
       setHolderList(accts.slice(0, 50));
-    } catch (e) {
-      console.warn('Holders fetch failed:', e.message);
-      setHolders('N/A');
-    }
+    } catch (e) { console.warn('Holders fetch failed:', e.message); setHolders('N/A'); }
   };
 
   useEffect(() => {
     fetchPrice();
-    fetchTrades();
+    fetchTradesFromRpc();
     fetchHolders();
-    const priceInt = setInterval(fetchPrice, 30000);
-    const tradesInt = setInterval(fetchTrades, 60000);
+    const priceInt  = setInterval(fetchPrice, 30000);
+    const tradesInt = setInterval(fetchTradesFromRpc, 60000);
     return () => { clearInterval(priceInt); clearInterval(tradesInt); };
   }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(TOKEN_CA).then(() => {
-      setCopyDone(true);
-      setTimeout(() => setCopyDone(false), 2000);
+      setCopyDone(true); setTimeout(() => setCopyDone(false), 2000);
     }).catch(() => {
       const ta = document.createElement('textarea');
-      ta.value = TOKEN_CA;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopyDone(true);
-      setTimeout(() => setCopyDone(false), 2000);
+      ta.value = TOKEN_CA; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      setCopyDone(true); setTimeout(() => setCopyDone(false), 2000);
     });
   };
 
@@ -410,14 +377,28 @@ export default function Home() {
     iframeRef.current?.contentWindow?.postMessage({ type: 'setTF', tf }, '*');
   };
 
-  // ── WALLET CONNECT — port of working old repo logic ──────────────────────
-  // Step 1: open wallet extension popup, get real address
-  // Step 2: call authWallet with dummy username 'temp_check_wallet'
-  //         → backend finds existing wallet → auto login (no username needed)
-  //         → backend does NOT find wallet → error triggers username form
-  // Step 3: new user submits username → call authWallet again with real username
+  // ── WALLET AUTH ────────────────────────────────────────────────────────────
+  //
+  // HOW IT WORKS (ported from working vanilla JS repo):
+  //
+  // 1. User clicks wallet button
+  // 2. CLOSE our modal overlay FIRST — browser blocks extension popups
+  //    if a fullscreen overlay is covering the page
+  // 3. Call window.x1Wallet.connect() — wallet extension popup opens
+  // 4. Get real wallet address from extension
+  // 5. POST to authWallet with wallet_address only (no username)
+  //    → Backend: wallet found   → returns user  → auto login ✓
+  //    → Backend: wallet missing → is_new_user:true → show username form
+  // 6. New user submits username → POST again with wallet_address + username
+  //    → Backend creates account → auto login ✓
+  //
+  // KEY FIX: setShowWalletModal(false) BEFORE calling .connect()
+  // ──────────────────────────────────────────────────────────────────────────
 
   const connectWallet = async (walletType) => {
+    // Close the modal overlay BEFORE opening the wallet popup
+    // Wallet extensions refuse to open if a fullscreen overlay is present
+    setShowWalletModal(false);
     setConnecting(true);
     setWalletConnectError('');
     setWalletConnectSuccess('');
@@ -426,7 +407,8 @@ export default function Home() {
     try {
       if (walletType === 'x1') {
         if (typeof window.x1Wallet === 'undefined') {
-          setWalletConnectError('X1 Wallet not installed. Click "Install →" below.');
+          setWalletConnectError('X1 Wallet not installed.');
+          setShowWalletModal(true);
           setConnecting(false);
           return;
         }
@@ -435,7 +417,8 @@ export default function Home() {
 
       } else if (walletType === 'phantom') {
         if (!window.phantom?.solana) {
-          setWalletConnectError('Phantom not installed. Click "Install →" below.');
+          setWalletConnectError('Phantom not installed.');
+          setShowWalletModal(true);
           setConnecting(false);
           return;
         }
@@ -444,7 +427,8 @@ export default function Home() {
 
       } else if (walletType === 'backpack') {
         if (typeof window.backpack === 'undefined') {
-          setWalletConnectError('Backpack not installed. Click "Install →" below.');
+          setWalletConnectError('Backpack not installed.');
+          setShowWalletModal(true);
           setConnecting(false);
           return;
         }
@@ -453,7 +437,8 @@ export default function Home() {
 
       } else if (walletType === 'metamask') {
         if (typeof window.ethereum === 'undefined') {
-          setWalletConnectError('MetaMask not installed. Click "Install →" below.');
+          setWalletConnectError('MetaMask not installed.');
+          setShowWalletModal(true);
           setConnecting(false);
           return;
         }
@@ -463,17 +448,19 @@ export default function Home() {
 
       if (!address) {
         setWalletConnectError('Could not get wallet address. Please try again.');
+        setShowWalletModal(true);
         setConnecting(false);
         return;
       }
 
       setTempWalletAddress(address);
 
-      // Use dummy username — backend checks wallet first, ignores username if wallet exists
-      await attemptLogin(address, 'temp_check_wallet');
+      // Check backend — send wallet only, no username
+      await attemptLogin(address, null);
 
     } catch (err) {
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
+      setShowWalletModal(true); // reopen so user can see the error
     }
 
     setConnecting(false);
@@ -481,45 +468,42 @@ export default function Home() {
 
   const attemptLogin = async (walletAddress, username) => {
     try {
+      // Only include username in body if we actually have one
+      const body = { wallet_address: walletAddress };
+      if (username) body.username = username;
+
       const response = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: walletAddress, username })
+        body: JSON.stringify(body)
       });
       const data = await response.json();
 
-      if (data.success) {
-        // Wallet recognised (returning user) OR new account just created
+      if (data.success && !data.is_new_user) {
+        // Existing user — log in immediately
         const u = data.user || data.player;
         saveUser(u);
         setUser(u);
         setShowWalletModal(false);
         setShowUsernameModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
-        if (username.startsWith('temp_check_')) {
-          // Returning user
-          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-        } else {
-          // New user just created
-          setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
-        }
+        const msg = username
+          ? `Welcome to 404x1, ${u.username}! 👾`
+          : `Welcome back, ${u.username}! 👾`;
+        setWalletConnectSuccess(msg);
         setTimeout(() => setWalletConnectSuccess(''), 4000);
 
-      } else if (data.error) {
-        if (
-          data.error.includes('Username must be') ||
-          data.error.includes('Username already taken') ||
-          data.error.includes('invalid') ||
-          data.is_new_user === true
-        ) {
-          // New wallet — needs a real username
-          setShowUsernameModal(true);
-        } else {
-          setWalletConnectError('Login failed: ' + data.error);
-        }
+      } else if (data.is_new_user) {
+        // New wallet — ask for username
+        setShowUsernameModal(true);
+
+      } else {
+        setWalletConnectError(data.error || 'Authentication failed');
+        setShowWalletModal(true);
       }
     } catch (err) {
       setWalletConnectError(err.message || 'Login failed. Please try again.');
+      setShowWalletModal(true);
     }
   };
 
@@ -530,17 +514,18 @@ export default function Home() {
       return;
     }
     if (reserved.includes(usernameInput.toLowerCase())) {
-      setUsernameError('This username is reserved. Please choose another.');
+      setUsernameError('That username is reserved. Please choose another.');
       return;
     }
     setUsernameError('');
     if (tempWalletAddress) {
       await attemptLogin(tempWalletAddress, usernameInput);
     } else {
-      setUsernameError('Wallet connection lost. Please try again.');
+      setUsernameError('Wallet session lost. Please close and connect again.');
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────
+
+  // ──────────────────────────────────────────────────────────────────────────
 
   const logout = () => {
     clearUser();
@@ -598,7 +583,7 @@ export default function Home() {
         .ohlcv-l404 { color:#ff4444; }
         .chart-canvas404 { height:380px;position:relative; }
         .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
-        .action-btns404 { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0; }
+        .action-btns404 { display:grid;gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
         .action-btn404:hover { border-color:#7dff7d;box-shadow:0 0 10px rgba(125,255,125,0.15); }
         .action-title404 { color:#7dff7d;font-size:13px;margin-bottom:3px; }
@@ -644,7 +629,6 @@ export default function Home() {
         @keyframes floatAnim404 { 0%,100%{transform:translateY(0) rotate(-10deg);opacity:0.3} 50%{transform:translateY(-20px) rotate(10deg);opacity:0.6} }
         @media(max-width:768px){
           .stats-grid404{grid-template-columns:1fr 1fr;}
-          .action-btns404{grid-template-columns:1fr 1fr;}
           .rp-cards404{grid-template-columns:1fr;}
           .nav-links404{display:none;}
           .txn-row404{grid-template-columns:70px 50px 1fr 1fr;font-size:10px;}
@@ -652,7 +636,6 @@ export default function Home() {
         }
         @media(max-width:480px){
           .stats-grid404{grid-template-columns:1fr;}
-          .action-btns404{grid-template-columns:1fr 1fr;}
           .chart-canvas404{height:260px;}
         }
       `}</style>
@@ -662,9 +645,9 @@ export default function Home() {
 
       {[
         { text: '404 ERROR', style: { left: '10%', top: '20%', animationDelay: '0s' } },
-        { text: 'X1 SVM', style: { left: '85%', top: '30%', animationDelay: '2s' } },
+        { text: 'X1 SVM',   style: { left: '85%', top: '30%', animationDelay: '2s' } },
         { text: '404 ERROR', style: { left: '15%', top: '70%', animationDelay: '4s' } },
-        { text: 'X1 SVM', style: { left: '80%', top: '65%', animationDelay: '6s' } },
+        { text: 'X1 SVM',   style: { left: '80%', top: '65%', animationDelay: '6s' } },
       ].map((f, i) => <div key={i} className="float-item404" style={f.style}>{f.text}</div>)}
 
       <div className="page-content">
@@ -687,129 +670,105 @@ export default function Home() {
             ))}
           </div>
 
-          <div>
-            <div className="ca-section404">
-              <div className="ca-label404">CONTRACT ADDRESS (CA)</div>
-              <div className="ca-box404">
-                <span className="ca-addr404">{TOKEN_CA}</span>
-                <button className="copy-btn404" onClick={handleCopy}>{copyDone ? '✅' : '📋'}</button>
+          <div className="ca-section404">
+            <div className="ca-label404">CONTRACT ADDRESS (CA)</div>
+            <div className="ca-box404">
+              <span className="ca-addr404">{TOKEN_CA}</span>
+              <button className="copy-btn404" onClick={handleCopy}>{copyDone ? '✅' : '📋'}</button>
+            </div>
+          </div>
+
+          <div className="stats-grid404">
+            <div className="stat-card404"><div className="stat-label404">PRICE XNT</div><div className="stat-val404">{price}</div></div>
+            <div className="stat-card404"><div className="stat-label404">HOLDERS</div><div className="stat-val404">{holders}</div></div>
+            <div className="stat-card404"><div className="stat-label404">MARKET CAP XNT</div><div className="stat-val404">{marketCap}</div></div>
+          </div>
+
+          <div className="chart-wrap404">
+            <div className="chart-header404">
+              <div className="chart-pair404">
+                <span className="chart-pair-name404">WXNT / 404</span>
+                <span className="chart-dot404">●</span>
+                <span className="chart-tf-label404">{currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}</span>
+              </div>
+              <div className="chart-price-wrap404">
+                <span className="chart-price404">{chartPrice}</span>
+                <span className="chart-change404">{chartChange}</span>
               </div>
             </div>
-
-            <div className="stats-grid404">
-              <div className="stat-card404">
-                <div className="stat-label404">PRICE XNT</div>
-                <div className="stat-val404">{price}</div>
-              </div>
-              <div className="stat-card404">
-                <div className="stat-label404">HOLDERS</div>
-                <div className="stat-val404">{holders}</div>
-              </div>
-              <div className="stat-card404">
-                <div className="stat-label404">MARKET CAP XNT</div>
-                <div className="stat-val404">{marketCap}</div>
-              </div>
+            <div className="tf-btns404">
+              {[1, 5, 15, 60, 240, 1440].map(tf => (
+                <button key={tf} className={`tf-btn404${currentTF === tf ? ' active' : ''}`} onClick={() => handleTF(tf)}>
+                  {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
+                </button>
+              ))}
+              <button className={`tf-btn404${showVol ? ' active' : ''}`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
             </div>
+            <div className="ohlcv404">
+              <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
+              <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
+              <span>L<span className="ohlcv-val404 ohlcv-l404">{fmt(ohlcv.l)}</span></span>
+              <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
+              <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
+            </div>
+            <div className="chart-canvas404">
+              <div className="chart-loading404">Loading chart data from X1 RPC...</div>
+              <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin" srcDoc={CHART_IFRAME_SRC}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} />
+            </div>
+          </div>
 
-            <div className="chart-wrap404">
-              <div className="chart-header404">
-                <div className="chart-pair404">
-                  <span className="chart-pair-name404">WXNT / 404</span>
-                  <span className="chart-dot404">●</span>
-                  <span className="chart-tf-label404">{currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}</span>
+          <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+            <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <div className="action-title404">Bridge</div><div className="action-sub404">Solana ↔ X1</div>
+            </a>
+            <a href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`} target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <div className="action-title404">Trade</div><div className="action-sub404">xDEX Swap</div>
+            </a>
+            <a href="https://xdex.xyz/liquidity" target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <div className="action-title404">Liquidity Pool</div><div className="action-sub404">Add/Remove</div>
+            </a>
+          </div>
+
+          <div className="feed-section404">
+            <div className="feed-tabs404">
+              <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
+              <button className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`} onClick={() => setFeedTab('holders')}>Holders</button>
+            </div>
+            {feedTab === 'transactions' && (
+              <>
+                <div className="feed-header404 txn-header404"><div>Time</div><div>Type</div><div>XNT</div><div>404</div><div>Price</div><div>Maker</div></div>
+                <div className="feed-list404">
+                  {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
+                  {transactions.map((tx, i) => (
+                    <div key={i} className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}>
+                      <span style={{ color: '#666' }}>{new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>{tx.side}</span>
+                      <span>{tx.xnt.toFixed(4)}</span>
+                      <span>{tx.tok.toFixed(0)}</span>
+                      <span style={{ color: '#5fffff' }}>{tx.price.toFixed(6)}</span>
+                      <span style={{ color: '#666' }}>{truncWallet(tx.maker)}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="chart-price-wrap404">
-                  <span className="chart-price404">{chartPrice}</span>
-                  <span className="chart-change404">{chartChange}</span>
+              </>
+            )}
+            {feedTab === 'holders' && (
+              <>
+                <div className="feed-header404 hld-header404"><div>Rank</div><div>Wallet</div><div>Balance</div><div>Share</div></div>
+                <div className="feed-list404">
+                  {holderList.length === 0 && <div className="loading-row404">Loading holder data...</div>}
+                  {holderList.map((h, i) => (
+                    <div key={i} className="hld-row404">
+                      <span style={{ color: '#888' }}>#{i + 1}</span>
+                      <span style={{ color: '#5fffff' }}>{truncWallet(h.wallet)}</span>
+                      <span style={{ color: '#e0e0e0' }}>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                      <span style={{ color: '#7dff7d' }}>{((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%</span>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="tf-btns404">
-                {[1, 5, 15, 60, 240, 1440].map(tf => (
-                  <button key={tf} className={`tf-btn404${currentTF === tf ? ' active' : ''}`} onClick={() => handleTF(tf)}>
-                    {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
-                  </button>
-                ))}
-                <button className={`tf-btn404${showVol ? ' active' : ''}`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
-              </div>
-              <div className="ohlcv404">
-                <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
-                <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
-                <span>L<span className="ohlcv-val404 ohlcv-l404">{fmt(ohlcv.l)}</span></span>
-                <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
-                <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
-              </div>
-              <div className="chart-canvas404">
-                <div className="chart-loading404">Loading chart data from X1 RPC...</div>
-                <iframe
-                  ref={iframeRef}
-                  sandbox="allow-scripts allow-same-origin"
-                  srcDoc={CHART_IFRAME_SRC}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                />
-              </div>
-            </div>
-
-            <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
-                <div className="action-title404">Bridge</div>
-                <div className="action-sub404">Solana ↔ X1</div>
-              </a>
-              <a href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`} target="_blank" rel="noopener noreferrer" className="action-btn404">
-                <div className="action-title404">Trade</div>
-                <div className="action-sub404">xDEX Swap</div>
-              </a>
-              <a href="https://xdex.xyz/liquidity" target="_blank" rel="noopener noreferrer" className="action-btn404">
-                <div className="action-title404">Liquidity Pool</div>
-                <div className="action-sub404">Add/Remove</div>
-              </a>
-            </div>
-
-            <div className="feed-section404">
-              <div className="feed-tabs404">
-                <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
-                <button className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`} onClick={() => setFeedTab('holders')}>Holders</button>
-              </div>
-
-              {feedTab === 'transactions' && (
-                <>
-                  <div className="feed-header404 txn-header404">
-                    <div>Time</div><div>Type</div><div>XNT</div><div>404</div><div>Price</div><div>Maker</div>
-                  </div>
-                  <div className="feed-list404">
-                    {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
-                    {transactions.map((tx, i) => (
-                      <div key={i} className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}>
-                        <span style={{ color: '#666' }}>{new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>{tx.side}</span>
-                        <span>{tx.xnt.toFixed(4)}</span>
-                        <span>{tx.tok.toFixed(0)}</span>
-                        <span style={{ color: '#5fffff' }}>{tx.price.toFixed(6)}</span>
-                        <span style={{ color: '#666' }}>{truncWallet(tx.maker)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {feedTab === 'holders' && (
-                <>
-                  <div className="feed-header404 hld-header404">
-                    <div>Rank</div><div>Wallet</div><div>Balance</div><div>Share</div>
-                  </div>
-                  <div className="feed-list404">
-                    {holderList.length === 0 && <div className="loading-row404">Loading holder data from xDEX...</div>}
-                    {holderList.map((h, i) => (
-                      <div key={i} className="hld-row404">
-                        <span style={{ color: '#888' }}>#{i + 1}</span>
-                        <span style={{ color: '#5fffff' }}>{h.label || truncWallet(h.wallet)}</span>
-                        <span style={{ color: '#e0e0e0' }}>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                        <span style={{ color: '#7dff7d' }}>{((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           <div className="token-desc404">
@@ -819,26 +778,26 @@ export default function Home() {
 
           <div className="cta-section404">
             <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
-            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{border:'2px solid #7dff7d',cursor:'pointer',background:'transparent'}}>CONNECT WALLET</button>}
+            {!user && (
+              <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)}
+                style={{ border: '2px solid #7dff7d', cursor: 'pointer', background: 'transparent' }}>
+                CONNECT WALLET
+              </button>
+            )}
             <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
           </div>
 
+          {/* Welcome back success banner — shown outside modal after login */}
+          {walletConnectSuccess && (
+            <div style={{ margin: '0 auto 16px', maxWidth: '420px', padding: '12px 20px', background: 'rgba(125,255,125,0.08)', border: '1px solid #7dff7d', color: '#7dff7d', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', textAlign: 'center', borderRadius: '2px' }}>
+              {walletConnectSuccess}
+            </div>
+          )}
+
           <div className="rp-cards404">
-            <div className="rp-card404">
-              <div className="rp-icon404">⚡</div>
-              <div className="rp-title404">Reputation Points</div>
-              <p className="rp-text404">Earn RP through chat participation and game progression.</p>
-            </div>
-            <div className="rp-card404">
-              <div className="rp-icon404">🎮</div>
-              <div className="rp-title404">Runner Game</div>
-              <p className="rp-text404">Dodge enemies, collect tokens, score points. Submit for RP.</p>
-            </div>
-            <div className="rp-card404">
-              <div className="rp-icon404">🏆</div>
-              <div className="rp-title404">Leaderboards</div>
-              <p className="rp-text404">Compete in chat activity and game mastery.</p>
-            </div>
+            <div className="rp-card404"><div className="rp-icon404">⚡</div><div className="rp-title404">Reputation Points</div><p className="rp-text404">Earn RP through chat participation and game progression.</p></div>
+            <div className="rp-card404"><div className="rp-icon404">🎮</div><div className="rp-title404">Runner Game</div><p className="rp-text404">Dodge enemies, collect tokens, score points. Submit for RP.</p></div>
+            <div className="rp-card404"><div className="rp-icon404">🏆</div><div className="rp-title404">Leaderboards</div><p className="rp-text404">Compete in chat activity and game mastery.</p></div>
           </div>
         </div>
 
@@ -852,100 +811,83 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* ── Wallet Selection Modal ── */}
+      {/* ── Wallet Selection Modal ────────────────────────────────────────────── */}
       {showWalletModal && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setShowWalletModal(false)}>
-          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
+          <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono',monospace" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
+            <div style={{ fontFamily: "'Rubik Mono One',monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '24px', textAlign: 'center' }}>
               CONNECT WALLET
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-              {/* X1 — always a button regardless of detection */}
-              <button onClick={() => connectWallet('x1')} disabled={connecting}
-                style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between',opacity:connecting?0.5:1}}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button onClick={() => connectWallet('x1')}
+                style={{ background: 'linear-gradient(135deg,#7dff7d22,#7dff7d11)', border: '2px solid #7dff7d', color: '#7dff7d', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>⭐ X1 Wallet</span>
-                <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
+                <span style={{ background: '#7dff7d', color: '#0a0a0a', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold' }}>RECOMMENDED</span>
               </button>
-              {/* Phantom — always a button */}
-              <button onClick={() => connectWallet('phantom')} disabled={connecting}
-                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
+              <button onClick={() => connectWallet('phantom')}
+                style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', textAlign: 'left' }}>
                 👻 Phantom
               </button>
-              {/* Backpack — always a button */}
-              <button onClick={() => connectWallet('backpack')} disabled={connecting}
-                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
+              <button onClick={() => connectWallet('backpack')}
+                style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', textAlign: 'left' }}>
                 🎒 Backpack
               </button>
-              {/* MetaMask — always a button */}
-              <button onClick={() => connectWallet('metamask')} disabled={connecting}
-                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
+              <button onClick={() => connectWallet('metamask')}
+                style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', textAlign: 'left' }}>
                 🦊 MetaMask
               </button>
             </div>
-            {connecting && (
-              <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'14px'}}>
-                Connecting... check your wallet extension
-              </div>
-            )}
             {walletConnectError && (
-              <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
+              <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,68,68,0.08)', border: '1px solid #ff4444', color: '#ff4444', fontFamily: "'Share Tech Mono',monospace", fontSize: '12px', textAlign: 'center', borderRadius: '2px' }}>
                 ⚠ {walletConnectError}
-                <div style={{marginTop:'6px',fontSize:'11px'}}>
-                  {walletConnectError.includes('X1') && <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install X1 Wallet →</a>}
-                  {walletConnectError.includes('Phantom') && <a href="https://phantom.app" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Phantom →</a>}
-                  {walletConnectError.includes('Backpack') && <a href="https://www.backpack.app" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Backpack →</a>}
-                  {walletConnectError.includes('MetaMask') && <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install MetaMask →</a>}
+                <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                  {walletConnectError.includes('X1')      && <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d' }}>Install X1 Wallet →</a>}
+                  {walletConnectError.includes('Phantom') && <a href="https://phantom.app"           target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d' }}>Install Phantom →</a>}
+                  {walletConnectError.includes('Backpack') && <a href="https://www.backpack.app"     target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d' }}>Install Backpack →</a>}
+                  {walletConnectError.includes('MetaMask') && <a href="https://metamask.io"          target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d' }}>Install MetaMask →</a>}
                 </div>
               </div>
             )}
-            {walletConnectSuccess && (
-              <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
-                {walletConnectSuccess}
-              </div>
-            )}
-            <div style={{textAlign:'center',fontSize:'11px',color:'#555',marginTop:'12px'}}>
-              No X1 Wallet? <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Here</a>
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#555', marginTop: '14px' }}>
+              No X1 Wallet? <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d' }}>Install Here</a>
             </div>
             <button onClick={() => setShowWalletModal(false)}
-              style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'8px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+              style={{ background: 'transparent', border: 'none', color: '#444', padding: '16px', width: '100%', marginTop: '8px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '12px' }}>
               CANCEL
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Username Setup Modal ── */}
+      {/* ── Username Setup Modal ─────────────────────────────────────────────── */}
       {showUsernameModal && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}>
-            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'8px',textAlign:'center'}}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono',monospace" }}>
+            <div style={{ fontFamily: "'Rubik Mono One',monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '8px', textAlign: 'center' }}>
               SET USERNAME
             </div>
-            <div style={{color:'#ffaa00',fontSize:'11px',textAlign:'center',marginBottom:'20px'}}>
+            <div style={{ color: '#ffaa00', fontSize: '11px', textAlign: 'center', marginBottom: '20px' }}>
               ⚠️ Username is PERMANENT and cannot be changed!
             </div>
-            <div style={{marginBottom:'16px'}}>
-              <label style={{fontSize:'10px',color:'#888',display:'block',marginBottom:'6px',letterSpacing:'1px'}}>USERNAME (3-16 chars)</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '10px', color: '#888', display: 'block', marginBottom: '6px', letterSpacing: '1px' }}>USERNAME (3-16 chars)</label>
               <input
-                style={{width:'100%',padding:'10px 12px',background:'#1a1a2a',border:'1px solid #2a2a4a',color:'#e0e0e0',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',outline:'none',boxSizing:'border-box'}}
-                type="text"
-                placeholder="your_username"
-                value={usernameInput}
+                style={{ width: '100%', padding: '10px 12px', background: '#1a1a2a', border: '1px solid #2a2a4a', color: '#e0e0e0', fontFamily: "'Share Tech Mono',monospace", fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                type="text" placeholder="your_username" value={usernameInput}
                 onChange={e => setUsernameInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && submitUsername()}
-                maxLength={16}
-                autoFocus
+                maxLength={16} autoFocus
               />
             </div>
-            {usernameError && <div style={{color:'#ff4444',fontSize:'11px',marginBottom:'12px'}}>⚠ {usernameError}</div>}
+            {usernameError && <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '12px' }}>⚠ {usernameError}</div>}
             <button onClick={submitUsername}
-              style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
+              style={{ width: '100%', padding: '12px', border: '2px solid #7dff7d', background: 'transparent', color: '#7dff7d', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '14px', letterSpacing: '1px' }}>
               CONFIRM & LOCK USERNAME
             </button>
             <button onClick={() => { setShowUsernameModal(false); setUsernameInput(''); setUsernameError(''); }}
-              style={{background:'transparent',border:'none',color:'#444',padding:'12px',width:'100%',marginTop:'4px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+              style={{ background: 'transparent', border: 'none', color: '#444', padding: '12px', width: '100%', marginTop: '4px', cursor: 'pointer', fontFamily: "'Share Tech Mono',monospace", fontSize: '12px' }}>
               CANCEL
             </button>
           </div>
