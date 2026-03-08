@@ -509,23 +509,6 @@ export default function Home() {
     setConnecting(false);
   };
 
-  const attemptAuth = async (address, username) => {
-    try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address, username });
-      const data = response.data;
-      if (data.success && data.user) {
-        saveUser(data.user);
-        setUser(data.user);
-        setShowUsernameModal(false);
-        window.dispatchEvent(new Event('userAuthChanged'));
-      } else if (data.error) {
-        setUsernameError(data.error);
-      }
-    } catch (err) {
-      console.error('Auth error:', err);
-    }
-  };
-
   const submitUsername = async () => {
     const reserved = ['admin','mod','moderator','system','bot','null','undefined'];
     if (!/^[a-zA-Z0-9_]{3,16}$/.test(usernameInput)) {
@@ -537,7 +520,24 @@ export default function Home() {
       return;
     }
     setUsernameError('');
-    await attemptAuth(tempWalletAddress, usernameInput);
+    try {
+      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
+      const data = response.data;
+      if (data.success) {
+        const u = data.player || data.user;
+        saveUser(u);
+        setUser(u);
+        setShowUsernameModal(false);
+        setShowWalletModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
+        setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
+      } else {
+        setUsernameError(data.error || 'Registration failed');
+      }
+    } catch (err) {
+      setUsernameError(err.message || 'Registration failed');
+    }
   };
 
   const logout = () => {
