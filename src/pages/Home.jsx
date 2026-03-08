@@ -429,7 +429,7 @@ export default function Home() {
   };
 
   const detectWallets = () => ({
-    x1: typeof window.x1Wallet !== 'undefined',
+    x1: typeof window.x1Wallet !== 'undefined' && window.x1Wallet !== null,
     phantom: typeof window.phantom?.solana !== 'undefined',
     backpack: typeof window.backpack !== 'undefined',
     metamask: typeof window.ethereum !== 'undefined',
