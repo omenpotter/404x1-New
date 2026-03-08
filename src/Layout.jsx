@@ -175,7 +175,7 @@ export default function Layout({ children, currentPageName }) {
               <button className="nav-btn" onClick={logout}>LOGOUT</button>
             </>
           ) : (
-            <Link to={createPageUrl('Home')}>
+            <Link to={createPageUrl('Home') + '?connect=1'}>
               <button className="nav-btn">CONNECT</button>
             </Link>
           )}
