@@ -486,7 +486,7 @@ export default function Home() {
       setTempWalletAddress(address);
 
       const response = await fetch(AUTH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet_address: address, wallet_type: walletType }) });
-const data = await response.json();
+      const data = await response.json();
 
       if (data.success) {
         if (data.is_new_user) {
@@ -522,7 +522,7 @@ const data = await response.json();
     setUsernameError('');
     try {
       const response = await fetch(AUTH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet_address: tempWalletAddress, username: usernameInput }) });
-const data = await response.json();
+      const data = await response.json();
       if (data.success) {
         const u = data.player || data.user;
         saveUser(u);
@@ -913,84 +913,60 @@ const data = await response.json();
       </div>
 
       {/* Wallet Selection Modal */}
-      {showWalletModal && (() => {
-        const w = detectWallets();
-        return (
-          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
-            onClick={() => setShowWalletModal(false)}>
-            <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
-              onClick={e => e.stopPropagation()}>
-              <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
-                CONNECT WALLET
-              </div>
-              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                {/* X1 Wallet */}
-                {w.x1 ? (
-                  <button onClick={() => connectWallet('x1')} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <span>⭐ X1 Wallet</span>
-                    <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
-                  </button>
-                ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>⭐ X1 Wallet (Not Installed)</span>
-                    <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
-                  </div>
-                )}
-                {/* Phantom */}
-                {w.phantom ? (
-                  <button onClick={() => connectWallet('phantom')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
-                    👻 Phantom
-                  </button>
-                ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>👻 Phantom (Not Installed)</span>
-                    <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
-                  </div>
-                )}
-                {/* Backpack */}
-                {w.backpack ? (
-                  <button onClick={() => connectWallet('backpack')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
-                    🎒 Backpack
-                  </button>
-                ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🎒 Backpack (Not Installed)</span>
-                    <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
-                  </div>
-                )}
-                {/* MetaMask */}
-                {w.metamask ? (
-                  <button onClick={() => connectWallet('metamask')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
-                    🦊 MetaMask
-                  </button>
-                ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🦊 MetaMask (Not Installed)</span>
-                    <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
-                  </div>
-                )}
-              </div>
-              {connecting && (
-                <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'10px',fontFamily:"'Share Tech Mono',monospace"}}>Connecting...</div>
-              )}
-              {walletConnectError && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
-                  ⚠ {walletConnectError}
-                </div>
-              )}
-              {walletConnectSuccess && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
-                  {walletConnectSuccess}
-                </div>
-              )}
-              <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'16px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
-                CANCEL
+      {showWalletModal && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={() => setShowWalletModal(false)}>
+          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
+              CONNECT WALLET
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+              {/* X1 Wallet - always show as clickable button */}
+              <button onClick={() => connectWallet('x1')} disabled={connecting} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between',opacity:connecting?0.6:1}}>
+                <span>⭐ X1 Wallet</span>
+                <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
+              </button>
+              {/* Phantom - always show as clickable button */}
+              <button onClick={() => connectWallet('phantom')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+                👻 Phantom
+              </button>
+              {/* Backpack - always show as clickable button */}
+              <button onClick={() => connectWallet('backpack')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+                🎒 Backpack
+              </button>
+              {/* MetaMask - always show as clickable button */}
+              <button onClick={() => connectWallet('metamask')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+                🦊 MetaMask
               </button>
             </div>
+            {connecting && (
+              <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'16px',fontFamily:"'Share Tech Mono',monospace"}}>
+                Connecting... please check your wallet extension
+              </div>
+            )}
+            {walletConnectError && (
+              <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
+                ⚠ {walletConnectError}
+                <div style={{marginTop:'6px',fontSize:'11px',color:'#888'}}>
+                  {walletConnectError.includes('X1') && <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install X1 Wallet →</a>}
+                  {walletConnectError.includes('Phantom') && <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Phantom →</a>}
+                  {walletConnectError.includes('Backpack') && <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Backpack →</a>}
+                  {walletConnectError.includes('MetaMask') && <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install MetaMask →</a>}
+                </div>
+              </div>
+            )}
+            {walletConnectSuccess && (
+              <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
+                {walletConnectSuccess}
+              </div>
+            )}
+            <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'8px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+              CANCEL
+            </button>
           </div>
-        );
-      })()}
-
+        </div>
+      )}
       {/* Username Setup Modal */}
       {showUsernameModal && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
