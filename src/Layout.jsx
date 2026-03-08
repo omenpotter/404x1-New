@@ -45,6 +45,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Profile', page: 'Profile', label: 'PROFILE' },
     { name: 'Docs', page: 'Docs', label: 'DOCS' },
     { name: 'ModPanel', page: 'ModPanel', label: 'MOD' },
+    { name: 'ModerationLogs', page: 'ModerationLogs', label: 'LOGS' },
   ];
 
   return (
