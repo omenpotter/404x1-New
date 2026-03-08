@@ -167,16 +167,42 @@ const sections = [
     icon: '📊',
     content: [
       {
-        heading: '404 ERROR Token',
-        body: 'Ticker: 404\nChain: X1 SVM (Solana Virtual Machine)\nContract: 4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2\nTotal Supply: 404,404 (fixed)\nDecimals: 9'
+        heading: 'Supply Information',
+        body: 'Token name: 404\nTotal supply: 404,404 (fixed — cannot be changed)\nSupply type: Fixed\nMint Authority: Not Set\nDecimals: 9\nChain: X1 SVM (Solana Virtual Machine)\nContract: 4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2'
       },
       {
         heading: 'Trading',
         body: 'Trade on xDEX: the primary DEX on X1 SVM.\nBridge from Solana to X1 via the official X1 bridge.\nPrice is quoted in XNT (Wrapped X1 native token).'
       },
       {
-        heading: 'Philosophy',
-        body: 'No roadmap. No utility promises. No supply expansion. No guarantees.\n\nError 404 — Roadmap Not Found.\nError 404 — Utility Not Found.\nError 404 — Guarantees Not Found.\n\nOnly supply, liquidity, and the market.'
+        heading: 'Token Pools Summary',
+        body: '💎 Initial Liquidity: 100 XNT paired against full 404,404 supply (Fair Launch Base)\n\n🛒 Market Purchases:\n  · 54.35 XNT → 15,003 404\n  · 22.45 XNT → 23,123 404\n  · 10 XNT → 4,999 404\n  · 19.46 XNT → 2,269+ XEN\n  Subtotal: 116.57 XNT\n\n🔗 Paired Liquidity Equivalents:\n  rXNT, PXNT, USDC.X, PEPE, XEN Pools\n  ~22–22.5 XNT per pool × 5 = 88.6 XNT\n\n🔒 Grand Total: ~305 XNT committed\n   All liquidity locked / burned — no withdrawals possible.'
+      },
+      {
+        heading: '👤 Creator Transparency — 4.04%',
+        body: 'Creator allocation: 4.04% of total supply\nMethod: Acquired openly and transparently via the public pool.\nNo private allocation. No early access. No insider wallets.'
+      },
+      {
+        heading: '⚖️ Fairness Model',
+        body: '✗ No private allocation\n✗ No early access\n✗ No insider wallets\n✗ No presale\n✗ No whitelist\n✗ No free mint\n\nLiquidity was added directly to the DEX. Price discovery is left entirely to the market.'
+      },
+      {
+        heading: '☠️ Risk & Philosophy',
+        body: 'If you bought, you bought from the pool.\nIf you didn\'t, nothing was taken from you.\n\n404 is a minimal, experimental meme token.\nThere is no destination. There is no direction.\nOnly supply, liquidity, and the market.\n\nIf you are looking for certainty, you are on the wrong page.'
+      },
+      {
+        heading: '❓ FAQ (404 Style)',
+        body: 'Is there a roadmap?\n  ❌ Error 404 — Roadmap Not Found\n\nCan more tokens be minted?\n  ❌ Error 404 — Supply Expansion Not Found\n\nIs success guaranteed?\n  ❌ Error 404 — Guarantees Not Found\n\nIs there utility?\n  ❌ Error 404 — Utility Not Found'
+      },
+      {
+        heading: '🔗 Links',
+        links: [
+          { label: 'Twitter', url: 'https://x.com/rkbehelvi' },
+          { label: 'Telegram', url: 'https://t.me/+jpYK0gMfA5o1MGFk' },
+          { label: 'Trade on xDEX', url: 'https://app.xdex.xyz/swap?fromTokenAddress=4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2' },
+          { label: 'Bridge (Solana ↔ X1)', url: 'https://app.bridge.x1.xyz/' },
+          { label: 'X1 Explorer', url: 'https://explorer.mainnet.x1.xyz/' },
+        ]
       }
     ]
   }

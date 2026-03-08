@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
         // ✅ STEP 1: CHECK IF WALLET EXISTS FIRST (returning user)
         const existingPlayers = await base44.asServiceRole.entities.Player.filter({
-            wallet_address: wallet_address.toLowerCase()
+            wallet_address: wallet_address
         });
 
         if (existingPlayers.length > 0) {
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
 
         // ✅ STEP 5: Create new player
         const player = await base44.asServiceRole.entities.Player.create({
-            wallet_address: wallet_address.toLowerCase(),
+            wallet_address: wallet_address,
             username: username,
             reputation_points: 0,
             total_score: 0,
