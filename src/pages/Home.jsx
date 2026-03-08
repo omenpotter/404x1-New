@@ -435,44 +435,76 @@ export default function Home() {
     metamask: typeof window.ethereum !== 'undefined',
   });
 
+  const [walletConnectError, setWalletConnectError] = useState('');
+  const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
+
   const connectWallet = async (walletType) => {
     setConnecting(true);
-    setShowWalletModal(false);
+    setWalletConnectError('');
+    setWalletConnectSuccess('');
+    let address = '';
     try {
-      // Step 1: Get wallet address from the browser wallet
-      let address;
       if (walletType === 'x1') {
+        if (!window.x1Wallet) {
+          setWalletConnectError('X1 Wallet not installed. Install from the Chrome Web Store.');
+          setConnecting(false);
+          return;
+        }
         const res = await window.x1Wallet.connect();
-        address = res.publicKey?.toString() || res.toString();
+        address = res.publicKey.toString();
       } else if (walletType === 'phantom') {
+        if (!window.phantom?.solana) {
+          setWalletConnectError('Phantom not installed. Install from phantom.app');
+          setConnecting(false);
+          return;
+        }
         const res = await window.phantom.solana.connect();
         address = res.publicKey.toString();
       } else if (walletType === 'backpack') {
+        if (!window.backpack) {
+          setWalletConnectError('Backpack not installed. Install from backpack.app');
+          setConnecting(false);
+          return;
+        }
         const res = await window.backpack.connect();
         address = res.publicKey.toString();
       } else if (walletType === 'metamask') {
+        if (!window.ethereum) {
+          setWalletConnectError('MetaMask not installed. Install from metamask.io');
+          setConnecting(false);
+          return;
+        }
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
 
-      if (!address) throw new Error('No address returned from wallet');
+      if (!address) {
+        setWalletConnectError('Could not get wallet address. Please try again.');
+        setConnecting(false);
+        return;
+      }
       setTempWalletAddress(address);
 
-      // Step 2: Check if wallet exists in our system
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address });
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType });
       const data = response.data;
 
-      if (data.success && data.user && !data.is_new_user) {
-        // Returning user — log in directly
-        saveUser(data.user);
-        setUser(data.user);
-        window.dispatchEvent(new Event('userAuthChanged'));
-      } else if (data.is_new_user) {
-        // New wallet — ask for username
-        setShowUsernameModal(true);
+      if (data.success) {
+        if (data.is_new_user) {
+          setShowUsernameModal(true);
+        } else {
+          const u = data.player || data.user;
+          saveUser(u);
+          setUser(u);
+          setShowWalletModal(false);
+          window.dispatchEvent(new Event('userAuthChanged'));
+          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+          setTimeout(() => setWalletConnectSuccess(''), 4000);
+        }
+      } else {
+        setWalletConnectError(data.error || 'Authentication failed');
       }
     } catch (err) {
-      console.error('Wallet connect error:', err);
+      setWalletConnectError(err.message || 'Connection failed. Please try again.');
     }
     setConnecting(false);
   };
