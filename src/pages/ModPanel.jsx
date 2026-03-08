@@ -262,7 +262,7 @@ export default function ModPanel() {
             </>
           )}
 
-          {tab === 'rp' && isAdmin && (
+          {tab === 'rp' && isSuperuser && (
             <>
               <div className="field">
                 <label className="field-label">TARGET PLAYER ID *</label>
