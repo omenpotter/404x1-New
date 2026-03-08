@@ -442,7 +442,7 @@ export default function Home() {
       let address;
       if (walletType === 'x1') {
         const res = await window.x1Wallet.connect();
-        address = res.publicKey.toString();
+        address = res.publicKey?.toString() || res.toString();
       } else if (walletType === 'phantom') {
         const res = await window.phantom.solana.connect();
         address = res.publicKey.toString();
@@ -474,6 +474,7 @@ export default function Home() {
         saveUser(u);
         setUser(u);
         setShowUsernameModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
       } else if (data.error && (
         data.error.includes('Username must be') ||
         data.error.includes('Username already taken') ||
@@ -510,6 +511,7 @@ export default function Home() {
   const logout = () => {
     clearUser();
     setUser(null);
+    window.dispatchEvent(new Event('userAuthChanged'));
   };
 
   const fmt = (n, d = 6) => (n || 0).toFixed(d);

@@ -18,11 +18,17 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     setUser(getCurrentUser());
-    // count unread DMs
     try {
       const convs = JSON.parse(localStorage.getItem('404x1_conversations') || '[]');
       setUnread(convs.reduce((acc, c) => acc + (c.unread_count || 0), 0));
     } catch {}
+    const onAuth = () => setUser(getCurrentUser());
+    window.addEventListener('storage', onAuth);
+    window.addEventListener('userAuthChanged', onAuth);
+    return () => {
+      window.removeEventListener('storage', onAuth);
+      window.removeEventListener('userAuthChanged', onAuth);
+    };
   }, [currentPageName]);
 
   const logout = () => {
