@@ -29,7 +29,6 @@ async function rpc(method, params) {
   return d.result;
 }
 
-// FIX 3: helper to read token amount, falling back to raw amount / 10^decimals when uiAmount is null
 function getUiAmount(entry) {
   if (!entry?.uiTokenAmount) return 0;
   if (entry.uiTokenAmount.uiAmount != null) return entry.uiTokenAmount.uiAmount;
@@ -108,7 +107,6 @@ const CHART_IFRAME_SRC = `
   let allTrades = [];
   let showVol = false;
 
-  // Remove default price line at 0
   chart.applyOptions({ handleScroll: true, handleScale: true });
 
   function tradesToCandles(trades, tf) {
@@ -144,7 +142,6 @@ const CHART_IFRAME_SRC = `
   window.addEventListener('message', e => {
     const msg = e.data;
     if (msg.type === 'candles') {
-      // Direct OHLCV candles from xDEX chart/history
       const c = (msg.candles || []).filter(x => x.open > 0.000001 && x.close > 0.000001 && x.high > 0.000001);
       if (c.length) {
         candles.setData(c);
@@ -188,19 +185,24 @@ export default function Home() {
   const [holderList, setHolderList] = useState([]);
   const [feedTab, setFeedTab] = useState('transactions');
   const [copyDone, setCopyDone] = useState(false);
+
+  // ── Auth state ───────────────────────────────────────────────────────────
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [tempWalletAddress, setTempWalletAddress] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [walletConnectError, setWalletConnectError] = useState('');
+  const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
+  // ────────────────────────────────────────────────────────────────────────
+
   const [unreadCount, setUnreadCount] = useState(0);
   const iframeRef = useRef(null);
   const chartReadyRef = useRef(false);
   const pendingTradesRef = useRef(null);
   const currentPriceRef = useRef(0);
 
-  // Open wallet modal via custom event (from nav) or ?connect=1 param
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('connect') === '1' && !getUser()) {
@@ -211,7 +213,6 @@ export default function Home() {
     return () => window.removeEventListener('open_wallet_modal', handler);
   }, []);
 
-  // Matrix rain
   useEffect(() => {
     const el = document.getElementById('matrixBg404');
     if (!el) return;
@@ -229,7 +230,6 @@ export default function Home() {
     }
   }, []);
 
-  // Listen for chart messages
   useEffect(() => {
     const handler = (e) => {
       const msg = e.data;
@@ -247,7 +247,6 @@ export default function Home() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  // Unread badge
   useEffect(() => {
     try {
       const c = JSON.parse(localStorage.getItem('404x1_conversations') || '[]');
@@ -255,7 +254,6 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Deep-scan for output amount regardless of xDEX field naming
   function findOutputAmount(obj, depth = 0) {
     if (depth > 4 || obj == null) return null;
     if (typeof obj === 'number' && obj >= 10 && obj <= 999999) return obj;
@@ -278,7 +276,6 @@ export default function Home() {
     else setMarketCap(cap.toFixed(2) + ' XNT');
   };
 
-  // Fetch price via backend proxy (avoids CORS)
   const fetchPrice = async () => {
     try {
       const d1 = await xdex(`/api/token-price/price?network=X1 Mainnet&token_address=${TOKEN_CA}`);
@@ -301,10 +298,7 @@ export default function Home() {
     }
   };
 
-  // Fetch chart data from X1 RPC
-  const fetchTrades = async () => {
-    fetchTradesFromRpc();
-  };
+  const fetchTrades = async () => { fetchTradesFromRpc(); };
 
   const fetchTradesFromRpc = async () => {
     const cacheKey = 'chart_trades_cache';
@@ -343,15 +337,6 @@ export default function Home() {
     }
   };
 
-  const sendCandlesToChart = (candles) => {
-    const msg = { type: 'candles', candles, tf: currentTF };
-    if (chartReadyRef.current && iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(msg, '*');
-    } else {
-      pendingTradesRef.current = msg;
-    }
-  };
-
   const sendTradesToChart = (trades) => {
     const msg = { type: 'trades', trades, tf: currentTF };
     if (chartReadyRef.current && iframeRef.current?.contentWindow) {
@@ -361,11 +346,8 @@ export default function Home() {
     }
   };
 
-  const buildTransactions = (trades) => {
-    setTransactions([...trades].reverse().slice(0, 50));
-  };
+  const buildTransactions = (trades) => { setTransactions([...trades].reverse().slice(0, 50)); };
 
-  // FIX 2: Fetch holders — query both legacy SPL and Token-2022 programs
   const fetchHolders = async () => {
     try {
       const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
@@ -428,49 +410,50 @@ export default function Home() {
     iframeRef.current?.contentWindow?.postMessage({ type: 'setTF', tf }, '*');
   };
 
-  const detectWallets = () => ({
-    x1: typeof window.x1Wallet !== 'undefined' && window.x1Wallet !== null,
-    phantom: typeof window.phantom?.solana !== 'undefined',
-    backpack: typeof window.backpack !== 'undefined',
-    metamask: typeof window.ethereum !== 'undefined',
-  });
-
-  const [walletConnectError, setWalletConnectError] = useState('');
-  const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
+  // ── WALLET CONNECT — port of working old repo logic ──────────────────────
+  // Step 1: open wallet extension popup, get real address
+  // Step 2: call authWallet with dummy username 'temp_check_wallet'
+  //         → backend finds existing wallet → auto login (no username needed)
+  //         → backend does NOT find wallet → error triggers username form
+  // Step 3: new user submits username → call authWallet again with real username
 
   const connectWallet = async (walletType) => {
     setConnecting(true);
     setWalletConnectError('');
     setWalletConnectSuccess('');
     let address = '';
+
     try {
       if (walletType === 'x1') {
-        if (!window.x1Wallet) {
-          setWalletConnectError('X1 Wallet not installed. Install from the Chrome Web Store.');
+        if (typeof window.x1Wallet === 'undefined') {
+          setWalletConnectError('X1 Wallet not installed. Click "Install →" below.');
           setConnecting(false);
           return;
         }
         const res = await window.x1Wallet.connect();
         address = res.publicKey.toString();
+
       } else if (walletType === 'phantom') {
         if (!window.phantom?.solana) {
-          setWalletConnectError('Phantom not installed. Install from phantom.app');
+          setWalletConnectError('Phantom not installed. Click "Install →" below.');
           setConnecting(false);
           return;
         }
         const res = await window.phantom.solana.connect();
         address = res.publicKey.toString();
+
       } else if (walletType === 'backpack') {
-        if (!window.backpack) {
-          setWalletConnectError('Backpack not installed. Install from backpack.app');
+        if (typeof window.backpack === 'undefined') {
+          setWalletConnectError('Backpack not installed. Click "Install →" below.');
           setConnecting(false);
           return;
         }
         const res = await window.backpack.connect();
         address = res.publicKey.toString();
+
       } else if (walletType === 'metamask') {
-        if (!window.ethereum) {
-          setWalletConnectError('MetaMask not installed. Install from metamask.io');
+        if (typeof window.ethereum === 'undefined') {
+          setWalletConnectError('MetaMask not installed. Click "Install →" below.');
           setConnecting(false);
           return;
         }
@@ -483,34 +466,65 @@ export default function Home() {
         setConnecting(false);
         return;
       }
+
       setTempWalletAddress(address);
 
-      const response = await fetch(AUTH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet_address: address, wallet_type: walletType }) });
-      const data = await response.json();
+      // Use dummy username — backend checks wallet first, ignores username if wallet exists
+      await attemptLogin(address, 'temp_check_wallet');
 
-      if (data.success) {
-        if (data.is_new_user) {
-          setShowUsernameModal(true);
-        } else {
-          const u = data.player || data.user;
-          saveUser(u);
-          setUser(u);
-          setShowWalletModal(false);
-          window.dispatchEvent(new Event('userAuthChanged'));
-          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-          setTimeout(() => setWalletConnectSuccess(''), 4000);
-        }
-      } else {
-        setWalletConnectError(data.error || 'Authentication failed');
-      }
     } catch (err) {
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
     }
+
     setConnecting(false);
   };
 
+  const attemptLogin = async (walletAddress, username) => {
+    try {
+      const response = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: walletAddress, username })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        // Wallet recognised (returning user) OR new account just created
+        const u = data.user || data.player;
+        saveUser(u);
+        setUser(u);
+        setShowWalletModal(false);
+        setShowUsernameModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
+        if (username.startsWith('temp_check_')) {
+          // Returning user
+          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+        } else {
+          // New user just created
+          setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
+        }
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
+
+      } else if (data.error) {
+        if (
+          data.error.includes('Username must be') ||
+          data.error.includes('Username already taken') ||
+          data.error.includes('invalid') ||
+          data.is_new_user === true
+        ) {
+          // New wallet — needs a real username
+          setShowUsernameModal(true);
+        } else {
+          setWalletConnectError('Login failed: ' + data.error);
+        }
+      }
+    } catch (err) {
+      setWalletConnectError(err.message || 'Login failed. Please try again.');
+    }
+  };
+
   const submitUsername = async () => {
-    const reserved = ['admin','mod','moderator','system','bot','null','undefined'];
+    const reserved = ['admin', 'mod', 'moderator', 'system', 'bot', 'null', 'undefined'];
     if (!/^[a-zA-Z0-9_]{3,16}$/.test(usernameInput)) {
       setUsernameError('3-16 characters, letters/numbers/underscore only');
       return;
@@ -520,25 +534,13 @@ export default function Home() {
       return;
     }
     setUsernameError('');
-    try {
-      const response = await fetch(AUTH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet_address: tempWalletAddress, username: usernameInput }) });
-      const data = await response.json();
-      if (data.success) {
-        const u = data.player || data.user;
-        saveUser(u);
-        setUser(u);
-        setShowUsernameModal(false);
-        setShowWalletModal(false);
-        window.dispatchEvent(new Event('userAuthChanged'));
-        setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
-      } else {
-        setUsernameError(data.error || 'Registration failed');
-      }
-    } catch (err) {
-      setUsernameError(err.message || 'Registration failed');
+    if (tempWalletAddress) {
+      await attemptLogin(tempWalletAddress, usernameInput);
+    } else {
+      setUsernameError('Wallet connection lost. Please try again.');
     }
   };
+  // ─────────────────────────────────────────────────────────────────────────
 
   const logout = () => {
     clearUser();
@@ -558,35 +560,24 @@ export default function Home() {
         @keyframes matrixFall { to { top:110%; } }
         .scanlines404 { position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); }
         .page-content { position:relative;z-index:2; }
-
-        /* Hero */
         .hero404 { max-width:1000px;margin:0 auto;padding:40px 20px 20px; }
-        .hero-title404 { font-family:'Rubik Mono One',monospace;font-size:clamp(48px,10vw,96px);color:#7dff7d;text-align:center;margin:0;letter-spacing:4px;
-          text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 30px #7dff7d;animation:glitch404 3s infinite; }
+        .hero-title404 { font-family:'Rubik Mono One',monospace;font-size:clamp(48px,10vw,96px);color:#7dff7d;text-align:center;margin:0;letter-spacing:4px;text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 30px #7dff7d;animation:glitch404 3s infinite; }
         .hero-sub404 { text-align:center;color:#888;font-size:14px;margin-top:8px;letter-spacing:4px; }
-
-        /* Error list */
         .error-list404 { margin:24px auto;max-width:500px;display:flex;flex-direction:column;gap:8px;align-items:center; }
         .error-item404 { display:flex;gap:12px;align-items:center;opacity:0;animation:fadeIn404 0.5s forwards;font-size:13px;justify-content:center; }
         @keyframes fadeIn404 { to { opacity:1; } }
         .error-code404 { color:#ff4444;flex-shrink:0; }
         .error-text404 { color:#888; }
-
-        /* CA */
         .ca-section404 { margin:24px 0; }
         .ca-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
         .ca-box404 { display:flex;align-items:center;gap:8px;background:#0d1219;border:1px solid #1a2a1a;padding:10px 14px;border-radius:2px; }
         .ca-addr404 { font-size:12px;color:#5fffff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:1px; }
         .copy-btn404 { background:none;border:1px solid #2a3a2a;cursor:pointer;padding:4px 10px;font-size:14px;transition:all 0.2s;color:#7dff7d;flex-shrink:0; }
         .copy-btn404:hover { border-color:#7dff7d;background:rgba(125,255,125,0.1); }
-
-        /* Stats grid */
         .stats-grid404 { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0; }
         .stat-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:16px;text-align:center;border-radius:2px; }
         .stat-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
         .stat-val404 { font-family:'Rubik Mono One',monospace;font-size:18px;color:#7dff7d; }
-
-        /* Chart */
         .chart-wrap404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .chart-header404 { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1a2a1a;flex-wrap:wrap;gap:8px; }
         .chart-pair404 { display:flex;align-items:center;gap:8px;font-size:13px; }
@@ -607,15 +598,11 @@ export default function Home() {
         .ohlcv-l404 { color:#ff4444; }
         .chart-canvas404 { height:380px;position:relative; }
         .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
-
-        /* Action buttons */
         .action-btns404 { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
         .action-btn404:hover { border-color:#7dff7d;box-shadow:0 0 10px rgba(125,255,125,0.15); }
         .action-title404 { color:#7dff7d;font-size:13px;margin-bottom:3px; }
         .action-sub404 { color:#888;font-size:10px; }
-
-        /* Feed */
         .feed-section404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .feed-tabs404 { display:flex;border-bottom:1px solid #1a2a1a; }
         .feed-tab404 { padding:10px 20px;background:none;border:none;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;color:#888;border-bottom:2px solid transparent;transition:all 0.2s; }
@@ -632,63 +619,29 @@ export default function Home() {
         .txn-sell-label { color:#ff4444; }
         .hld-row404 { display:grid;grid-template-columns:50px 1fr 1fr 80px;padding:7px 14px;font-size:11px;border-bottom:1px solid #0a0e14; }
         .loading-row404 { padding:20px;text-align:center;color:#444;font-size:12px; }
-
-        /* Token description */
         .token-desc404 { text-align:center;padding:24px 0;border-top:1px solid #1a2a1a;margin-top:16px; }
         .token-intro404 { font-size:14px;color:#888;margin-bottom:8px; }
         .highlight404 { color:#7dff7d; }
         .token-philosophy404 { color:#e0e0e0;font-size:13px;line-height:1.6; }
-
-        /* CTAs */
         .cta-section404 { display:flex;gap:12px;justify-content:center;margin:24px 0;flex-wrap:wrap; }
         .cta-btn404 { padding:14px 32px;font-family:'Share Tech Mono',monospace;font-size:14px;text-decoration:none;cursor:pointer;transition:all 0.2s;border-radius:2px;letter-spacing:1px; }
         .cta-primary404 { border:2px solid #7dff7d;color:#7dff7d;background:transparent; }
         .cta-primary404:hover { background:#7dff7d;color:#0a0e14;box-shadow:0 0 20px rgba(125,255,125,0.4); }
         .cta-secondary404 { border:2px solid #5fffff;color:#5fffff;background:transparent; }
         .cta-secondary404:hover { background:#5fffff;color:#0a0e14;box-shadow:0 0 20px rgba(95,255,255,0.4); }
-
-        /* RP cards */
         .rp-cards404 { display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0; }
         .rp-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:24px;text-align:center;border-radius:2px;transition:all 0.2s; }
         .rp-card404:hover { border-color:#7dff7d;box-shadow:0 0 15px rgba(125,255,125,0.1); }
         .rp-icon404 { font-size:32px;margin-bottom:12px; }
         .rp-title404 { font-family:'Rubik Mono One',monospace;font-size:13px;color:#7dff7d;margin-bottom:8px; }
         .rp-text404 { font-size:11px;color:#888;line-height:1.5; }
-
-        /* Footer */
         .footer404 { border-top:1px solid #1a2a1a;padding:24px 20px;text-align:center;margin-top:40px; }
         .footer-note404 { font-size:11px;color:#444;line-height:1.6;margin-bottom:12px; }
         .footer-links404 { display:flex;gap:16px;justify-content:center; }
         .footer-link404 { color:#888;text-decoration:none;font-size:12px; }
         .footer-link404:hover { color:#7dff7d; }
-
-        /* Modal */
-        .modal404 { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px; }
-        .modal-content404 { background:#0d1219;border:1px solid #2a3a2a;padding:32px;width:100%;max-width:420px;position:relative;border-radius:2px; }
-        .modal-close404 { position:absolute;top:12px;right:16px;background:none;border:none;color:#888;cursor:pointer;font-size:20px; }
-        .modal-close404:hover { color:#ff4444; }
-        .modal-title404 { font-family:'Rubik Mono One',monospace;color:#7dff7d;font-size:18px;margin-bottom:20px;text-align:center;letter-spacing:3px; }
-        .wallet-btns404 { display:flex;flex-direction:column;gap:10px;margin-bottom:16px; }
-        .wallet-btn404 { padding:14px 16px;border:1px solid #2a3a2a;background:#111;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:'Share Tech Mono',monospace;font-size:13px;transition:all 0.2s; }
-        .wallet-btn404:hover { border-color:#7dff7d;color:#7dff7d; }
-        .wallet-btn404.recommended { border-color:#5fffff;color:#5fffff; }
-        .wallet-icon404 { font-size:20px; }
-        .form-group404 { margin-bottom:14px; }
-        .form-label404 { font-size:10px;color:#888;margin-bottom:5px;display:block;letter-spacing:1px; }
-        .form-input404 { width:100%;padding:10px 12px;background:#1a1a2a;border:1px solid #2a2a4a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none; }
-        .form-input404:focus { border-color:#7dff7d; }
-        .submit-btn404 { width:100%;padding:12px;border:2px solid #7dff7d;background:transparent;color:#7dff7d;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:14px;transition:all 0.2s;margin-top:8px;letter-spacing:1px; }
-        .submit-btn404:hover:not(:disabled) { background:#7dff7d;color:#0a0e14; }
-        .submit-btn404:disabled { opacity:0.4;cursor:not-allowed; }
-        .modal-error404 { color:#ff4444;font-size:11px;margin-top:8px;text-align:center; }
-        .warning-txt404 { font-size:10px;color:#ffaa00;margin-bottom:12px;text-align:center; }
-        .wallet-note404 { text-align:center;font-size:11px;color:#888;margin-top:8px; }
-        .wallet-note404 a { color:#5fffff; }
-
-        /* Floating elements */
         .float-item404 { position:fixed;color:#7dff7d11;font-family:'Rubik Mono One',monospace;font-size:14px;pointer-events:none;z-index:1;animation:floatAnim404 8s ease-in-out infinite; }
         @keyframes floatAnim404 { 0%,100%{transform:translateY(0) rotate(-10deg);opacity:0.3} 50%{transform:translateY(-20px) rotate(10deg);opacity:0.6} }
-
         @media(max-width:768px){
           .stats-grid404{grid-template-columns:1fr 1fr;}
           .action-btns404{grid-template-columns:1fr 1fr;}
@@ -704,11 +657,9 @@ export default function Home() {
         }
       `}</style>
 
-      {/* Matrix BG */}
       <div id="matrixBg404" />
       <div className="scanlines404" />
 
-      {/* Floating items */}
       {[
         { text: '404 ERROR', style: { left: '10%', top: '20%', animationDelay: '0s' } },
         { text: 'X1 SVM', style: { left: '85%', top: '30%', animationDelay: '2s' } },
@@ -717,7 +668,6 @@ export default function Home() {
       ].map((f, i) => <div key={i} className="float-item404" style={f.style}>{f.text}</div>)}
 
       <div className="page-content">
-        {/* Hero */}
         <div className="hero404">
           <h1 className="hero-title404">404 ERROR</h1>
           <p className="hero-sub404">Page Not Found</p>
@@ -737,9 +687,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Token Info */}
           <div>
-            {/* CA */}
             <div className="ca-section404">
               <div className="ca-label404">CONTRACT ADDRESS (CA)</div>
               <div className="ca-box404">
@@ -748,7 +696,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="stats-grid404">
               <div className="stat-card404">
                 <div className="stat-label404">PRICE XNT</div>
@@ -764,7 +711,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Chart */}
             <div className="chart-wrap404">
               <div className="chart-header404">
                 <div className="chart-pair404">
@@ -803,7 +749,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Action buttons */}
             <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Bridge</div>
@@ -819,7 +764,6 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Live Feed */}
             <div className="feed-section404">
               <div className="feed-tabs404">
                 <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
@@ -868,20 +812,17 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Token description */}
           <div className="token-desc404">
             <p className="token-intro404"><span className="highlight404">404 ERROR</span> is a minimal, experimental meme token on <span className="highlight404">X1 SVM</span>.</p>
             <p className="token-philosophy404"><strong>No Destination. No Direction.</strong><br />Only supply, liquidity, and the market.</p>
           </div>
 
-          {/* CTAs */}
           <div className="cta-section404">
             <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
             {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{border:'2px solid #7dff7d',cursor:'pointer',background:'transparent'}}>CONNECT WALLET</button>}
-          <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
+            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
           </div>
 
-          {/* RP Cards */}
           <div className="rp-cards404">
             <div className="rp-card404">
               <div className="rp-icon404">⚡</div>
@@ -901,7 +842,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer */}
         <footer className="footer404">
           <p className="footer-note404">404x1 may integrate blockchain-based rewards in the future.<br />Existing accounts, RP, and achievements will remain valid.</p>
           <div className="footer-links404">
@@ -912,7 +852,7 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* Wallet Selection Modal */}
+      {/* ── Wallet Selection Modal ── */}
       {showWalletModal && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={() => setShowWalletModal(false)}>
@@ -922,37 +862,41 @@ export default function Home() {
               CONNECT WALLET
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-              {/* X1 Wallet - always show as clickable button */}
-              <button onClick={() => connectWallet('x1')} disabled={connecting} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between',opacity:connecting?0.6:1}}>
+              {/* X1 — always a button regardless of detection */}
+              <button onClick={() => connectWallet('x1')} disabled={connecting}
+                style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between',opacity:connecting?0.5:1}}>
                 <span>⭐ X1 Wallet</span>
                 <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
               </button>
-              {/* Phantom - always show as clickable button */}
-              <button onClick={() => connectWallet('phantom')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+              {/* Phantom — always a button */}
+              <button onClick={() => connectWallet('phantom')} disabled={connecting}
+                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
                 👻 Phantom
               </button>
-              {/* Backpack - always show as clickable button */}
-              <button onClick={() => connectWallet('backpack')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+              {/* Backpack — always a button */}
+              <button onClick={() => connectWallet('backpack')} disabled={connecting}
+                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
                 🎒 Backpack
               </button>
-              {/* MetaMask - always show as clickable button */}
-              <button onClick={() => connectWallet('metamask')} disabled={connecting} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.6:1}}>
+              {/* MetaMask — always a button */}
+              <button onClick={() => connectWallet('metamask')} disabled={connecting}
+                style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left',opacity:connecting?0.5:1}}>
                 🦊 MetaMask
               </button>
             </div>
             {connecting && (
-              <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'16px',fontFamily:"'Share Tech Mono',monospace"}}>
-                Connecting... please check your wallet extension
+              <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'14px'}}>
+                Connecting... check your wallet extension
               </div>
             )}
             {walletConnectError && (
               <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
                 ⚠ {walletConnectError}
-                <div style={{marginTop:'6px',fontSize:'11px',color:'#888'}}>
-                  {walletConnectError.includes('X1') && <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install X1 Wallet →</a>}
-                  {walletConnectError.includes('Phantom') && <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Phantom →</a>}
-                  {walletConnectError.includes('Backpack') && <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Backpack →</a>}
-                  {walletConnectError.includes('MetaMask') && <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install MetaMask →</a>}
+                <div style={{marginTop:'6px',fontSize:'11px'}}>
+                  {walletConnectError.includes('X1') && <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install X1 Wallet →</a>}
+                  {walletConnectError.includes('Phantom') && <a href="https://phantom.app" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Phantom →</a>}
+                  {walletConnectError.includes('Backpack') && <a href="https://www.backpack.app" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Backpack →</a>}
+                  {walletConnectError.includes('MetaMask') && <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install MetaMask →</a>}
                 </div>
               </div>
             )}
@@ -961,15 +905,20 @@ export default function Home() {
                 {walletConnectSuccess}
               </div>
             )}
-            <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'8px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+            <div style={{textAlign:'center',fontSize:'11px',color:'#555',marginTop:'12px'}}>
+              No X1 Wallet? <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{color:'#7dff7d'}}>Install Here</a>
+            </div>
+            <button onClick={() => setShowWalletModal(false)}
+              style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'8px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
               CANCEL
             </button>
           </div>
         </div>
       )}
-      {/* Username Setup Modal */}
+
+      {/* ── Username Setup Modal ── */}
       {showUsernameModal && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}>
             <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'8px',textAlign:'center'}}>
               SET USERNAME
@@ -991,8 +940,13 @@ export default function Home() {
               />
             </div>
             {usernameError && <div style={{color:'#ff4444',fontSize:'11px',marginBottom:'12px'}}>⚠ {usernameError}</div>}
-            <button onClick={submitUsername} style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
+            <button onClick={submitUsername}
+              style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
               CONFIRM & LOCK USERNAME
+            </button>
+            <button onClick={() => { setShowUsernameModal(false); setUsernameInput(''); setUsernameError(''); }}
+              style={{background:'transparent',border:'none',color:'#444',padding:'12px',width:'100%',marginTop:'4px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+              CANCEL
             </button>
           </div>
         </div>
