@@ -200,12 +200,15 @@ export default function Home() {
   const pendingTradesRef = useRef(null);
   const currentPriceRef = useRef(0);
 
-  // Auto-open wallet modal if ?connect=1
+  // Open wallet modal via custom event (from nav) or ?connect=1 param
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('connect') === '1' && !getUser()) {
       setShowWalletModal(true);
     }
+    const handler = () => { if (!getUser()) setShowWalletModal(true); };
+    window.addEventListener('open_wallet_modal', handler);
+    return () => window.removeEventListener('open_wallet_modal', handler);
   }, []);
 
   // Matrix rain
