@@ -55,6 +55,7 @@ import Leaderboard from './pages/Leaderboard';
 import Messages from './pages/Messages';
 import ModPanel from './pages/ModPanel';
 import Profile from './pages/Profile';
+import ModerationLogs from './pages/ModerationLogs';
 import __Layout from './Layout.jsx';
 
 
@@ -67,6 +68,7 @@ export const PAGES = {
     "Messages": Messages,
     "ModPanel": ModPanel,
     "Profile": Profile,
+    "ModerationLogs": ModerationLogs,
 }
 
 export const pagesConfig = {
