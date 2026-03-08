@@ -200,6 +200,14 @@ export default function Home() {
   const pendingTradesRef = useRef(null);
   const currentPriceRef = useRef(0);
 
+  // Auto-open wallet modal if ?connect=1
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('connect') === '1' && !getUser()) {
+      setShowWalletModal(true);
+    }
+  }, []);
+
   // Matrix rain
   useEffect(() => {
     const el = document.getElementById('matrixBg404');
