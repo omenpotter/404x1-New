@@ -1,9 +1,8 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
         const { 
-            user_id, 
             message, 
             reply_to_message_id, 
             reply_to_username,
@@ -11,7 +10,7 @@ Deno.serve(async (req) => {
             image_url 
         } = await req.json();
 
-        if (!user_id || !message) {
+        if (!message) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
@@ -20,6 +19,10 @@ Deno.serve(async (req) => {
         }
 
         const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const user_id = authUser.id;
 
         // Get player info
         const player = await base44.asServiceRole.entities.Player.get(user_id);

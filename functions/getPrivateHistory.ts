@@ -1,18 +1,21 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
         const url = new URL(req.url);
         const conversation_id = url.searchParams.get('conversation_id');
-        const player_id = url.searchParams.get('player_id');
         const limit = parseInt(url.searchParams.get('limit') || '50');
         const offset = parseInt(url.searchParams.get('offset') || '0');
 
-        if (!conversation_id || !player_id) {
-            return Response.json({ error: 'conversation_id and player_id are required' }, { status: 400 });
+        if (!conversation_id) {
+            return Response.json({ error: 'conversation_id is required' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const player_id = authUser.id;
 
         // Verify conversation exists and player is a participant
         const conversation = await base44.asServiceRole.entities.Conversation.get(conversation_id);

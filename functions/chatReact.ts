@@ -1,14 +1,18 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
-        const { user_id, message_id, emoji, action } = await req.json();
+        const { message_id, emoji, action } = await req.json();
 
-        if (!user_id || !message_id || !emoji) {
+        if (!message_id || !emoji) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const user_id = authUser.id;
 
         // Get reactor
         const reactor = await base44.asServiceRole.entities.Player.get(user_id);

@@ -1,18 +1,22 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
-        const { from_player_id, to_player_id } = await req.json();
+        const { to_player_id } = await req.json();
 
-        if (!from_player_id || !to_player_id) {
+        if (!to_player_id) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
+
+        const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const from_player_id = authUser.id;
 
         if (from_player_id === to_player_id) {
             return Response.json({ error: 'Cannot create conversation with yourself' }, { status: 400 });
         }
-
-        const base44 = createClientFromRequest(req);
 
         // Verify both players exist
         const [fromPlayer, toPlayer] = await Promise.all([

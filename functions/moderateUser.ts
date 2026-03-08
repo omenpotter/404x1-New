@@ -1,9 +1,8 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
         const { 
-            moderator_id, 
             target_player_id, 
             action_type,
             reason,
@@ -12,11 +11,15 @@ Deno.serve(async (req) => {
             duration_hours
         } = await req.json();
 
-        if (!moderator_id || !target_player_id || !action_type) {
+        if (!target_player_id || !action_type) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
+        const authUser = await base44.auth.me();
+        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const moderator_id = authUser.id;
 
         // Get moderator
         const moderator = await base44.asServiceRole.entities.Player.get(moderator_id);
