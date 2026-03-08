@@ -439,6 +439,7 @@ export default function Home() {
     setConnecting(true);
     setShowWalletModal(false);
     try {
+      // Step 1: Get wallet address from the browser wallet
       let address;
       if (walletType === 'x1') {
         const res = await window.x1Wallet.connect();
@@ -453,23 +454,21 @@ export default function Home() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
+
+      if (!address) throw new Error('No address returned from wallet');
       setTempWalletAddress(address);
 
-      // First: check if wallet already exists (no username sent)
-      const res = await fetch(AUTH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: address })
-      });
-      const data = await res.json();
+      // Step 2: Check if wallet exists in our system
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address });
+      const data = response.data;
 
-      if (data.success && !data.is_new_user && data.user) {
-        // Returning user — log them in directly
+      if (data.success && data.user && !data.is_new_user) {
+        // Returning user — log in directly
         saveUser(data.user);
         setUser(data.user);
         window.dispatchEvent(new Event('userAuthChanged'));
       } else if (data.is_new_user) {
-        // New wallet — show username setup
+        // New wallet — ask for username
         setShowUsernameModal(true);
       }
     } catch (err) {
