@@ -17,9 +17,7 @@ Deno.serve(async (req) => {
 
         console.log('=== authWallet called ===');
         console.log('wallet_address:', wallet_address);
-        console.log('wallet_type:', wallet_type);
-        console.log('signature:', signature ? '[present]' : '[missing]');
-        console.log('username:', username || '[none - first check]');
+        console.log('username:', username || '[none - checking existence]');
 
         if (!wallet_address) {
             return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 400, headers });
@@ -27,7 +25,7 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Try filter first (most efficient)
+        // 1. Try efficient filter lookup
         let existingPlayer = null;
         try {
             const filtered = await base44.asServiceRole.entities.Player.filter({ wallet_address });
@@ -35,23 +33,23 @@ Deno.serve(async (req) => {
                 existingPlayer = filtered[0];
                 console.log('Found via filter:', existingPlayer.username || existingPlayer.id);
             }
-        } catch (e) {
-            console.warn('Filter failed:', e.message);
+        } catch (filterErr) {
+            console.warn('Filter failed:', filterErr.message);
         }
 
-        // Fallback to list + case-insensitive search
+        // 2. Fallback to list if needed (case-insensitive)
         if (!existingPlayer) {
             const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 5000, 0);
             console.log('Fallback list loaded:', allPlayers.length, 'players');
             existingPlayer = allPlayers.find(p =>
                 p.wallet_address && p.wallet_address.toLowerCase() === wallet_address.toLowerCase()
             );
-            if (existingPlayer) console.log('Found in list fallback:', existingPlayer.username);
+            if (existingPlayer) console.log('Found in fallback:', existingPlayer.username);
         }
 
         // Existing user → auto-login
         if (existingPlayer) {
-            console.log('Existing user found → auto-login');
+            console.log('Existing user found - auto-login');
             const updated = await base44.asServiceRole.entities.Player.update(existingPlayer.id, {
                 last_seen: new Date().toISOString()
             });
@@ -70,17 +68,17 @@ Deno.serve(async (req) => {
             }), { status: 200, headers });
         }
 
-        // No existing user
+        // New user logic
         if (!username) {
-            // This is the "please show username modal" response
-            console.log('No username sent → telling frontend: new user');
+            // First call - no username yet → show modal
+            console.log('No username provided - returning is_new_user: true');
             return new Response(JSON.stringify({
                 success: true,
                 is_new_user: true
             }), { status: 200, headers });
         }
 
-        // Username provided → create new user
+        // Username was sent → validate & create
         if (username.length < 3 || username.length > 16) {
             return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 400, headers });
         }
@@ -88,7 +86,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 400, headers });
         }
 
-        // Check uniqueness (case-insensitive)
+        // Check uniqueness
         let isTaken = false;
         try {
             const taken = await base44.asServiceRole.entities.Player.filter({ username });
@@ -102,7 +100,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken' }), { status: 400, headers });
         }
 
-        // Create
+        // Create new player
         const newPlayer = await base44.asServiceRole.entities.Player.create({
             wallet_address,
             username,
