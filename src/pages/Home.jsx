@@ -492,22 +492,21 @@ export default function Home() {
       setTempSignature(signature);
       const response = await base44.functions.invoke('authWallet', {
         wallet_address: address,
-        wallet_type: walletType,
-        signature
+        username: 'temp_check_wallet'
       });
       const data = response.data;
       if (data.success) {
-        if (data.is_new_user) {
-          setShowUsernameModal(true);
-        } else {
-          const u = data.user || data.player;
-          saveUser(u);
-          setUser(u);
-          setShowWalletModal(false);
-          window.dispatchEvent(new Event('userAuthChanged'));
-          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-          setTimeout(() => setWalletConnectSuccess(''), 4000);
-        }
+        // Existing user — auto login
+        const u = data.user || data.player;
+        saveUser(u);
+        setUser(u);
+        setShowWalletModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
+        setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
+      } else if (data.error && data.error.includes('Username must be')) {
+        // New wallet — show username form
+        setShowUsernameModal(true);
       } else {
         setWalletConnectError(data.error || 'Authentication failed');
       }
@@ -532,8 +531,7 @@ export default function Home() {
     try {
       const response = await base44.functions.invoke('authWallet', {
         wallet_address: tempWalletAddress,
-        username: usernameInput,
-        signature: tempSignature
+        username: usernameInput
       });
       const data = response.data;
       if (data.success) {
