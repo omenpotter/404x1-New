@@ -12,30 +12,28 @@ Deno.serve(async (req) => {
 
     try {
         const body = await req.json();
-        console.log('Raw body:', JSON.stringify(body));
+        const wallet_address = body.wallet_address;
+        const username = body.username;
 
-        // base44.functions.invoke wraps payload in a 'data' key
-        const payload = body.data || body;
-        const wallet_address = payload.wallet_address;
-        const username = payload.username;
-
-        console.log('wallet_address:', wallet_address);
-        console.log('username:', username);
+        console.log('authWallet called, wallet_address:', wallet_address, 'username:', username);
 
         if (!wallet_address) {
-            return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 200, headers });
+            return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 400, headers });
         }
 
         const base44 = createClientFromRequest(req);
 
+        // STEP 1: Check if wallet already exists (exact match, Solana is case-sensitive)
         const existing = await base44.asServiceRole.entities.Player.filter({ wallet_address });
-        console.log('Existing count:', existing.length);
+        console.log('Existing player count:', existing.length);
 
         if (existing.length > 0) {
+            // Returning user — auto login, no username needed
             const p = existing[0];
             await base44.asServiceRole.entities.Player.update(p.id, {
                 last_seen: new Date().toISOString()
             });
+            console.log('Returning user:', p.username);
             return new Response(JSON.stringify({
                 success: true,
                 user: {
@@ -50,13 +48,16 @@ Deno.serve(async (req) => {
             }), { status: 200, headers });
         }
 
+        // STEP 2: New wallet — dummy username means frontend needs to ask for real one
         if (!username || username.startsWith('temp_check_')) {
+            console.log('New wallet, no real username provided');
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Username must be 3-16 characters'
-            }), { status: 200, headers });
+            }), { status: 200, headers }); // 200 so frontend can read the error body
         }
 
+        // STEP 3: Validate username
         if (username.length < 3 || username.length > 16) {
             return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 200, headers });
         }
@@ -64,11 +65,13 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 200, headers });
         }
 
+        // STEP 4: Check username taken
         const taken = await base44.asServiceRole.entities.Player.filter({ username });
         if (taken.length > 0) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
 
+        // STEP 5: Create new player
         const p = await base44.asServiceRole.entities.Player.create({
             wallet_address,
             username,
@@ -79,6 +82,7 @@ Deno.serve(async (req) => {
             last_seen: new Date().toISOString()
         });
 
+        console.log('New player created:', p.username);
         return new Response(JSON.stringify({
             success: true,
             user: {
