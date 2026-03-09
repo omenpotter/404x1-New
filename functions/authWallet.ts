@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
         // ✅ STEP 1: CHECK IF WALLET EXISTS FIRST (returning user)
         const existingPlayers = await base44.asServiceRole.entities.Player.filter({
-            wallet_address: wallet_address
+            wallet_address: wallet_address.toLowerCase()
         });
 
         if (existingPlayers.length > 0) {
@@ -54,8 +54,6 @@ Deno.serve(async (req) => {
                         reputation_points: player.reputation_points,
                         total_score: player.total_score,
                         games_played: player.games_played,
-                        messages_sent: player.messages_sent || 0,
-                        is_muted: player.is_muted || false,
                         user_role: player.user_role
                     }
                 }),
@@ -63,20 +61,20 @@ Deno.serve(async (req) => {
             );
         }
 
-        // ✅ STEP 3: New wallet - if no username provided, signal frontend to show form
+        // ✅ STEP 3: New wallet - validate username
         if (!username) {
             return new Response(
-                JSON.stringify({ success: true, is_new_user: true }),
-                { status: 200, headers }
+                JSON.stringify({ success: false, error: 'username is required' }),
+                { status: 400, headers }
             );
         }
 
-        // Validate username length (3-16 characters, matching frontend)
-        if (username.length < 3 || username.length > 16) {
+        // Validate username length (4-12 characters)
+        if (username.length < 4 || username.length > 12) {
             return new Response(
                 JSON.stringify({ 
                     success: false, 
-                    error: 'Username must be 3-16 characters' 
+                    error: 'Username must be 4-12 characters' 
                 }),
                 { status: 400, headers }
             );
@@ -110,7 +108,7 @@ Deno.serve(async (req) => {
 
         // ✅ STEP 5: Create new player
         const player = await base44.asServiceRole.entities.Player.create({
-            wallet_address: wallet_address,
+            wallet_address: wallet_address.toLowerCase(),
             username: username,
             reputation_points: 0,
             total_score: 0,
@@ -122,7 +120,6 @@ Deno.serve(async (req) => {
         return new Response(
             JSON.stringify({
                 success: true,
-                is_new_user: true,
                 user: {
                     id: player.id,
                     wallet_address: player.wallet_address,
@@ -130,8 +127,6 @@ Deno.serve(async (req) => {
                     reputation_points: player.reputation_points,
                     total_score: player.total_score,
                     games_played: player.games_played,
-                    messages_sent: 0,
-                    is_muted: false,
                     user_role: player.user_role
                 }
             }),
