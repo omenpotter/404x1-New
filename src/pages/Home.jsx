@@ -191,6 +191,7 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [tempWalletAddress, setTempWalletAddress] = useState('');
+  const [tempSignature, setTempSignature] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -483,9 +484,32 @@ export default function Home() {
         setConnecting(false);
         return;
       }
-      setTempWalletAddress(address);
 
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType });
+      // Add signing to trigger the "signin" popup and prove ownership
+      let signature;
+      const message = 'Sign to authenticate to 404x1';
+      const encodedMessage = new TextEncoder().encode(message);
+      if (walletType === 'metamask') {
+        signature = await window.ethereum.request({
+          method: 'personal_sign',
+          params: [message, address],
+        });
+      } else {
+        let signedMessage;
+        if (walletType === 'x1') {
+          signedMessage = await window.x1Wallet.signMessage(encodedMessage);
+        } else if (walletType === 'phantom') {
+          signedMessage = await window.phantom.solana.signMessage(encodedMessage, 'utf8');
+        } else if (walletType === 'backpack') {
+          signedMessage = await window.backpack.signMessage(encodedMessage);
+        }
+        signature = btoa(String.fromCharCode(...signedMessage.signature));
+      }
+
+      setTempWalletAddress(address);
+      setTempSignature(signature);
+
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType, signature });
       const data = response.data;
 
       if (data.success) {
@@ -521,7 +545,7 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
+      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput, signature: tempSignature });
       const data = response.data;
       if (data.success) {
         const u = data.player || data.user;
@@ -803,7 +827,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Action buttons */}
+            /* Action buttons */
             <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Bridge</div>
@@ -819,7 +843,7 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Live Feed */}
+            /* Live Feed */
             <div className="feed-section404">
               <div className="feed-tabs404">
                 <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
@@ -966,7 +990,7 @@ export default function Home() {
                 ) : (
                   <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <span style={{color:'#444'}}>🦊 MetaMask (Not Installed)</span>
-                    <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                    <a href='https://metamask.io' target='_blank' rel=\"noopener noreferrer\" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
                   </div>
                 )}
               </div>
