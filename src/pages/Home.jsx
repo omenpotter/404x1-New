@@ -988,12 +988,17 @@ export default function Home() {
                     🦊 MetaMask
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🦊 MetaMask (Not Installed)</span>
-                    <a href='https://metamask.io' target='_blank' rel=\"noopener noreferrer\" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
-                  </div>
-                )}
-              </div>
+                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <span style={{ color: '#444' }}>🦊 MetaMask (Not Installed)</span>
+  <a
+    href="https://metamask.io"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{ color: '#7dff7d', fontSize: '11px' }}
+  >
+    Install →
+  </a>
+</div>
               {connecting && (
                 <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'10px',fontFamily:"'Share Tech Mono',monospace"}}>Connecting...</div>
               )}
