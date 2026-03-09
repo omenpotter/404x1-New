@@ -22,7 +22,7 @@ function clearUser() { localStorage.removeItem('404x1_user'); }
 async function rpc(method, params) {
   const res = await fetch(X1_RPC, {
     method: 'POST',
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
   });
   const d = await res.json();
@@ -478,14 +478,43 @@ export default function Home() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
+
       if (!address) {
         setWalletConnectError('Could not get wallet address. Please try again.');
         setConnecting(false);
         return;
       }
-      setTempWalletAddress(address);
 
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType });
+      // Signing step to force popup
+      let signature;
+      const message = 'Sign to authenticate to 404x1';
+      const encodedMessage = new TextEncoder().encode(message);
+
+      if (walletType === 'metamask') {
+        signature = await window.ethereum.request({
+          method: 'personal_sign',
+          params: [message, address],
+        });
+      } else {
+        let signedMessage;
+        if (walletType === 'x1') {
+          signedMessage = await window.x1Wallet.signMessage(encodedMessage);
+        } else if (walletType === 'phantom') {
+          signedMessage = await window.phantom.solana.signMessage(encodedMessage, 'utf8');
+        } else if (walletType === 'backpack') {
+          signedMessage = await window.backpack.signMessage(encodedMessage);
+        }
+        signature = btoa(String.fromCharCode(...signedMessage.signature));
+      }
+
+      setTempWalletAddress(address);
+      setTempSignature(signature);
+
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: address,
+        wallet_type: walletType,
+        signature
+      });
       const data = response.data;
 
       if (data.success) {
@@ -521,7 +550,11 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: tempWalletAddress,
+        username: usernameInput,
+        signature: tempSignature
+      });
       const data = response.data;
       if (data.success) {
         const u = data.player || data.user;
@@ -538,12 +571,6 @@ export default function Home() {
     } catch (err) {
       setUsernameError(err.message || 'Registration failed');
     }
-  };
-
-  const logout = () => {
-    clearUser();
-    setUser(null);
-    window.dispatchEvent(new Event('userAuthChanged'));
   };
 
   const fmt = (n, d = 6) => (n || 0).toFixed(d);
@@ -609,7 +636,7 @@ export default function Home() {
         .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
 
         /* Action buttons */
-        .action-btns404 { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0; }
+        .action-btns404 { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
         .action-btn404:hover { border-color:#7dff7d;box-shadow:0 0 10px rgba(125,255,125,0.15); }
         .action-title404 { color:#7dff7d;font-size:13px;margin-bottom:3px; }
@@ -770,21 +797,38 @@ export default function Home() {
                 <div className="chart-pair404">
                   <span className="chart-pair-name404">WXNT / 404</span>
                   <span className="chart-dot404">●</span>
-                  <span className="chart-tf-label404">{currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}</span>
+                  <span className="chart-tf-label404">
+                    {currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}
+                  </span>
                 </div>
                 <div className="chart-price-wrap404">
                   <span className="chart-price404">{chartPrice}</span>
                   <span className="chart-change404">{chartChange}</span>
                 </div>
               </div>
+
               <div className="tf-btns404">
                 {[1, 5, 15, 60, 240, 1440].map(tf => (
-                  <button key={tf} className={\`tf-btn404\${currentTF === tf ? ' active' : ''}\`} onClick={() => handleTF(tf)}>
+                  <button
+                    key={tf}
+                    className={`tf-btn404${currentTF === tf ? ' active' : ''}`}
+                    onClick={() => handleTF(tf)}
+                  >
                     {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
                   </button>
                 ))}
-                <button className={\`tf-btn404\${showVol ? ' active' : ''}\`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
+                <button
+                  className={`tf-btn404${showVol ? ' active' : ''}`}
+                  onClick={() => {
+                    const next = !showVol;
+                    setShowVol(next);
+                    iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*');
+                  }}
+                >
+                  Vol
+                </button>
               </div>
+
               <div className="ohlcv404">
                 <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
                 <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
@@ -792,6 +836,7 @@ export default function Home() {
                 <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
                 <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
               </div>
+
               <div className="chart-canvas404">
                 <div className="chart-loading404">Loading chart data from X1 RPC...</div>
                 <iframe
@@ -809,7 +854,12 @@ export default function Home() {
                 <div className="action-title404">Bridge</div>
                 <div className="action-sub404">Solana ↔ X1</div>
               </a>
-              <a href={\`https://app.xdex.xyz/swap?fromTokenAddress=\${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111\`} target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <a
+                href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="action-btn404"
+              >
                 <div className="action-title404">Trade</div>
                 <div className="action-sub404">xDEX Swap</div>
               </a>
@@ -822,8 +872,18 @@ export default function Home() {
             {/* Live Feed */}
             <div className="feed-section404">
               <div className="feed-tabs404">
-                <button className={\`feed-tab404\${feedTab === 'transactions' ? ' active' : ''}\`} onClick={() => setFeedTab('transactions')}>Transactions</button>
-                <button className={\`feed-tab404\${feedTab === 'holders' ? ' active' : ''}\`} onClick={() => setFeedTab('holders')}>Holders</button>
+                <button
+                  className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`}
+                  onClick={() => setFeedTab('transactions')}
+                >
+                  Transactions
+                </button>
+                <button
+                  className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`}
+                  onClick={() => setFeedTab('holders')}
+                >
+                  Holders
+                </button>
               </div>
 
               {feedTab === 'transactions' && (
@@ -834,9 +894,16 @@ export default function Home() {
                   <div className="feed-list404">
                     {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
                     {transactions.map((tx, i) => (
-                      <div key={i} className={\`txn-row404 \${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}\`}>
-                        <span style={{ color: '#666' }}>{new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>{tx.side}</span>
+                      <div
+                        key={i}
+                        className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}
+                      >
+                        <span style={{ color: '#666' }}>
+                          {new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>
+                          {tx.side}
+                        </span>
                         <span>{tx.xnt.toFixed(4)}</span>
                         <span>{tx.tok.toFixed(0)}</span>
                         <span style={{ color: '#5fffff' }}>{tx.price.toFixed(6)}</span>
@@ -858,8 +925,12 @@ export default function Home() {
                       <div key={i} className="hld-row404">
                         <span style={{ color: '#888' }}>#{i + 1}</span>
                         <span style={{ color: '#5fffff' }}>{h.label || truncWallet(h.wallet)}</span>
-                        <span style={{ color: '#e0e0e0' }}>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                        <span style={{ color: '#7dff7d' }}>{((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%</span>
+                        <span style={{ color: '#e0e0e0' }}>
+                          {Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </span>
+                        <span style={{ color: '#7dff7d' }}>
+                          {((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -870,15 +941,33 @@ export default function Home() {
 
           {/* Token description */}
           <div className="token-desc404">
-            <p className="token-intro404"><span className="highlight404">404 ERROR</span> is a minimal, experimental meme token on <span className="highlight404">X1 SVM</span>.</p>
-            <p className="token-philosophy404"><strong>No Destination. No Direction.</strong><br />Only supply, liquidity, and the market.</p>
+            <p className="token-intro404">
+              <span className="highlight404">404 ERROR</span> is a minimal, experimental meme token on{' '}
+              <span className="highlight404">X1 SVM</span>.
+            </p>
+            <p className="token-philosophy404">
+              <strong>No Destination. No Direction.</strong><br />
+              Only supply, liquidity, and the market.
+            </p>
           </div>
 
           {/* CTAs */}
           <div className="cta-section404">
-            <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
-            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{ border: '2px solid #7dff7d', cursor: 'pointer', background: 'transparent' }}>CONNECT WALLET</button>}
-            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
+            <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">
+              ENTER CHAT
+            </a>
+            {!user && (
+              <button
+                className="cta-btn404 cta-primary404"
+                onClick={() => setShowWalletModal(true)}
+                style={{ border: '2px solid #7dff7d', cursor: 'pointer', background: 'transparent' }}
+              >
+                CONNECT WALLET
+              </button>
+            )}
+            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">
+              PLAY GAME
+            </a>
           </div>
 
           {/* RP Cards */}
@@ -903,11 +992,20 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="footer404">
-          <p className="footer-note404">404x1 may integrate blockchain-based rewards in the future.<br />Existing accounts, RP, and achievements will remain valid.</p>
+          <p className="footer-note404">
+            404x1 may integrate blockchain-based rewards in the future.<br />
+            Existing accounts, RP, and achievements will remain valid.
+          </p>
           <div className="footer-links404">
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="footer-link404">Twitter</a>
-            <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="footer-link404">Telegram</a>
-            <a href={createPageUrl('Profile')} className="footer-link404">Profile</a>
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="footer-link404">
+              Twitter
+            </a>
+            <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="footer-link404">
+              Telegram
+            </a>
+            <a href={createPageUrl('Profile')} className="footer-link404">
+              Profile
+            </a>
           </div>
         </footer>
       </div>
@@ -916,105 +1014,380 @@ export default function Home() {
       {showWalletModal && (() => {
         const w = detectWallets();
         return (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => setShowWalletModal(false)}>
-            <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono', monospace" }}
-              onClick={e => e.stopPropagation()}>
-              <div style={{ fontFamily: "'Rubik Mono One', monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '24px', textAlign: 'center' }}>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.92)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onClick={() => setShowWalletModal(false)}
+          >
+            <div
+              style={{
+                background: '#111',
+                border: '2px solid #7dff7d',
+                padding: '32px',
+                width: '100%',
+                maxWidth: '420px',
+                fontFamily: "'Share Tech Mono', monospace",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  fontFamily: "'Rubik Mono One', monospace",
+                  color: '#7dff7d',
+                  fontSize: '20px',
+                  letterSpacing: '3px',
+                  marginBottom: '24px',
+                  textAlign: 'center',
+                }}
+              >
                 CONNECT WALLET
               </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {/* X1 Wallet */}
                 {w.x1 ? (
-                  <button onClick={() => connectWallet('x1')} style={{ background: 'linear-gradient(135deg,#7dff7d22,#7dff7d11)', border: '2px solid #7dff7d', color: '#7dff7d', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    onClick={() => connectWallet('x1')}
+                    style={{
+                      background: 'linear-gradient(135deg,#7dff7d22,#7dff7d11)',
+                      border: '2px solid #7dff7d',
+                      color: '#7dff7d',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
                     <span>⭐ X1 Wallet</span>
-                    <span style={{ background: '#7dff7d', color: '#0a0a0a', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold' }}>RECOMMENDED</span>
+                    <span
+                      style={{
+                        background: '#7dff7d',
+                        color: '#0a0a0a',
+                        padding: '2px 8px',
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      RECOMMENDED
+                    </span>
                   </button>
                 ) : (
-                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
                     <span style={{ color: '#444' }}>⭐ X1 Wallet (Not Installed)</span>
-                    <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
+                    <a
+                      href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
+
                 {/* Phantom */}
                 {w.phantom ? (
-                  <button onClick={() => connectWallet('phantom')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
+                  <button
+                    onClick={() => connectWallet('phantom')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     👻 Phantom
                   </button>
                 ) : (
-                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
                     <span style={{ color: '#444' }}>👻 Phantom (Not Installed)</span>
-                    <a href="https://phantom.app" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
+                    <a
+                      href="https://phantom.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
+
                 {/* Backpack */}
                 {w.backpack ? (
-                  <button onClick={() => connectWallet('backpack')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
+                  <button
+                    onClick={() => connectWallet('backpack')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     🎒 Backpack
                   </button>
                 ) : (
-                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
                     <span style={{ color: '#444' }}>🎒 Backpack (Not Installed)</span>
-                    <a href="https://www.backpack.app" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
+                    <a
+                      href="https://www.backpack.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
+
                 {/* MetaMask */}
                 {w.metamask ? (
-                  <button onClick={() => connectWallet('metamask')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
+                  <button
+                    onClick={() => connectWallet('metamask')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     🦊 MetaMask
                   </button>
                 ) : (
-                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
                     <span style={{ color: '#444' }}>🦊 MetaMask (Not Installed)</span>
-                    <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
+                    <a
+                      href="https://metamask.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
               </div>
+
               {connecting && (
-                <div style={{ textAlign: 'center', color: '#7dff7d', fontSize: '12px', marginTop: '10px', fontFamily: "'Share Tech Mono', monospace" }}>Connecting...</div>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    color: '#7dff7d',
+                    fontSize: '12px',
+                    marginTop: '10px',
+                    fontFamily: "'Share Tech Mono', monospace"
+                  }}
+                >
+                  Connecting...
+                </div>
               )}
+
               {walletConnectError && (
-                <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,68,68,0.08)', border: '1px solid #ff4444', color: '#ff4444', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', textAlign: 'center', borderRadius: '2px' }}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 16px',
+                    background: 'rgba(255,68,68,0.08)',
+                    border: '1px solid #ff4444',
+                    color: '#ff4444',
+                    fontFamily: "'Share Tech Mono', monospace",
+                    fontSize: '12px',
+                    textAlign: 'center',
+                    borderRadius: '2px'
+                  }}
+                >
                   ⚠ {walletConnectError}
                 </div>
               )}
+
               {walletConnectSuccess && (
-                <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(125,255,125,0.08)', border: '1px solid #7dff7d', color: '#7dff7d', fontFamily: "'Share Tech Mono', monospace", fontSize: '13px', textAlign: 'center', borderRadius: '2px' }}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 16px',
+                    background: 'rgba(125,255,125,0.08)',
+                    border: '1px solid #7dff7d',
+                    color: '#7dff7d',
+                    fontFamily: "'Share Tech Mono', monospace",
+                    fontSize: '13px',
+                    textAlign: 'center',
+                    borderRadius: '2px'
+                  }}
+                >
                   {walletConnectSuccess}
                 </div>
               )}
-              <button onClick={() => setShowWalletModal(false)} style={{ background: 'transparent', border: 'none', color: '#444', padding: '16px', width: '100%', marginTop: '16px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px' }}>
+
+              <button
+                onClick={() => setShowWalletModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#444',
+                  padding: '16px',
+                  width: '100%',
+                  marginTop: '16px',
+                  cursor: 'pointer',
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: '12px'
+                }}
+              >
                 CANCEL
               </button>
             </div>
           </div>
         );
       })()}
+
       {/* Username Setup Modal */}
       {showUsernameModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono', monospace" }}>
-            <div style={{ fontFamily: "'Rubik Mono One', monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '8px', textAlign: 'center' }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.92)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div
+            style={{
+              background: '#111',
+              border: '2px solid #7dff7d',
+              padding: '32px',
+              width: '100%',
+              maxWidth: '420px',
+              fontFamily: "'Share Tech Mono', monospace"
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Rubik Mono One', monospace",
+                color: '#7dff7d',
+                fontSize: '20px',
+                letterSpacing: '3px',
+                marginBottom: '8px',
+                textAlign: 'center'
+              }}
+            >
               SET USERNAME
             </div>
             <div style={{ color: '#ffaa00', fontSize: '11px', textAlign: 'center', marginBottom: '20px' }}>
               ⚠️ Username is PERMANENT and cannot be changed!
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '10px', color: '#888', display: 'block', marginBottom: '6px', letterSpacing: '1px' }}>USERNAME (3-16 chars)</label>
+              <label
+                style={{
+                  fontSize: '10px',
+                  color: '#888',
+                  display: 'block',
+                  marginBottom: '6px',
+                  letterSpacing: '1px'
+                }}
+              >
+                USERNAME (3-16 chars)
+              </label>
               <input
-                style={{ width: '100%', padding: '10px 12px', background: '#1a1a2a', border: '1px solid #2a2a4a', color: '#e0e0e0', fontFamily: "'Share Tech Mono', monospace", fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1a1a2a',
+                  border: '1px solid #2a2a4a',
+                  color: '#e0e0e0',
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
                 type="text"
                 placeholder="your_username"
                 value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submitUsername()}
+                onChange={e => setUsernameInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && submitUsername()}
                 maxLength={16}
                 autoFocus
               />
             </div>
-            {usernameError && <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '12px' }}>⚠ {usernameError}</div>}
-            <button onClick={submitUsername} style={{ width: '100%', padding: '12px', border: '2px solid #7dff7d', background: 'transparent', color: '#7dff7d', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', letterSpacing: '1px' }}>
+            {usernameError && (
+              <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '12px' }}>
+                ⚠ {usernameError}
+              </div>
+            )}
+            <button
+              onClick={submitUsername}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #7dff7d',
+                background: 'transparent',
+                color: '#7dff7d',
+                cursor: 'pointer',
+                fontFamily: "'Share Tech Mono', monospace",
+                fontSize: '14px',
+                letterSpacing: '1px'
+              }}
+            >
               CONFIRM & LOCK USERNAME
             </button>
           </div>
