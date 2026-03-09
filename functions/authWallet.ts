@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     const headers = {
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        const allPlayers = await base44.asServiceRole.entities.Player.list(null, 1000);
+        const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 1000, 0);
         console.log('Total players found:', allPlayers.length);
 
         const existingPlayer = allPlayers.find(p =>
