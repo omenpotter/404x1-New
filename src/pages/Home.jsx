@@ -11,7 +11,6 @@ const TOKEN_CA = '4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2';
 const WXNT_ADDRESS = 'So11111111111111111111111111111111111111112';
 const X1_RPC = 'https://rpc.mainnet.x1.xyz/';
 const TOTAL_SUPPLY = 404404;
-const AUTH_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/authWallet';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -29,7 +28,6 @@ async function rpc(method, params) {
   return d.result;
 }
 
-// FIX 3: helper to read token amount, falling back to raw amount / 10^decimals when uiAmount is null
 function getUiAmount(entry) {
   if (!entry?.uiTokenAmount) return 0;
   if (entry.uiTokenAmount.uiAmount != null) return entry.uiTokenAmount.uiAmount;
@@ -40,7 +38,7 @@ function getUiAmount(entry) {
 
 function parseTrade(tx) {
   try {
-    const pre  = tx.meta?.preTokenBalances  || [];
+    const pre = tx.meta?.preTokenBalances || [];
     const post = tx.meta?.postTokenBalances || [];
     let xntChange = 0, tokChange = 0;
     for (const p of post) {
@@ -49,17 +47,17 @@ function parseTrade(tx) {
       const mint = p.mint;
       const diff = getUiAmount(p) - getUiAmount(pr);
       if (mint === WXNT_ADDRESS) xntChange = diff;
-      if (mint === TOKEN_CA)     tokChange = diff;
+      if (mint === TOKEN_CA) tokChange = diff;
     }
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
     const price = Math.abs(xntChange / tokChange);
     if (price < 0.0001 || price > 0.1) return null;
     return {
-      time:  tx.blockTime,
-      xnt:   Math.abs(xntChange),
-      tok:   Math.abs(tokChange),
+      time: tx.blockTime,
+      xnt: Math.abs(xntChange),
+      tok: Math.abs(tokChange),
       price,
-      side:  xntChange < 0 ? 'SELL' : 'BUY',
+      side: xntChange < 0 ? 'SELL' : 'BUY',
       maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || ''
     };
   } catch { return null; }
@@ -86,7 +84,6 @@ const CHART_IFRAME_SRC = `
     s.onerror = () => reject(new Error('Chart library failed to load'));
     document.head.appendChild(s);
   });
-
   const chart = window.LightweightCharts.createChart(document.getElementById('chart'), {
     width: window.innerWidth,
     height: window.innerHeight,
@@ -107,10 +104,7 @@ const CHART_IFRAME_SRC = `
   let currentTF = 60;
   let allTrades = [];
   let showVol = false;
-
-  // Remove default price line at 0
   chart.applyOptions({ handleScroll: true, handleScale: true });
-
   function tradesToCandles(trades, tf) {
     const buckets = {};
     for (const t of trades) {
@@ -125,7 +119,6 @@ const CHART_IFRAME_SRC = `
     }
     return Object.values(buckets).sort((a,b) => a.time - b.time);
   }
-
   function render() {
     const c = tradesToCandles(allTrades, currentTF);
     if (c.length) {
@@ -133,18 +126,15 @@ const CHART_IFRAME_SRC = `
       if (volSeries && showVol) volSeries.setData(c.map(x => ({ time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(125,255,125,0.3)' : 'rgba(255,68,68,0.3)' })));
     }
   }
-
   chart.subscribeCrosshairMove(p => {
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
       if (d) window.parent.postMessage({ type: 'ohlcv', o: d.open, h: d.high, l: d.low, cl: d.close, v: 0 }, '*');
     }
   });
-
   window.addEventListener('message', e => {
     const msg = e.data;
     if (msg.type === 'candles') {
-      // Direct OHLCV candles from xDEX chart/history
       const c = (msg.candles || []).filter(x => x.open > 0.000001 && x.close > 0.000001 && x.high > 0.000001);
       if (c.length) {
         candles.setData(c);
@@ -165,7 +155,6 @@ const CHART_IFRAME_SRC = `
       render();
     }
   });
-
   window.addEventListener('resize', () => chart.applyOptions({ width: window.innerWidth, height: window.innerHeight }));
   window.parent.postMessage({ type: 'chartReady' }, '*');
 })();
@@ -191,16 +180,20 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [tempWalletAddress, setTempWalletAddress] = useState('');
+  const [tempSignature, setTempSignature] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [walletConnectError, setWalletConnectError] = useState('');
+  const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+
   const iframeRef = useRef(null);
   const chartReadyRef = useRef(false);
   const pendingTradesRef = useRef(null);
   const currentPriceRef = useRef(0);
 
-  // Open wallet modal via custom event (from nav) or ?connect=1 param
+  // Open wallet modal via custom event or query param
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('connect') === '1' && !getUser()) {
@@ -211,7 +204,7 @@ export default function Home() {
     return () => window.removeEventListener('open_wallet_modal', handler);
   }, []);
 
-  // Matrix rain
+  // Matrix rain background
   useEffect(() => {
     const el = document.getElementById('matrixBg404');
     if (!el) return;
@@ -229,7 +222,7 @@ export default function Home() {
     }
   }, []);
 
-  // Listen for chart messages
+  // Chart message listener
   useEffect(() => {
     const handler = (e) => {
       const msg = e.data;
@@ -247,7 +240,7 @@ export default function Home() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  // Unread badge
+  // Unread conversations count
   useEffect(() => {
     try {
       const c = JSON.parse(localStorage.getItem('404x1_conversations') || '[]');
@@ -255,7 +248,6 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Deep-scan for output amount regardless of xDEX field naming
   function findOutputAmount(obj, depth = 0) {
     if (depth > 4 || obj == null) return null;
     if (typeof obj === 'number' && obj >= 10 && obj <= 999999) return obj;
@@ -278,7 +270,6 @@ export default function Home() {
     else setMarketCap(cap.toFixed(2) + ' XNT');
   };
 
-  // Fetch price via backend proxy (avoids CORS)
   const fetchPrice = async () => {
     try {
       const d1 = await xdex(`/api/token-price/price?network=X1 Mainnet&token_address=${TOKEN_CA}`);
@@ -301,7 +292,6 @@ export default function Home() {
     }
   };
 
-  // Fetch chart data from X1 RPC
   const fetchTrades = async () => {
     fetchTradesFromRpc();
   };
@@ -365,11 +355,10 @@ export default function Home() {
     setTransactions([...trades].reverse().slice(0, 50));
   };
 
-  // FIX 2: Fetch holders — query both legacy SPL and Token-2022 programs
   const fetchHolders = async () => {
     try {
       const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-      const T2022  = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+      const T2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
       const [legacyRes, t2022Res] = await Promise.all([
         rpc('getProgramAccounts', [LEGACY, {
           encoding: 'jsonParsed',
@@ -435,9 +424,6 @@ export default function Home() {
     metamask: typeof window.ethereum !== 'undefined',
   });
 
-  const [walletConnectError, setWalletConnectError] = useState('');
-  const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
-
   const connectWallet = async (walletType) => {
     setConnecting(true);
     setWalletConnectError('');
@@ -477,36 +463,58 @@ export default function Home() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
-
       if (!address) {
         setWalletConnectError('Could not get wallet address. Please try again.');
         setConnecting(false);
         return;
       }
-      setTempWalletAddress(address);
-
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType });
-      const data = response.data;
-
-      if (data.success) {
-        if (data.is_new_user) {
-          setShowUsernameModal(true);
-        } else {
-          const u = data.player || data.user;
-          saveUser(u);
-          setUser(u);
-          setShowWalletModal(false);
-          window.dispatchEvent(new Event('userAuthChanged'));
-          setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-          setTimeout(() => setWalletConnectSuccess(''), 4000);
+      // Signing step
+      let signature;
+      const message = 'Sign to authenticate to 404x1';
+      const encodedMessage = new TextEncoder().encode(message);
+      if (walletType === 'metamask') {
+        signature = await window.ethereum.request({
+          method: 'personal_sign',
+          params: [message, address],
+        });
+      } else {
+        let signedMessage;
+        if (walletType === 'x1') {
+          signedMessage = await window.x1Wallet.signMessage(encodedMessage);
+        } else if (walletType === 'phantom') {
+          signedMessage = await window.phantom.solana.signMessage(encodedMessage, 'utf8');
+        } else if (walletType === 'backpack') {
+          signedMessage = await window.backpack.signMessage(encodedMessage);
         }
+        signature = btoa(String.fromCharCode(...signedMessage.signature));
+      }
+      setTempWalletAddress(address);
+      setTempSignature(signature);
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: address,
+        username: 'temp_check_wallet'
+      });
+      const data = response.data;
+      if (data.success) {
+        // Existing user — auto login
+        const u = data.user || data.player;
+        saveUser(u);
+        setUser(u);
+        setShowWalletModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
+        setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
+      } else if (data.error && data.error.includes('Username must be')) {
+        // New wallet — show username form
+        setShowUsernameModal(true);
       } else {
         setWalletConnectError(data.error || 'Authentication failed');
       }
     } catch (err) {
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
+    } finally {
+      setConnecting(false);
     }
-    setConnecting(false);
   };
 
   const submitUsername = async () => {
@@ -521,10 +529,13 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: tempWalletAddress,
+        username: usernameInput
+      });
       const data = response.data;
       if (data.success) {
-        const u = data.player || data.user;
+        const u = data.user || data.player;
         saveUser(u);
         setUser(u);
         setShowUsernameModal(false);
@@ -540,12 +551,6 @@ export default function Home() {
     }
   };
 
-  const logout = () => {
-    clearUser();
-    setUser(null);
-    window.dispatchEvent(new Event('userAuthChanged'));
-  };
-
   const fmt = (n, d = 6) => (n || 0).toFixed(d);
   const truncWallet = (w) => w ? w.slice(0, 4) + '...' + w.slice(-4) : '';
 
@@ -558,20 +563,17 @@ export default function Home() {
         @keyframes matrixFall { to { top:110%; } }
         .scanlines404 { position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); }
         .page-content { position:relative;z-index:2; }
-
         /* Hero */
         .hero404 { max-width:1000px;margin:0 auto;padding:40px 20px 20px; }
         .hero-title404 { font-family:'Rubik Mono One',monospace;font-size:clamp(48px,10vw,96px);color:#7dff7d;text-align:center;margin:0;letter-spacing:4px;
           text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 30px #7dff7d;animation:glitch404 3s infinite; }
         .hero-sub404 { text-align:center;color:#888;font-size:14px;margin-top:8px;letter-spacing:4px; }
-
         /* Error list */
         .error-list404 { margin:24px auto;max-width:500px;display:flex;flex-direction:column;gap:8px;align-items:center; }
         .error-item404 { display:flex;gap:12px;align-items:center;opacity:0;animation:fadeIn404 0.5s forwards;font-size:13px;justify-content:center; }
         @keyframes fadeIn404 { to { opacity:1; } }
         .error-code404 { color:#ff4444;flex-shrink:0; }
         .error-text404 { color:#888; }
-
         /* CA */
         .ca-section404 { margin:24px 0; }
         .ca-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
@@ -579,13 +581,11 @@ export default function Home() {
         .ca-addr404 { font-size:12px;color:#5fffff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:1px; }
         .copy-btn404 { background:none;border:1px solid #2a3a2a;cursor:pointer;padding:4px 10px;font-size:14px;transition:all 0.2s;color:#7dff7d;flex-shrink:0; }
         .copy-btn404:hover { border-color:#7dff7d;background:rgba(125,255,125,0.1); }
-
         /* Stats grid */
         .stats-grid404 { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0; }
         .stat-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:16px;text-align:center;border-radius:2px; }
         .stat-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
         .stat-val404 { font-family:'Rubik Mono One',monospace;font-size:18px;color:#7dff7d; }
-
         /* Chart */
         .chart-wrap404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .chart-header404 { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1a2a1a;flex-wrap:wrap;gap:8px; }
@@ -607,14 +607,12 @@ export default function Home() {
         .ohlcv-l404 { color:#ff4444; }
         .chart-canvas404 { height:380px;position:relative; }
         .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
-
         /* Action buttons */
-        .action-btns404 { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0; }
+        .action-btns404 { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
         .action-btn404:hover { border-color:#7dff7d;box-shadow:0 0 10px rgba(125,255,125,0.15); }
         .action-title404 { color:#7dff7d;font-size:13px;margin-bottom:3px; }
         .action-sub404 { color:#888;font-size:10px; }
-
         /* Feed */
         .feed-section404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .feed-tabs404 { display:flex;border-bottom:1px solid #1a2a1a; }
@@ -632,13 +630,11 @@ export default function Home() {
         .txn-sell-label { color:#ff4444; }
         .hld-row404 { display:grid;grid-template-columns:50px 1fr 1fr 80px;padding:7px 14px;font-size:11px;border-bottom:1px solid #0a0e14; }
         .loading-row404 { padding:20px;text-align:center;color:#444;font-size:12px; }
-
         /* Token description */
         .token-desc404 { text-align:center;padding:24px 0;border-top:1px solid #1a2a1a;margin-top:16px; }
         .token-intro404 { font-size:14px;color:#888;margin-bottom:8px; }
         .highlight404 { color:#7dff7d; }
         .token-philosophy404 { color:#e0e0e0;font-size:13px;line-height:1.6; }
-
         /* CTAs */
         .cta-section404 { display:flex;gap:12px;justify-content:center;margin:24px 0;flex-wrap:wrap; }
         .cta-btn404 { padding:14px 32px;font-family:'Share Tech Mono',monospace;font-size:14px;text-decoration:none;cursor:pointer;transition:all 0.2s;border-radius:2px;letter-spacing:1px; }
@@ -646,7 +642,6 @@ export default function Home() {
         .cta-primary404:hover { background:#7dff7d;color:#0a0e14;box-shadow:0 0 20px rgba(125,255,125,0.4); }
         .cta-secondary404 { border:2px solid #5fffff;color:#5fffff;background:transparent; }
         .cta-secondary404:hover { background:#5fffff;color:#0a0e14;box-shadow:0 0 20px rgba(95,255,255,0.4); }
-
         /* RP cards */
         .rp-cards404 { display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0; }
         .rp-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:24px;text-align:center;border-radius:2px;transition:all 0.2s; }
@@ -654,14 +649,12 @@ export default function Home() {
         .rp-icon404 { font-size:32px;margin-bottom:12px; }
         .rp-title404 { font-family:'Rubik Mono One',monospace;font-size:13px;color:#7dff7d;margin-bottom:8px; }
         .rp-text404 { font-size:11px;color:#888;line-height:1.5; }
-
         /* Footer */
         .footer404 { border-top:1px solid #1a2a1a;padding:24px 20px;text-align:center;margin-top:40px; }
         .footer-note404 { font-size:11px;color:#444;line-height:1.6;margin-bottom:12px; }
         .footer-links404 { display:flex;gap:16px;justify-content:center; }
         .footer-link404 { color:#888;text-decoration:none;font-size:12px; }
         .footer-link404:hover { color:#7dff7d; }
-
         /* Modal */
         .modal404 { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px; }
         .modal-content404 { background:#0d1219;border:1px solid #2a3a2a;padding:32px;width:100%;max-width:420px;position:relative;border-radius:2px; }
@@ -684,16 +677,13 @@ export default function Home() {
         .warning-txt404 { font-size:10px;color:#ffaa00;margin-bottom:12px;text-align:center; }
         .wallet-note404 { text-align:center;font-size:11px;color:#888;margin-top:8px; }
         .wallet-note404 a { color:#5fffff; }
-
         /* Floating elements */
         .float-item404 { position:fixed;color:#7dff7d11;font-family:'Rubik Mono One',monospace;font-size:14px;pointer-events:none;z-index:1;animation:floatAnim404 8s ease-in-out infinite; }
         @keyframes floatAnim404 { 0%,100%{transform:translateY(0) rotate(-10deg);opacity:0.3} 50%{transform:translateY(-20px) rotate(10deg);opacity:0.6} }
-
         @media(max-width:768px){
           .stats-grid404{grid-template-columns:1fr 1fr;}
           .action-btns404{grid-template-columns:1fr 1fr;}
           .rp-cards404{grid-template-columns:1fr;}
-          .nav-links404{display:none;}
           .txn-row404{grid-template-columns:70px 50px 1fr 1fr;font-size:10px;}
           .txn-header404{grid-template-columns:70px 50px 1fr 1fr;}
         }
@@ -770,21 +760,38 @@ export default function Home() {
                 <div className="chart-pair404">
                   <span className="chart-pair-name404">WXNT / 404</span>
                   <span className="chart-dot404">●</span>
-                  <span className="chart-tf-label404">{currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}</span>
+                  <span className="chart-tf-label404">
+                    {currentTF >= 1440 ? '1d' : currentTF >= 240 ? '4h' : currentTF >= 60 ? '1h' : currentTF >= 15 ? '15m' : currentTF >= 5 ? '5m' : '1m'}
+                  </span>
                 </div>
                 <div className="chart-price-wrap404">
                   <span className="chart-price404">{chartPrice}</span>
                   <span className="chart-change404">{chartChange}</span>
                 </div>
               </div>
+
               <div className="tf-btns404">
                 {[1, 5, 15, 60, 240, 1440].map(tf => (
-                  <button key={tf} className={`tf-btn404${currentTF === tf ? ' active' : ''}`} onClick={() => handleTF(tf)}>
+                  <button
+                    key={tf}
+                    className={`tf-btn404${currentTF === tf ? ' active' : ''}`}
+                    onClick={() => handleTF(tf)}
+                  >
                     {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
                   </button>
                 ))}
-                <button className={`tf-btn404${showVol ? ' active' : ''}`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
+                <button
+                  className={`tf-btn404${showVol ? ' active' : ''}`}
+                  onClick={() => {
+                    const next = !showVol;
+                    setShowVol(next);
+                    iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*');
+                  }}
+                >
+                  Vol
+                </button>
               </div>
+
               <div className="ohlcv404">
                 <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
                 <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
@@ -792,6 +799,7 @@ export default function Home() {
                 <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
                 <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
               </div>
+
               <div className="chart-canvas404">
                 <div className="chart-loading404">Loading chart data from X1 RPC...</div>
                 <iframe
@@ -809,7 +817,12 @@ export default function Home() {
                 <div className="action-title404">Bridge</div>
                 <div className="action-sub404">Solana ↔ X1</div>
               </a>
-              <a href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`} target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <a
+                href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="action-btn404"
+              >
                 <div className="action-title404">Trade</div>
                 <div className="action-sub404">xDEX Swap</div>
               </a>
@@ -822,8 +835,18 @@ export default function Home() {
             {/* Live Feed */}
             <div className="feed-section404">
               <div className="feed-tabs404">
-                <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
-                <button className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`} onClick={() => setFeedTab('holders')}>Holders</button>
+                <button
+                  className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`}
+                  onClick={() => setFeedTab('transactions')}
+                >
+                  Transactions
+                </button>
+                <button
+                  className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`}
+                  onClick={() => setFeedTab('holders')}
+                >
+                  Holders
+                </button>
               </div>
 
               {feedTab === 'transactions' && (
@@ -834,9 +857,16 @@ export default function Home() {
                   <div className="feed-list404">
                     {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
                     {transactions.map((tx, i) => (
-                      <div key={i} className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}>
-                        <span style={{ color: '#666' }}>{new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>{tx.side}</span>
+                      <div
+                        key={i}
+                        className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}
+                      >
+                        <span style={{ color: '#666' }}>
+                          {new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>
+                          {tx.side}
+                        </span>
                         <span>{tx.xnt.toFixed(4)}</span>
                         <span>{tx.tok.toFixed(0)}</span>
                         <span style={{ color: '#5fffff' }}>{tx.price.toFixed(6)}</span>
@@ -858,8 +888,12 @@ export default function Home() {
                       <div key={i} className="hld-row404">
                         <span style={{ color: '#888' }}>#{i + 1}</span>
                         <span style={{ color: '#5fffff' }}>{h.label || truncWallet(h.wallet)}</span>
-                        <span style={{ color: '#e0e0e0' }}>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                        <span style={{ color: '#7dff7d' }}>{((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%</span>
+                        <span style={{ color: '#e0e0e0' }}>
+                          {Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </span>
+                        <span style={{ color: '#7dff7d' }}>
+                          {((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -870,15 +904,33 @@ export default function Home() {
 
           {/* Token description */}
           <div className="token-desc404">
-            <p className="token-intro404"><span className="highlight404">404 ERROR</span> is a minimal, experimental meme token on <span className="highlight404">X1 SVM</span>.</p>
-            <p className="token-philosophy404"><strong>No Destination. No Direction.</strong><br />Only supply, liquidity, and the market.</p>
+            <p className="token-intro404">
+              <span className="highlight404">404 ERROR</span> is a minimal, experimental meme token on{' '}
+              <span className="highlight404">X1 SVM</span>.
+            </p>
+            <p className="token-philosophy404">
+              <strong>No Destination. No Direction.</strong><br />
+              Only supply, liquidity, and the market.
+            </p>
           </div>
 
           {/* CTAs */}
           <div className="cta-section404">
-            <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
-            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{border:'2px solid #7dff7d',cursor:'pointer',background:'transparent'}}>CONNECT WALLET</button>}
-          <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
+            <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">
+              ENTER CHAT
+            </a>
+            {!user && (
+              <button
+                className="cta-btn404 cta-primary404"
+                onClick={() => setShowWalletModal(true)}
+                style={{ border: '2px solid #7dff7d', cursor: 'pointer', background: 'transparent' }}
+              >
+                CONNECT WALLET
+              </button>
+            )}
+            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">
+              PLAY GAME
+            </a>
           </div>
 
           {/* RP Cards */}
@@ -903,11 +955,20 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="footer404">
-          <p className="footer-note404">404x1 may integrate blockchain-based rewards in the future.<br />Existing accounts, RP, and achievements will remain valid.</p>
+          <p className="footer-note404">
+            404x1 may integrate blockchain-based rewards in the future.<br />
+            Existing accounts, RP, and achievements will remain valid.
+          </p>
           <div className="footer-links404">
-            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="footer-link404">Twitter</a>
-            <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="footer-link404">Telegram</a>
-            <a href={createPageUrl('Profile')} className="footer-link404">Profile</a>
+            <a href="https://x.com/rkbehelvi" target="_blank" rel="noopener noreferrer" className="footer-link404">
+              Twitter
+            </a>
+            <a href="https://t.me/+jpYK0gMfA5o1MGFk" target="_blank" rel="noopener noreferrer" className="footer-link404">
+              Telegram
+            </a>
+            <a href={createPageUrl('Profile')} className="footer-link404">
+              Profile
+            </a>
           </div>
         </footer>
       </div>
@@ -916,74 +977,276 @@ export default function Home() {
       {showWalletModal && (() => {
         const w = detectWallets();
         return (
-          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
-            onClick={() => setShowWalletModal(false)}>
-            <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
-              onClick={e => e.stopPropagation()}>
-              <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.92)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onClick={() => setShowWalletModal(false)}
+          >
+            <div
+              style={{
+                background: '#111',
+                border: '2px solid #7dff7d',
+                padding: '32px',
+                width: '100%',
+                maxWidth: '420px',
+                fontFamily: "'Share Tech Mono', monospace"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  fontFamily: "'Rubik Mono One', monospace",
+                  color: '#7dff7d',
+                  fontSize: '20px',
+                  letterSpacing: '3px',
+                  marginBottom: '24px',
+                  textAlign: 'center'
+                }}
+              >
                 CONNECT WALLET
               </div>
-              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                {/* X1 Wallet */}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {w.x1 ? (
-                  <button onClick={() => connectWallet('x1')} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <button
+                    onClick={() => connectWallet('x1')}
+                    style={{
+                      background: 'linear-gradient(135deg,#7dff7d22,#7dff7d11)',
+                      border: '2px solid #7dff7d',
+                      color: '#7dff7d',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
                     <span>⭐ X1 Wallet</span>
-                    <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
+                    <span
+                      style={{
+                        background: '#7dff7d',
+                        color: '#0a0a0a',
+                        padding: '2px 8px',
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      RECOMMENDED
+                    </span>
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>⭐ X1 Wallet (Not Installed)</span>
-                    <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#444' }}>⭐ X1 Wallet (Not Installed)</span>
+                    <a
+                      href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
-                {/* Phantom */}
+
                 {w.phantom ? (
-                  <button onClick={() => connectWallet('phantom')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button
+                    onClick={() => connectWallet('phantom')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     👻 Phantom
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>👻 Phantom (Not Installed)</span>
-                    <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#444' }}>👻 Phantom (Not Installed)</span>
+                    <a
+                      href="https://phantom.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
-                {/* Backpack */}
+
                 {w.backpack ? (
-                  <button onClick={() => connectWallet('backpack')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button
+                    onClick={() => connectWallet('backpack')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     🎒 Backpack
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🎒 Backpack (Not Installed)</span>
-                    <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#444' }}>🎒 Backpack (Not Installed)</span>
+                    <a
+                      href="https://www.backpack.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
-                {/* MetaMask */}
+
                 {w.metamask ? (
-                  <button onClick={() => connectWallet('metamask')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button
+                    onClick={() => connectWallet('metamask')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: '#e0e0e0',
+                      padding: '14px 20px',
+                      cursor: 'pointer',
+                      fontFamily: "'Share Tech Mono', monospace",
+                      fontSize: '14px',
+                      textAlign: 'left'
+                    }}
+                  >
                     🦊 MetaMask
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🦊 MetaMask (Not Installed)</span>
-                    <a href='https://metamask.io' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div
+                    style={{
+                      border: '1px solid #2a2a2a',
+                      padding: '14px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#444' }}>🦊 MetaMask (Not Installed)</span>
+                    <a
+                      href="https://metamask.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#7dff7d', fontSize: '11px' }}
+                    >
+                      Install →
+                    </a>
                   </div>
                 )}
               </div>
+
               {connecting && (
-                <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'10px',fontFamily:"'Share Tech Mono',monospace"}}>Connecting...</div>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    color: '#7dff7d',
+                    fontSize: '12px',
+                    marginTop: '10px',
+                    fontFamily: "'Share Tech Mono', monospace"
+                  }}
+                >
+                  Connecting...
+                </div>
               )}
+
               {walletConnectError && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 16px',
+                    background: 'rgba(255,68,68,0.08)',
+                    border: '1px solid #ff4444',
+                    color: '#ff4444',
+                    fontFamily: "'Share Tech Mono', monospace",
+                    fontSize: '12px',
+                    textAlign: 'center',
+                    borderRadius: '2px'
+                  }}
+                >
                   ⚠ {walletConnectError}
                 </div>
               )}
+
               {walletConnectSuccess && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 16px',
+                    background: 'rgba(125,255,125,0.08)',
+                    border: '1px solid #7dff7d',
+                    color: '#7dff7d',
+                    fontFamily: "'Share Tech Mono', monospace",
+                    fontSize: '13px',
+                    textAlign: 'center',
+                    borderRadius: '2px'
+                  }}
+                >
                   {walletConnectSuccess}
                 </div>
               )}
-              <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'16px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+
+              <button
+                onClick={() => setShowWalletModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#444',
+                  padding: '16px',
+                  width: '100%',
+                  marginTop: '16px',
+                  cursor: 'pointer',
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: '12px'
+                }}
+              >
                 CANCEL
               </button>
             </div>
@@ -993,18 +1256,69 @@ export default function Home() {
 
       {/* Username Setup Modal */}
       {showUsernameModal && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}>
-            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'8px',textAlign:'center'}}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.92)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div
+            style={{
+              background: '#111',
+              border: '2px solid #7dff7d',
+              padding: '32px',
+              width: '100%',
+              maxWidth: '420px',
+              fontFamily: "'Share Tech Mono', monospace"
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Rubik Mono One', monospace",
+                color: '#7dff7d',
+                fontSize: '20px',
+                letterSpacing: '3px',
+                marginBottom: '8px',
+                textAlign: 'center'
+              }}
+            >
               SET USERNAME
             </div>
-            <div style={{color:'#ffaa00',fontSize:'11px',textAlign:'center',marginBottom:'20px'}}>
+            <div style={{ color: '#ffaa00', fontSize: '11px', textAlign: 'center', marginBottom: '20px' }}>
               ⚠️ Username is PERMANENT and cannot be changed!
             </div>
-            <div style={{marginBottom:'16px'}}>
-              <label style={{fontSize:'10px',color:'#888',display:'block',marginBottom:'6px',letterSpacing:'1px'}}>USERNAME (3-16 chars)</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label
+                style={{
+                  fontSize: '10px',
+                  color: '#888',
+                  display: 'block',
+                  marginBottom: '6px',
+                  letterSpacing: '1px'
+                }}
+              >
+                USERNAME (3-16 chars)
+              </label>
               <input
-                style={{width:'100%',padding:'10px 12px',background:'#1a1a2a',border:'1px solid #2a2a4a',color:'#e0e0e0',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',outline:'none',boxSizing:'border-box'}}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1a1a2a',
+                  border: '1px solid #2a2a4a',
+                  color: '#e0e0e0',
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
                 type="text"
                 placeholder="your_username"
                 value={usernameInput}
@@ -1014,8 +1328,25 @@ export default function Home() {
                 autoFocus
               />
             </div>
-            {usernameError && <div style={{color:'#ff4444',fontSize:'11px',marginBottom:'12px'}}>⚠ {usernameError}</div>}
-            <button onClick={submitUsername} style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
+            {usernameError && (
+              <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '12px' }}>
+                ⚠ {usernameError}
+              </div>
+            )}
+            <button
+              onClick={submitUsername}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #7dff7d',
+                background: 'transparent',
+                color: '#7dff7d',
+                cursor: 'pointer',
+                fontFamily: "'Share Tech Mono', monospace",
+                fontSize: '14px',
+                letterSpacing: '1px'
+              }}
+            >
               CONFIRM & LOCK USERNAME
             </button>
           </div>
