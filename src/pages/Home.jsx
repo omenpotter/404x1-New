@@ -22,7 +22,7 @@ function clearUser() { localStorage.removeItem('404x1_user'); }
 async function rpc(method, params) {
   const res = await fetch(X1_RPC, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
   });
   const d = await res.json();
@@ -478,38 +478,14 @@ export default function Home() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
-
       if (!address) {
         setWalletConnectError('Could not get wallet address. Please try again.');
         setConnecting(false);
         return;
       }
-
-      // Add signing to trigger the "signin" popup and prove ownership
-      let signature;
-      const message = 'Sign to authenticate to 404x1';
-      const encodedMessage = new TextEncoder().encode(message);
-      if (walletType === 'metamask') {
-        signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, address],
-        });
-      } else {
-        let signedMessage;
-        if (walletType === 'x1') {
-          signedMessage = await window.x1Wallet.signMessage(encodedMessage);
-        } else if (walletType === 'phantom') {
-          signedMessage = await window.phantom.solana.signMessage(encodedMessage, 'utf8');
-        } else if (walletType === 'backpack') {
-          signedMessage = await window.backpack.signMessage(encodedMessage);
-        }
-        signature = btoa(String.fromCharCode(...signedMessage.signature));
-      }
-
       setTempWalletAddress(address);
-      setTempSignature(signature);
 
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType, signature });
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address, wallet_type: walletType });
       const data = response.data;
 
       if (data.success) {
@@ -545,7 +521,7 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput, signature: tempSignature });
+      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
       const data = response.data;
       if (data.success) {
         const u = data.player || data.user;
@@ -803,11 +779,11 @@ export default function Home() {
               </div>
               <div className="tf-btns404">
                 {[1, 5, 15, 60, 240, 1440].map(tf => (
-                  <button key={tf} className={`tf-btn404${currentTF === tf ? ' active' : ''}`} onClick={() => handleTF(tf)}>
+                  <button key={tf} className={\`tf-btn404\${currentTF === tf ? ' active' : ''}\`} onClick={() => handleTF(tf)}>
                     {tf === 1440 ? '1d' : tf === 240 ? '4h' : tf === 60 ? '1h' : tf === 15 ? '15m' : tf === 5 ? '5m' : '1m'}
                   </button>
                 ))}
-                <button className={`tf-btn404${showVol ? ' active' : ''}`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
+                <button className={\`tf-btn404\${showVol ? ' active' : ''}\`} onClick={() => { const next = !showVol; setShowVol(next); iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*'); }}>Vol</button>
               </div>
               <div className="ohlcv404">
                 <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
@@ -827,13 +803,13 @@ export default function Home() {
               </div>
             </div>
 
-            /* Action buttons */
+            {/* Action buttons */}
             <div className="action-btns404" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <a href="https://app.bridge.x1.xyz/" target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Bridge</div>
                 <div className="action-sub404">Solana ↔ X1</div>
               </a>
-              <a href={`https://app.xdex.xyz/swap?fromTokenAddress=${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111`} target="_blank" rel="noopener noreferrer" className="action-btn404">
+              <a href={\`https://app.xdex.xyz/swap?fromTokenAddress=\${TOKEN_CA}&toTokenAddress=111111111111111111111111111111111111111111\`} target="_blank" rel="noopener noreferrer" className="action-btn404">
                 <div className="action-title404">Trade</div>
                 <div className="action-sub404">xDEX Swap</div>
               </a>
@@ -843,11 +819,11 @@ export default function Home() {
               </a>
             </div>
 
-            /* Live Feed */
+            {/* Live Feed */}
             <div className="feed-section404">
               <div className="feed-tabs404">
-                <button className={`feed-tab404${feedTab === 'transactions' ? ' active' : ''}`} onClick={() => setFeedTab('transactions')}>Transactions</button>
-                <button className={`feed-tab404${feedTab === 'holders' ? ' active' : ''}`} onClick={() => setFeedTab('holders')}>Holders</button>
+                <button className={\`feed-tab404\${feedTab === 'transactions' ? ' active' : ''}\`} onClick={() => setFeedTab('transactions')}>Transactions</button>
+                <button className={\`feed-tab404\${feedTab === 'holders' ? ' active' : ''}\`} onClick={() => setFeedTab('holders')}>Holders</button>
               </div>
 
               {feedTab === 'transactions' && (
@@ -858,7 +834,7 @@ export default function Home() {
                   <div className="feed-list404">
                     {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
                     {transactions.map((tx, i) => (
-                      <div key={i} className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}>
+                      <div key={i} className={\`txn-row404 \${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}\`}>
                         <span style={{ color: '#666' }}>{new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         <span className={tx.side === 'BUY' ? 'txn-buy-label' : 'txn-sell-label'}>{tx.side}</span>
                         <span>{tx.xnt.toFixed(4)}</span>
@@ -901,8 +877,8 @@ export default function Home() {
           {/* CTAs */}
           <div className="cta-section404">
             <a href={createPageUrl('Chat')} className="cta-btn404 cta-primary404">ENTER CHAT</a>
-            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{border:'2px solid #7dff7d',cursor:'pointer',background:'transparent'}}>CONNECT WALLET</button>}
-          <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
+            {!user && <button className="cta-btn404 cta-primary404" onClick={() => setShowWalletModal(true)} style={{ border: '2px solid #7dff7d', cursor: 'pointer', background: 'transparent' }}>CONNECT WALLET</button>}
+            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">PLAY GAME</a>
           </div>
 
           {/* RP Cards */}
@@ -940,111 +916,105 @@ export default function Home() {
       {showWalletModal && (() => {
         const w = detectWallets();
         return (
-          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => setShowWalletModal(false)}>
-            <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}
+            <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono', monospace" }}
               onClick={e => e.stopPropagation()}>
-              <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'24px',textAlign:'center'}}>
+              <div style={{ fontFamily: "'Rubik Mono One', monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '24px', textAlign: 'center' }}>
                 CONNECT WALLET
               </div>
-              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {/* X1 Wallet */}
                 {w.x1 ? (
-                  <button onClick={() => connectWallet('x1')} style={{background:'linear-gradient(135deg,#7dff7d22,#7dff7d11)',border:'2px solid #7dff7d',color:'#7dff7d',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <button onClick={() => connectWallet('x1')} style={{ background: 'linear-gradient(135deg,#7dff7d22,#7dff7d11)', border: '2px solid #7dff7d', color: '#7dff7d', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>⭐ X1 Wallet</span>
-                    <span style={{background:'#7dff7d',color:'#0a0a0a',padding:'2px 8px',fontSize:'10px',fontWeight:'bold'}}>RECOMMENDED</span>
+                    <span style={{ background: '#7dff7d', color: '#0a0a0a', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold' }}>RECOMMENDED</span>
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>⭐ X1 Wallet (Not Installed)</span>
-                    <a href='https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#444' }}>⭐ X1 Wallet (Not Installed)</span>
+                    <a href="https://chromewebstore.google.com/detail/kcfmcpdmlchhbikbogddmgopmjbflnae" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
                   </div>
                 )}
                 {/* Phantom */}
                 {w.phantom ? (
-                  <button onClick={() => connectWallet('phantom')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button onClick={() => connectWallet('phantom')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
                     👻 Phantom
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>👻 Phantom (Not Installed)</span>
-                    <a href='https://phantom.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#444' }}>👻 Phantom (Not Installed)</span>
+                    <a href="https://phantom.app" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
                   </div>
                 )}
                 {/* Backpack */}
                 {w.backpack ? (
-                  <button onClick={() => connectWallet('backpack')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button onClick={() => connectWallet('backpack')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
                     🎒 Backpack
                   </button>
                 ) : (
-                  <div style={{border:'1px solid #2a2a2a',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{color:'#444'}}>🎒 Backpack (Not Installed)</span>
-                    <a href='https://www.backpack.app' target='_blank' rel="noopener noreferrer" style={{color:'#7dff7d',fontSize:'11px'}}>Install →</a>
+                  <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#444' }}>🎒 Backpack (Not Installed)</span>
+                    <a href="https://www.backpack.app" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
                   </div>
                 )}
                 {/* MetaMask */}
                 {w.metamask ? (
-                  <button onClick={() => connectWallet('metamask')} style={{background:'transparent',border:'1px solid #444',color:'#e0e0e0',padding:'14px 20px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',textAlign:'left'}}>
+                  <button onClick={() => connectWallet('metamask')} style={{ background: 'transparent', border: '1px solid #444', color: '#e0e0e0', padding: '14px 20px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', textAlign: 'left' }}>
                     🦊 MetaMask
                   </button>
                 ) : (
                   <div style={{ border: '1px solid #2a2a2a', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-  <span style={{ color: '#444' }}>🦊 MetaMask (Not Installed)</span>
-  <a
-    href="https://metamask.io"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{ color: '#7dff7d', fontSize: '11px' }}
-  >
-    Install →
-  </a>
-</div>
+                    <span style={{ color: '#444' }}>🦊 MetaMask (Not Installed)</span>
+                    <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" style={{ color: '#7dff7d', fontSize: '11px' }}>Install →</a>
+                  </div>
+                )}
+              </div>
               {connecting && (
-                <div style={{textAlign:'center',color:'#7dff7d',fontSize:'12px',marginTop:'10px',fontFamily:"'Share Tech Mono',monospace"}}>Connecting...</div>
+                <div style={{ textAlign: 'center', color: '#7dff7d', fontSize: '12px', marginTop: '10px', fontFamily: "'Share Tech Mono', monospace" }}>Connecting...</div>
               )}
               {walletConnectError && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(255,68,68,0.08)',border:'1px solid #ff4444',color:'#ff4444',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px',textAlign:'center',borderRadius:'2px'}}>
+                <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,68,68,0.08)', border: '1px solid #ff4444', color: '#ff4444', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', textAlign: 'center', borderRadius: '2px' }}>
                   ⚠ {walletConnectError}
                 </div>
               )}
               {walletConnectSuccess && (
-                <div style={{marginTop:'12px',padding:'10px 16px',background:'rgba(125,255,125,0.08)',border:'1px solid #7dff7d',color:'#7dff7d',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',textAlign:'center',borderRadius:'2px'}}>
+                <div style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(125,255,125,0.08)', border: '1px solid #7dff7d', color: '#7dff7d', fontFamily: "'Share Tech Mono', monospace", fontSize: '13px', textAlign: 'center', borderRadius: '2px' }}>
                   {walletConnectSuccess}
                 </div>
               )}
-              <button onClick={() => setShowWalletModal(false)} style={{background:'transparent',border:'none',color:'#444',padding:'16px',width:'100%',marginTop:'16px',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'12px'}}>
+              <button onClick={() => setShowWalletModal(false)} style={{ background: 'transparent', border: 'none', color: '#444', padding: '16px', width: '100%', marginTop: '16px', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px' }}>
                 CANCEL
               </button>
             </div>
           </div>
         );
       })()}
-
       {/* Username Setup Modal */}
       {showUsernameModal && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#111',border:'2px solid #7dff7d',padding:'32px',width:'100%',maxWidth:'420px',fontFamily:"'Share Tech Mono',monospace"}}>
-            <div style={{fontFamily:"'Rubik Mono One',monospace",color:'#7dff7d',fontSize:'20px',letterSpacing:'3px',marginBottom:'8px',textAlign:'center'}}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#111', border: '2px solid #7dff7d', padding: '32px', width: '100%', maxWidth: '420px', fontFamily: "'Share Tech Mono', monospace" }}>
+            <div style={{ fontFamily: "'Rubik Mono One', monospace", color: '#7dff7d', fontSize: '20px', letterSpacing: '3px', marginBottom: '8px', textAlign: 'center' }}>
               SET USERNAME
             </div>
-            <div style={{color:'#ffaa00',fontSize:'11px',textAlign:'center',marginBottom:'20px'}}>
+            <div style={{ color: '#ffaa00', fontSize: '11px', textAlign: 'center', marginBottom: '20px' }}>
               ⚠️ Username is PERMANENT and cannot be changed!
             </div>
-            <div style={{marginBottom:'16px'}}>
-              <label style={{fontSize:'10px',color:'#888',display:'block',marginBottom:'6px',letterSpacing:'1px'}}>USERNAME (3-16 chars)</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '10px', color: '#888', display: 'block', marginBottom: '6px', letterSpacing: '1px' }}>USERNAME (3-16 chars)</label>
               <input
-                style={{width:'100%',padding:'10px 12px',background:'#1a1a2a',border:'1px solid #2a2a4a',color:'#e0e0e0',fontFamily:"'Share Tech Mono',monospace",fontSize:'13px',outline:'none',boxSizing:'border-box'}}
+                style={{ width: '100%', padding: '10px 12px', background: '#1a1a2a', border: '1px solid #2a2a4a', color: '#e0e0e0', fontFamily: "'Share Tech Mono', monospace", fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 type="text"
                 placeholder="your_username"
                 value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && submitUsername()}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitUsername()}
                 maxLength={16}
                 autoFocus
               />
             </div>
-            {usernameError && <div style={{color:'#ff4444',fontSize:'11px',marginBottom:'12px'}}>⚠ {usernameError}</div>}
-            <button onClick={submitUsername} style={{width:'100%',padding:'12px',border:'2px solid #7dff7d',background:'transparent',color:'#7dff7d',cursor:'pointer',fontFamily:"'Share Tech Mono',monospace",fontSize:'14px',letterSpacing:'1px'}}>
+            {usernameError && <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '12px' }}>⚠ {usernameError}</div>}
+            <button onClick={submitUsername} style={{ width: '100%', padding: '12px', border: '2px solid #7dff7d', background: 'transparent', color: '#7dff7d', cursor: 'pointer', fontFamily: "'Share Tech Mono', monospace", fontSize: '14px', letterSpacing: '1px' }}>
               CONFIRM & LOCK USERNAME
             </button>
           </div>
