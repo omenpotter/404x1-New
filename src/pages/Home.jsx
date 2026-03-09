@@ -490,7 +490,7 @@ export default function Home() {
       }
       setTempWalletAddress(address);
       setTempSignature(signature);
-      const response = await fetch('https://404x1.base44.app/api/functions/authWallet', {
+      const response = await fetch('https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/authWallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet_address: address, username: 'temp_check_wallet' })
@@ -530,7 +530,7 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await fetch('https://404x1.base44.app/api/functions/authWallet', {
+      const response = await fetch('https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/authWallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet_address: tempWalletAddress, username: usernameInput })
