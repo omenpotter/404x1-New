@@ -490,26 +490,46 @@ export default function Home() {
       }
       setTempWalletAddress(address);
       setTempSignature(signature);
-      const response = await base44.functions.invoke('authWallet', {
-        wallet_address: address,
-        username: 'temp_check_wallet'
-      });
-      const data = response.data;
-      if (data.success) {
-        // Existing user — auto login
-        const u = data.user || data.player;
-        saveUser(u);
-        setUser(u);
-        setShowWalletModal(false);
-        window.dispatchEvent(new Event('userAuthChanged'));
-        setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
-      } else if (data.error && data.error.includes('Username must be')) {
-        // New wallet — show username form
-        setShowUsernameModal(true);
-      } else {
-        setWalletConnectError(data.error || 'Authentication failed');
-      }
+      // Check if wallet already exists
+const response = await base44.functions.invoke('authWallet', {
+  wallet_address: address
+});
+
+const data = response.data;
+
+console.log("AUTH RESPONSE:", data);
+
+// EXISTING USER
+if (data.success && data.user) {
+
+  const u = data.user;
+
+  saveUser(u);
+  setUser(u);
+
+  setShowWalletModal(false);
+
+  window.dispatchEvent(new Event('userAuthChanged'));
+
+  setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+
+  setTimeout(() => setWalletConnectSuccess(''), 4000);
+
+}
+
+// NEW USER
+else if (data.needs_username === true) {
+
+  setShowUsernameModal(true);
+
+}
+
+// ERROR
+else {
+
+  setWalletConnectError(data.error || "Authentication failed");
+
+}
     } catch (err) {
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
     } finally {
