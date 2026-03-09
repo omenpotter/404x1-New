@@ -490,11 +490,12 @@ export default function Home() {
       }
       setTempWalletAddress(address);
       setTempSignature(signature);
-      const response = await base44.functions.invoke('authWallet', {
-        wallet_address: address,
-        username: 'temp_check_wallet'
+      const response = await fetch('https://404x1.base44.app/api/functions/authWallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: address, username: 'temp_check_wallet' })
       });
-      const data = response.data;
+      const data = await response.json();
       if (data.success) {
         // Existing user — auto login
         const u = data.user || data.player;
@@ -529,11 +530,12 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', {
-        wallet_address: tempWalletAddress,
-        username: usernameInput
+      const response = await fetch('https://404x1.base44.app/api/functions/authWallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: tempWalletAddress, username: usernameInput })
       });
-      const data = response.data;
+      const data = await response.json();
       if (data.success) {
         const u = data.user || data.player;
         saveUser(u);
