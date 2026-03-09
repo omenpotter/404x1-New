@@ -14,35 +14,20 @@ Deno.serve(async (req) => {
     try {
         const { wallet_address, username } = await req.json();
 
-        console.log('=== authWallet v3 called ===');
-        console.log('wallet_address:', wallet_address);
-        console.log('username:', username);
-
         if (!wallet_address) {
             return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 400, headers });
         }
 
         const base44 = createClientFromRequest(req);
 
-        // Use filter directly with wallet_address
-        console.log('Trying filter...');
-        const byFilter = await base44.asServiceRole.entities.Player.filter({ wallet_address });
-        console.log('Filter result length:', byFilter.length);
+        // STEP 1: Check if wallet exists (exact match, case-sensitive — Solana addresses are case-sensitive)
+        const existingPlayers = await base44.asServiceRole.entities.Player.filter({
+            wallet_address: wallet_address
+        });
 
-        // Also try list with skip
-        console.log('Trying list...');
-        const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 1000, 0);
-        console.log('Total players found:', allPlayers.length);
-        if (allPlayers.length > 0) console.log('First player wallet:', allPlayers[0].wallet_address);
-
-        const existingPlayer = allPlayers.find(p =>
-            p.wallet_address && p.wallet_address.toLowerCase() === wallet_address.toLowerCase()
-        ) || (byFilter.length > 0 ? byFilter[0] : null);
-
-        console.log('Existing player found:', existingPlayer ? existingPlayer.username : 'none');
-
-        if (existingPlayer) {
-            const player = await base44.asServiceRole.entities.Player.update(existingPlayer.id, {
+        if (existingPlayers.length > 0) {
+            // Returning user — auto login
+            const player = await base44.asServiceRole.entities.Player.update(existingPlayers[0].id, {
                 last_seen: new Date().toISOString()
             });
             return new Response(JSON.stringify({
@@ -59,10 +44,15 @@ Deno.serve(async (req) => {
             }), { status: 200, headers });
         }
 
-        if (!username) {
-            return new Response(JSON.stringify({ success: false, error: 'username is required' }), { status: 400, headers });
+        // STEP 2: New wallet — if dummy username sent, tell frontend to ask for real one
+        if (!username || username.startsWith('temp_check_')) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Username must be 3-16 characters'
+            }), { status: 400, headers });
         }
 
+        // STEP 3: Validate real username
         if (username.length < 3 || username.length > 16) {
             return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 400, headers });
         }
@@ -71,11 +61,13 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 400, headers });
         }
 
-        const takenUser = allPlayers.find(p => p.username && p.username.toLowerCase() === username.toLowerCase());
-        if (takenUser) {
+        // STEP 4: Check username uniqueness
+        const takenCheck = await base44.asServiceRole.entities.Player.filter({ username });
+        if (takenCheck.length > 0) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 400, headers });
         }
 
+        // STEP 5: Create new player
         const player = await base44.asServiceRole.entities.Player.create({
             wallet_address: wallet_address,
             username: username,
@@ -100,7 +92,6 @@ Deno.serve(async (req) => {
         }), { status: 200, headers });
 
     } catch (error) {
-        console.error('Auth error:', error);
         return new Response(JSON.stringify({ success: false, error: error.message || 'Authentication failed' }), { status: 500, headers });
     }
 });
