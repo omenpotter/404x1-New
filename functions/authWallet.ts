@@ -7,86 +7,128 @@ Deno.serve(async (req) => {
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     };
+
     if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
     if (req.method !== 'POST') return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers });
+
     try {
-        const { wallet_address, username } = await req.json();
-        console.log('=== authWallet v3 called ===');
+        const body = await req.json();
+        const { wallet_address, wallet_type, signature, username } = body;
+
+        console.log('=== authWallet called ===');
         console.log('wallet_address:', wallet_address);
-        console.log('username:', username);
+        console.log('wallet_type:', wallet_type);
+        console.log('signature:', signature ? '[present]' : '[missing]');
+        console.log('username:', username || '[none - first check]');
+
         if (!wallet_address) {
             return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 400, headers });
         }
+
         const base44 = createClientFromRequest(req);
-        // Use filter directly with wallet_address
-        console.log('Trying filter...');
-        const byFilter = await base44.asServiceRole.entities.Player.filter({ wallet_address });
-        console.log('Filter result length:', byFilter.length);
-        // Also try list with skip
-        console.log('Trying list...');
-        const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 1000, 0);
-        console.log('Total players found:', allPlayers.length);
-        if (allPlayers.length > 0) console.log('First player wallet:', allPlayers[0].wallet_address);
-        const existingPlayer = byFilter.length > 0 ? byFilter[0] : allPlayers.find(p =>
-            p.wallet_address && p.wallet_address === wallet_address  // Removed toLowerCase() - case-sensitive compare for base58
-        );
-        console.log('Existing player found:', existingPlayer ? existingPlayer.username : 'none');
+
+        // Try filter first (most efficient)
+        let existingPlayer = null;
+        try {
+            const filtered = await base44.asServiceRole.entities.Player.filter({ wallet_address });
+            if (filtered.length > 0) {
+                existingPlayer = filtered[0];
+                console.log('Found via filter:', existingPlayer.username || existingPlayer.id);
+            }
+        } catch (e) {
+            console.warn('Filter failed:', e.message);
+        }
+
+        // Fallback to list + case-insensitive search
+        if (!existingPlayer) {
+            const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 5000, 0);
+            console.log('Fallback list loaded:', allPlayers.length, 'players');
+            existingPlayer = allPlayers.find(p =>
+                p.wallet_address && p.wallet_address.toLowerCase() === wallet_address.toLowerCase()
+            );
+            if (existingPlayer) console.log('Found in list fallback:', existingPlayer.username);
+        }
+
+        // Existing user → auto-login
         if (existingPlayer) {
-            const player = await base44.asServiceRole.entities.Player.update(existingPlayer.id, {
+            console.log('Existing user found → auto-login');
+            const updated = await base44.asServiceRole.entities.Player.update(existingPlayer.id, {
                 last_seen: new Date().toISOString()
             });
             return new Response(JSON.stringify({
                 success: true,
+                is_new_user: false,
                 user: {
-                    id: player.id,
-                    wallet_address: player.wallet_address,
-                    username: player.username,
-                    reputation_points: player.reputation_points,
-                    total_score: player.total_score,
-                    games_played: player.games_played,
-                    user_role: player.user_role
+                    id: updated.id,
+                    wallet_address: updated.wallet_address,
+                    username: updated.username,
+                    reputation_points: updated.reputation_points || 0,
+                    total_score: updated.total_score || 0,
+                    games_played: updated.games_played || 0,
+                    user_role: updated.user_role || 'member'
                 }
             }), { status: 200, headers });
         }
-        // New wallet — need username
+
+        // No existing user
         if (!username) {
-            return new Response(JSON.stringify({ success: false, error: 'username is required' }), { status: 400, headers });
+            // This is the "please show username modal" response
+            console.log('No username sent → telling frontend: new user');
+            return new Response(JSON.stringify({
+                success: true,
+                is_new_user: true
+            }), { status: 200, headers });
         }
+
+        // Username provided → create new user
         if (username.length < 3 || username.length > 16) {
             return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 400, headers });
         }
         if (!/^[a-zA-Z0-9_]+$/.test(username)) {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 400, headers });
         }
-        // Check username uniqueness
-        const takenUser = allPlayers.find(p => p.username && p.username.toLowerCase() === username.toLowerCase());
-        if (takenUser) {
-            return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 400, headers });
+
+        // Check uniqueness (case-insensitive)
+        let isTaken = false;
+        try {
+            const taken = await base44.asServiceRole.entities.Player.filter({ username });
+            isTaken = taken.length > 0;
+        } catch {
+            const all = await base44.asServiceRole.entities.Player.list(null, 5000, 0);
+            isTaken = all.some(p => p.username?.toLowerCase() === username.toLowerCase());
         }
-        // Create new player
-        const player = await base44.asServiceRole.entities.Player.create({
-            wallet_address: wallet_address,
-            username: username,
+
+        if (isTaken) {
+            return new Response(JSON.stringify({ success: false, error: 'Username already taken' }), { status: 400, headers });
+        }
+
+        // Create
+        const newPlayer = await base44.asServiceRole.entities.Player.create({
+            wallet_address,
+            username,
             reputation_points: 0,
             total_score: 0,
             games_played: 0,
             user_role: 'member',
             last_seen: new Date().toISOString()
         });
+
         return new Response(JSON.stringify({
             success: true,
+            is_new_user: false,
             user: {
-                id: player.id,
-                wallet_address: player.wallet_address,
-                username: player.username,
-                reputation_points: player.reputation_points,
-                total_score: player.total_score,
-                games_played: player.games_played,
-                user_role: player.user_role
+                id: newPlayer.id,
+                wallet_address: newPlayer.wallet_address,
+                username: newPlayer.username,
+                reputation_points: 0,
+                total_score: 0,
+                games_played: 0,
+                user_role: 'member'
             }
         }), { status: 200, headers });
+
     } catch (error) {
         console.error('Auth error:', error);
-        return new Response(JSON.stringify({ success: false, error: error.message || 'Authentication failed' }), { status: 500, headers });
+        return new Response(JSON.stringify({ success: false, error: error.message || 'Server error' }), { status: 500, headers });
     }
 });
