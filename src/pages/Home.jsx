@@ -490,12 +490,11 @@ export default function Home() {
       }
       setTempWalletAddress(address);
       setTempSignature(signature);
-      const response = await fetch('https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/authWallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: address, username: 'temp_check_wallet' })
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: address,
+        username: 'temp_check_wallet'
       });
-      const data = await response.json();
+      const data = response.data;
       if (data.success) {
         // Existing user — auto login
         const u = data.user || data.player;
@@ -530,12 +529,11 @@ export default function Home() {
     }
     setUsernameError('');
     try {
-      const response = await fetch('https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/authWallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: tempWalletAddress, username: usernameInput })
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: tempWalletAddress,
+        username: usernameInput
       });
-      const data = await response.json();
+      const data = response.data;
       if (data.success) {
         const u = data.user || data.player;
         saveUser(u);
