@@ -12,10 +12,9 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST') return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), { status: 405, headers });
 
     try {
-        const body = await req.json();
-        const { wallet_address, username } = body;
+        const { wallet_address, username } = await req.json();
 
-        console.log('=== authWallet v2 called ===');
+        console.log('=== authWallet v3 called ===');
         console.log('wallet_address:', wallet_address);
         console.log('username:', username);
 
@@ -25,12 +24,20 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
+        // Use filter directly with wallet_address
+        console.log('Trying filter...');
+        const byFilter = await base44.asServiceRole.entities.Player.filter({ wallet_address });
+        console.log('Filter result length:', byFilter.length);
+
+        // Also try list with skip
+        console.log('Trying list...');
         const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 1000, 0);
         console.log('Total players found:', allPlayers.length);
+        if (allPlayers.length > 0) console.log('First player wallet:', allPlayers[0].wallet_address);
 
         const existingPlayer = allPlayers.find(p =>
             p.wallet_address && p.wallet_address.toLowerCase() === wallet_address.toLowerCase()
-        );
+        ) || (byFilter.length > 0 ? byFilter[0] : null);
 
         console.log('Existing player found:', existingPlayer ? existingPlayer.username : 'none');
 
