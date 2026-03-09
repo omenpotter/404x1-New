@@ -38,7 +38,7 @@ function getUiAmount(entry) {
 
 function parseTrade(tx) {
   try {
-    const pre  = tx.meta?.preTokenBalances  || [];
+    const pre = tx.meta?.preTokenBalances || [];
     const post = tx.meta?.postTokenBalances || [];
     let xntChange = 0, tokChange = 0;
     for (const p of post) {
@@ -47,17 +47,17 @@ function parseTrade(tx) {
       const mint = p.mint;
       const diff = getUiAmount(p) - getUiAmount(pr);
       if (mint === WXNT_ADDRESS) xntChange = diff;
-      if (mint === TOKEN_CA)     tokChange = diff;
+      if (mint === TOKEN_CA) tokChange = diff;
     }
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
     const price = Math.abs(xntChange / tokChange);
     if (price < 0.0001 || price > 0.1) return null;
     return {
-      time:  tx.blockTime,
-      xnt:   Math.abs(xntChange),
-      tok:   Math.abs(tokChange),
+      time: tx.blockTime,
+      xnt: Math.abs(xntChange),
+      tok: Math.abs(tokChange),
       price,
-      side:  xntChange < 0 ? 'SELL' : 'BUY',
+      side: xntChange < 0 ? 'SELL' : 'BUY',
       maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || ''
     };
   } catch { return null; }
@@ -84,7 +84,6 @@ const CHART_IFRAME_SRC = `
     s.onerror = () => reject(new Error('Chart library failed to load'));
     document.head.appendChild(s);
   });
-
   const chart = window.LightweightCharts.createChart(document.getElementById('chart'), {
     width: window.innerWidth,
     height: window.innerHeight,
@@ -105,9 +104,7 @@ const CHART_IFRAME_SRC = `
   let currentTF = 60;
   let allTrades = [];
   let showVol = false;
-
   chart.applyOptions({ handleScroll: true, handleScale: true });
-
   function tradesToCandles(trades, tf) {
     const buckets = {};
     for (const t of trades) {
@@ -122,7 +119,6 @@ const CHART_IFRAME_SRC = `
     }
     return Object.values(buckets).sort((a,b) => a.time - b.time);
   }
-
   function render() {
     const c = tradesToCandles(allTrades, currentTF);
     if (c.length) {
@@ -130,14 +126,12 @@ const CHART_IFRAME_SRC = `
       if (volSeries && showVol) volSeries.setData(c.map(x => ({ time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(125,255,125,0.3)' : 'rgba(255,68,68,0.3)' })));
     }
   }
-
   chart.subscribeCrosshairMove(p => {
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
       if (d) window.parent.postMessage({ type: 'ohlcv', o: d.open, h: d.high, l: d.low, cl: d.close, v: 0 }, '*');
     }
   });
-
   window.addEventListener('message', e => {
     const msg = e.data;
     if (msg.type === 'candles') {
@@ -161,7 +155,6 @@ const CHART_IFRAME_SRC = `
       render();
     }
   });
-
   window.addEventListener('resize', () => chart.applyOptions({ width: window.innerWidth, height: window.innerHeight }));
   window.parent.postMessage({ type: 'chartReady' }, '*');
 })();
@@ -365,7 +358,7 @@ export default function Home() {
   const fetchHolders = async () => {
     try {
       const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-      const T2022  = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+      const T2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
       const [legacyRes, t2022Res] = await Promise.all([
         rpc('getProgramAccounts', [LEGACY, {
           encoding: 'jsonParsed',
@@ -470,18 +463,15 @@ export default function Home() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
       }
-
       if (!address) {
         setWalletConnectError('Could not get wallet address. Please try again.');
         setConnecting(false);
         return;
       }
-
       // Signing step
       let signature;
       const message = 'Sign to authenticate to 404x1';
       const encodedMessage = new TextEncoder().encode(message);
-
       if (walletType === 'metamask') {
         signature = await window.ethereum.request({
           method: 'personal_sign',
@@ -498,18 +488,14 @@ export default function Home() {
         }
         signature = btoa(String.fromCharCode(...signedMessage.signature));
       }
-
       setTempWalletAddress(address);
       setTempSignature(signature);
-
       const response = await base44.functions.invoke('authWallet', {
         wallet_address: address,
         wallet_type: walletType,
         signature
       });
-
       const data = response.data;
-
       if (data.success) {
         if (data.is_new_user) {
           setShowUsernameModal(true);
@@ -579,20 +565,17 @@ export default function Home() {
         @keyframes matrixFall { to { top:110%; } }
         .scanlines404 { position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); }
         .page-content { position:relative;z-index:2; }
-
         /* Hero */
         .hero404 { max-width:1000px;margin:0 auto;padding:40px 20px 20px; }
         .hero-title404 { font-family:'Rubik Mono One',monospace;font-size:clamp(48px,10vw,96px);color:#7dff7d;text-align:center;margin:0;letter-spacing:4px;
           text-shadow:2px 0 #5fffff,-2px 0 #ff4444,0 0 30px #7dff7d;animation:glitch404 3s infinite; }
         .hero-sub404 { text-align:center;color:#888;font-size:14px;margin-top:8px;letter-spacing:4px; }
-
         /* Error list */
         .error-list404 { margin:24px auto;max-width:500px;display:flex;flex-direction:column;gap:8px;align-items:center; }
         .error-item404 { display:flex;gap:12px;align-items:center;opacity:0;animation:fadeIn404 0.5s forwards;font-size:13px;justify-content:center; }
         @keyframes fadeIn404 { to { opacity:1; } }
         .error-code404 { color:#ff4444;flex-shrink:0; }
         .error-text404 { color:#888; }
-
         /* CA */
         .ca-section404 { margin:24px 0; }
         .ca-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
@@ -600,13 +583,11 @@ export default function Home() {
         .ca-addr404 { font-size:12px;color:#5fffff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:1px; }
         .copy-btn404 { background:none;border:1px solid #2a3a2a;cursor:pointer;padding:4px 10px;font-size:14px;transition:all 0.2s;color:#7dff7d;flex-shrink:0; }
         .copy-btn404:hover { border-color:#7dff7d;background:rgba(125,255,125,0.1); }
-
         /* Stats grid */
         .stats-grid404 { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0; }
         .stat-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:16px;text-align:center;border-radius:2px; }
         .stat-label404 { font-size:10px;color:#888;margin-bottom:6px;letter-spacing:2px; }
         .stat-val404 { font-family:'Rubik Mono One',monospace;font-size:18px;color:#7dff7d; }
-
         /* Chart */
         .chart-wrap404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .chart-header404 { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1a2a1a;flex-wrap:wrap;gap:8px; }
@@ -628,14 +609,12 @@ export default function Home() {
         .ohlcv-l404 { color:#ff4444; }
         .chart-canvas404 { height:380px;position:relative; }
         .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
-
         /* Action buttons */
         .action-btns404 { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
         .action-btn404:hover { border-color:#7dff7d;box-shadow:0 0 10px rgba(125,255,125,0.15); }
         .action-title404 { color:#7dff7d;font-size:13px;margin-bottom:3px; }
         .action-sub404 { color:#888;font-size:10px; }
-
         /* Feed */
         .feed-section404 { background:#0d1219;border:1px solid #1a2a1a;margin:16px 0;border-radius:2px; }
         .feed-tabs404 { display:flex;border-bottom:1px solid #1a2a1a; }
@@ -653,13 +632,11 @@ export default function Home() {
         .txn-sell-label { color:#ff4444; }
         .hld-row404 { display:grid;grid-template-columns:50px 1fr 1fr 80px;padding:7px 14px;font-size:11px;border-bottom:1px solid #0a0e14; }
         .loading-row404 { padding:20px;text-align:center;color:#444;font-size:12px; }
-
         /* Token description */
         .token-desc404 { text-align:center;padding:24px 0;border-top:1px solid #1a2a1a;margin-top:16px; }
         .token-intro404 { font-size:14px;color:#888;margin-bottom:8px; }
         .highlight404 { color:#7dff7d; }
         .token-philosophy404 { color:#e0e0e0;font-size:13px;line-height:1.6; }
-
         /* CTAs */
         .cta-section404 { display:flex;gap:12px;justify-content:center;margin:24px 0;flex-wrap:wrap; }
         .cta-btn404 { padding:14px 32px;font-family:'Share Tech Mono',monospace;font-size:14px;text-decoration:none;cursor:pointer;transition:all 0.2s;border-radius:2px;letter-spacing:1px; }
@@ -667,7 +644,6 @@ export default function Home() {
         .cta-primary404:hover { background:#7dff7d;color:#0a0e14;box-shadow:0 0 20px rgba(125,255,125,0.4); }
         .cta-secondary404 { border:2px solid #5fffff;color:#5fffff;background:transparent; }
         .cta-secondary404:hover { background:#5fffff;color:#0a0e14;box-shadow:0 0 20px rgba(95,255,255,0.4); }
-
         /* RP cards */
         .rp-cards404 { display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0; }
         .rp-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:24px;text-align:center;border-radius:2px;transition:all 0.2s; }
@@ -675,14 +651,12 @@ export default function Home() {
         .rp-icon404 { font-size:32px;margin-bottom:12px; }
         .rp-title404 { font-family:'Rubik Mono One',monospace;font-size:13px;color:#7dff7d;margin-bottom:8px; }
         .rp-text404 { font-size:11px;color:#888;line-height:1.5; }
-
         /* Footer */
         .footer404 { border-top:1px solid #1a2a1a;padding:24px 20px;text-align:center;margin-top:40px; }
         .footer-note404 { font-size:11px;color:#444;line-height:1.6;margin-bottom:12px; }
         .footer-links404 { display:flex;gap:16px;justify-content:center; }
         .footer-link404 { color:#888;text-decoration:none;font-size:12px; }
         .footer-link404:hover { color:#7dff7d; }
-
         /* Modal */
         .modal404 { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px; }
         .modal-content404 { background:#0d1219;border:1px solid #2a3a2a;padding:32px;width:100%;max-width:420px;position:relative;border-radius:2px; }
@@ -705,16 +679,13 @@ export default function Home() {
         .warning-txt404 { font-size:10px;color:#ffaa00;margin-bottom:12px;text-align:center; }
         .wallet-note404 { text-align:center;font-size:11px;color:#888;margin-top:8px; }
         .wallet-note404 a { color:#5fffff; }
-
         /* Floating elements */
         .float-item404 { position:fixed;color:#7dff7d11;font-family:'Rubik Mono One',monospace;font-size:14px;pointer-events:none;z-index:1;animation:floatAnim404 8s ease-in-out infinite; }
         @keyframes floatAnim404 { 0%,100%{transform:translateY(0) rotate(-10deg);opacity:0.3} 50%{transform:translateY(-20px) rotate(10deg);opacity:0.6} }
-
         @media(max-width:768px){
           .stats-grid404{grid-template-columns:1fr 1fr;}
           .action-btns404{grid-template-columns:1fr 1fr;}
           .rp-cards404{grid-template-columns:1fr;}
-          .nav-links404{display:none;}
           .txn-row404{grid-template-columns:70px 50px 1fr 1fr;font-size:10px;}
           .txn-header404{grid-template-columns:70px 50px 1fr 1fr;}
         }
