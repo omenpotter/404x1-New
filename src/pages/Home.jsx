@@ -187,6 +187,7 @@ export default function Home() {
   const [walletConnectError, setWalletConnectError] = useState('');
   const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pageNotification, setPageNotification] = useState('');
 
   const iframeRef = useRef(null);
   const chartReadyRef = useRef(false);
@@ -449,6 +450,25 @@ export default function Home() {
 
       if (!address) { setWalletConnectError('Wallet connection failed'); setWalletConnecting(false); return; }
 
+      // Request wallet signature to prove ownership
+      const message = `Sign in to 404x1\nTimestamp: ${Date.now()}`;
+      const encodedMessage = new TextEncoder().encode(message);
+      try {
+        if (walletType === 'x1') {
+          await window.x1Wallet.signMessage(encodedMessage);
+        } else if (walletType === 'phantom') {
+          await window.phantom.solana.signMessage(encodedMessage, 'utf8');
+        } else if (walletType === 'backpack') {
+          await window.backpack.signMessage(encodedMessage, 'utf8');
+        } else if (walletType === 'metamask') {
+          await window.ethereum.request({ method: 'personal_sign', params: [message, address] });
+        }
+      } catch (signErr) {
+        setWalletConnectError('Signature rejected. Please approve the sign request.');
+        setWalletConnecting(false);
+        return;
+      }
+
       setTempWalletAddress(address);
 
       const response = await base44.functions.invoke('authWallet', { wallet_address: address });
@@ -460,8 +480,8 @@ export default function Home() {
         setUser(data.user);
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
-        setWalletConnectSuccess(`Welcome back, ${data.user.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
+        setPageNotification(`Welcome back, ${data.user.username}! 👾`);
+        setTimeout(() => setPageNotification(''), 4000);
       } else if (data.needs_username) {
         setShowWalletModal(false);
         setShowUsernameModal(true);
@@ -500,8 +520,8 @@ export default function Home() {
         setShowUsernameModal(false);
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
-        setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
+        setPageNotification(`Welcome to 404x1, ${u.username}! 👾`);
+        setTimeout(() => setPageNotification(''), 4000);
       } else {
         setUsernameError(data.error || 'Registration failed');
       }
@@ -652,6 +672,20 @@ export default function Home() {
           .chart-canvas404{height:260px;}
         }
       `}</style>
+
+      {/* Page-level notification banner */}
+      {pageNotification && (
+        <div style={{
+          position: 'fixed', top: '60px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(10,20,10,0.97)', border: '1px solid #7dff7d',
+          color: '#7dff7d', padding: '12px 28px', zIndex: 2000,
+          fontFamily: "'Share Tech Mono', monospace", fontSize: '14px',
+          boxShadow: '0 0 20px rgba(125,255,125,0.3)', letterSpacing: '1px',
+          whiteSpace: 'nowrap'
+        }}>
+          {pageNotification}
+        </div>
+      )}
 
       {/* Matrix BG */}
       <div id="matrixBg404" />
