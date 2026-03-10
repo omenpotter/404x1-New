@@ -492,7 +492,8 @@ export default function Home() {
       setTempSignature(signature);
       // Check if wallet already exists
 const response = await base44.functions.invoke('authWallet', {
-  wallet_address: address
+  wallet_address: address,
+  signature: signature
 });
 
 const data = response.data;
