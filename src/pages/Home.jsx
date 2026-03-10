@@ -551,10 +551,12 @@ else {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', {
-        wallet_address: tempWalletAddress,
-        username: usernameInput
-      });
+      const response = await base44.functions.invoke("authWallet", {
+  body: {
+    wallet_address: tempWalletAddress,
+    username: usernameInput
+  }
+});
       const data = response.data;
       if (data.success) {
         const u = data.user || data.player;
