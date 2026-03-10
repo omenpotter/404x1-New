@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
 
             // Write ModerationLog
             try {
-                await base44.asServiceRole.entities.ModerationLog.create({
+                const logEntry = {
                     moderator_id: 'chat_moderator_agent',
                     moderator_username: '404x1 Chat Moderator AI',
                     moderator_role: 'moderator',
@@ -197,11 +197,16 @@ Deno.serve(async (req) => {
                     message_id: msg.id,
                     duration_hours: violation.mute_hours || 0,
                     escalated: violation.escalate || false,
-                    escalated_to: violation.escalate ? 'admin' : undefined,
-                    escalation_reason: violation.escalate ? `${violation.reason} — message: "${(msg.message || '').slice(0, 100)}"` : undefined,
-                });
+                };
+                if (violation.escalate) {
+                    logEntry.escalated_to = 'admin';
+                    logEntry.escalation_reason = `${violation.reason} — message: "${(msg.message || '').slice(0, 100)}"`;
+                }
+                await base44.asServiceRole.entities.ModerationLog.create(logEntry);
                 stats.logs++;
-            } catch(e) {}
+            } catch(e) {
+                console.error('ModerationLog write failed:', e.message, e.status);
+            }
 
             if (violation.escalate) {
                 stats.escalated++;
