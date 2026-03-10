@@ -51,9 +51,9 @@ export default function Chat() {
     return () => window.removeEventListener('userAuthChanged', onAuth);
   }, []);
 
-  // ── Close context menu on click ───────────────────────────────────────────
+  // ── Close context menu + input emoji on click ─────────────────────────────
   useEffect(() => {
-    const close = () => setContextMenu(null);
+    const close = () => { setContextMenu(null); setShowInputEmoji(false); };
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, []);
