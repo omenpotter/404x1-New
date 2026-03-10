@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 200, headers });
         }
 
-        const taken = allPlayers.find(p => p.username && p.username.toLowerCase() === username.toLowerCase());
+        const taken = allPlayers.find(p => p.username && p.username.toLowerCase() === username.toLowerCase() && p.wallet_address !== wallet_address);
         if (taken) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
