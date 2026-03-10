@@ -25,10 +25,23 @@ Deno.serve(async (req) => {
             metadata: { name: 'Auto Moderation Run', type: 'scheduled' }
         });
 
-        // Tell the agent to review recent messages
+        // Tell the agent to review recent messages - be very explicit
+        const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // last 10 minutes
         await base44.asServiceRole.agents.addMessage(conversation, {
             role: 'user',
-            content: 'Review the last 50 messages in the Message entity for any rule violations. Check for spam, off-topic content, NSFW, scams, hate speech, doxxing, impersonation, and raw CA drops. Take appropriate action on any violations you find and log everything to ModerationLog. Act now.'
+            content: `MODERATION SWEEP — ACT NOW.
+
+Query the Message entity filtered by is_deleted: false, sorted by created_date descending, limit 50.
+
+For EACH message you find, check the content carefully:
+- SPAM: repeated words, excessive caps, emoji floods, pump messages → set is_deleted: true on the message, create ModerationLog entry
+- SCAM/PHISHING: DM for returns, airdrop scams, fake links, guaranteed profits → set is_deleted: true, mute player (is_muted: true, muted_until: 24h from now), create ModerationLog entry with escalated: true
+- HATE SPEECH: insults targeting the community, calling people idiots/morons/brainless → set is_deleted: true, mute player, create ModerationLog entry with escalated: true
+- CA DROPS: raw contract addresses with no context → set is_deleted: true, create ModerationLog entry
+
+For every action taken, you MUST create a ModerationLog record with: moderator_id: "chat_moderator_agent", moderator_username: "404x1 Chat Moderator AI", moderator_role: "moderator", target_player_id, target_username, action_type, reason.
+
+Do not skip any violations. Process all messages now and take action.`
         });
 
         // Wait for agent to complete (agents typically take 60-90s for full scan)
