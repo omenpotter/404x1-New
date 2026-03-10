@@ -273,7 +273,7 @@ export default function Chat() {
         .msg-row:hover .msg-actions { display:flex; }
         .action-btn { padding:2px 6px;border:1px solid #2a2a2a;background:transparent;color:#888;cursor:pointer;font-size:10px;font-family:'Share Tech Mono',monospace; }
         .action-btn:hover { border-color:#7dff7d;color:#7dff7d; }
-        .emoji-picker { position:relative;background:#1a1a1a;border:1px solid #2a2a2a;padding:8px;display:flex;flex-wrap:wrap;gap:4px;z-index:100;border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,0.8);margin-top:4px; }
+        .emoji-picker { position:relative;background:#1a1a1a;border:1px solid #2a2a2a;padding:8px;display:flex;flex-wrap:wrap;gap:4px;z-index:100;border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,0.8);margin-top:4px;max-height:160px;overflow-y:auto;width:280px; }
         .emoji-btn { width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background 0.2s;font-size:16px; }
         .emoji-btn:hover { background:#2a2a2a; }
         .typing-bar { padding:6px 16px;font-size:11px;color:#888;flex-shrink:0;min-height:24px; }
