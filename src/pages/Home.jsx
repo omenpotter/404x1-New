@@ -520,10 +520,8 @@ if (data.success) {
 }
 
 // NEW USER
-else if (data.needs_username === true) {
-
+else if (data.needs_username || data.error === "USERNAME_REQUIRED") {
   setShowUsernameModal(true);
-
 }
 
 // ERROR
