@@ -512,9 +512,26 @@ export default function Chat() {
             </div>
           )}
 
+          <div style={{ position:'relative' }}>
+            {showInputEmoji && (
+              <div className="emoji-picker" style={{ position:'absolute', bottom:'44px', left:0 }}>
+                {EMOJIS.map(e => (
+                  <div key={e} className="emoji-btn" onClick={() => { setInput(prev => prev + e); setShowInputEmoji(false); inputRef.current?.focus(); }}>{e}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="input-row">
             {/* Hidden file input */}
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFileChange} />
+
+            <button className="action-btn"
+              onClick={() => setShowInputEmoji(v => !v)}
+              title="Emoji"
+              style={{ color: showInputEmoji ? '#7dff7d' : '#888', borderColor: showInputEmoji ? '#7dff7d' : '#2a2a2a', padding:'10px 10px' }}>
+              😀
+            </button>
 
             {canUploadImage && (
               <button className="action-btn"
