@@ -159,45 +159,56 @@ Deno.serve(async (req) => {
             const violation = detectViolation(msg);
             if (!violation) continue;
 
-            // Delete message
-            await base44.asServiceRole.entities.Message.update(msg.id, {
-                is_deleted: true,
-                deleted_by: '404x1 Chat Moderator AI'
-            });
-            stats.deleted++;
+            try {
+                // Delete message
+                await base44.asServiceRole.entities.Message.update(msg.id, {
+                    is_deleted: true,
+                    deleted_by: '404x1 Chat Moderator AI'
+                });
+                stats.deleted++;
+            } catch(e) { continue; }
+
+            // Small delay to avoid rate limits
+            await new Promise(r => setTimeout(r, 200));
 
             // Mute player if needed
             if (violation.mute_hours > 0) {
-                const muteUntil = new Date(Date.now() + violation.mute_hours * 60 * 60 * 1000).toISOString();
-                await base44.asServiceRole.entities.Player.update(msg.player_id, {
-                    is_muted: true,
-                    muted_until: muteUntil,
-                    muted_by: 'chat_moderator_agent'
-                });
-                stats.muted++;
+                try {
+                    const muteUntil = new Date(Date.now() + violation.mute_hours * 60 * 60 * 1000).toISOString();
+                    await base44.asServiceRole.entities.Player.update(msg.player_id, {
+                        is_muted: true,
+                        muted_until: muteUntil,
+                        muted_by: 'chat_moderator_agent'
+                    });
+                    stats.muted++;
+                } catch(e) {}
             }
 
             // Write ModerationLog
-            await base44.asServiceRole.entities.ModerationLog.create({
-                moderator_id: 'chat_moderator_agent',
-                moderator_username: '404x1 Chat Moderator AI',
-                moderator_role: 'moderator',
-                target_player_id: msg.player_id,
-                target_username: msg.username,
-                action_type: violation.action_type,
-                reason: violation.reason,
-                message_id: msg.id,
-                duration_hours: violation.mute_hours || 0,
-                escalated: violation.escalate || false,
-                escalated_to: violation.escalate ? 'admin' : undefined,
-                escalation_reason: violation.escalate ? `${violation.reason} — message: "${(msg.message || '').slice(0, 100)}"` : undefined,
-            });
-            stats.logs++;
+            try {
+                await base44.asServiceRole.entities.ModerationLog.create({
+                    moderator_id: 'chat_moderator_agent',
+                    moderator_username: '404x1 Chat Moderator AI',
+                    moderator_role: 'moderator',
+                    target_player_id: msg.player_id,
+                    target_username: msg.username,
+                    action_type: violation.action_type,
+                    reason: violation.reason,
+                    message_id: msg.id,
+                    duration_hours: violation.mute_hours || 0,
+                    escalated: violation.escalate || false,
+                    escalated_to: violation.escalate ? 'admin' : undefined,
+                    escalation_reason: violation.escalate ? `${violation.reason} — message: "${(msg.message || '').slice(0, 100)}"` : undefined,
+                });
+                stats.logs++;
+            } catch(e) {}
 
             if (violation.escalate) {
                 stats.escalated++;
                 escalations.push({ username: msg.username, rule: violation.rule, reason: violation.reason, message: msg.message });
             }
+
+            await new Promise(r => setTimeout(r, 200));
         }
 
         // Send Telegram for serious escalations
