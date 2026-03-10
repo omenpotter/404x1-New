@@ -196,10 +196,8 @@ export default function Home() {
   // Open wallet modal via custom event or query param
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.get('connect') === '1' && !getUser()) {
-      setShowWalletModal(true);
-    }
-    const handler = () => { if (!getUser()) setShowWalletModal(true); };
+    if (p.get('connect') === '1') setShowWalletModal(true);
+    const handler = () => setShowWalletModal(true);
     window.addEventListener('open_wallet_modal', handler);
     return () => window.removeEventListener('open_wallet_modal', handler);
   }, []);
