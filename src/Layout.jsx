@@ -15,6 +15,7 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setUser(getCurrentUser());
