@@ -13,7 +13,6 @@ export default async function authWallet(req, res) {
 
   try {
 
-    // SEARCH WALLET IN DATABASE
     const players = await base44.entities.Player.filter({
       wallet_address: wallet_address
     });
@@ -34,7 +33,7 @@ export default async function authWallet(req, res) {
 
     }
 
-    // WALLET EXISTS BUT USERNAME SENT
+    // WALLET EXISTS BUT USERNAME PROVIDED
     if (existing && username) {
 
       return res.json({
@@ -44,7 +43,7 @@ export default async function authWallet(req, res) {
 
     }
 
-    // NEW WALLET
+    // NEW USER
     if (!existing && !username) {
 
       return res.json({
@@ -53,11 +52,10 @@ export default async function authWallet(req, res) {
 
     }
 
-    // CREATE NEW USER
+    // CREATE USER
     if (!existing && username) {
 
       const created = await base44.entities.Player.create({
-
         wallet_address: wallet_address,
         username: username,
         bio: "",
@@ -70,7 +68,6 @@ export default async function authWallet(req, res) {
         is_banned: false,
         is_typing: false,
         last_seen: new Date().toISOString()
-
       });
 
       return res.json({
