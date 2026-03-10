@@ -10,13 +10,10 @@ Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
 
     try {
-        await req.json();
+        const { user_id } = await req.json();
+        if (!user_id) return Response.json({ success: false }, { headers });
 
         const base44 = createClientFromRequest(req);
-        const authUser = await base44.auth.me();
-        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const user_id = authUser.id;
 
         await base44.asServiceRole.entities.Player.update(user_id, {
             is_typing: true,

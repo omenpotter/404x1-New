@@ -1,19 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const COOLDOWN_MS = 3000;          // 3 seconds between messages
-const DAILY_MSG_RP_CAP = 200;      // max RP from messages per day
+const COOLDOWN_MS = 3000;
+const DAILY_MSG_RP_CAP = 200;
 
 Deno.serve(async (req) => {
     try {
-        const { 
-            message, 
-            reply_to_message_id, 
-            reply_to_username,
-            reply_to_message,
-            image_url 
-        } = await req.json();
+        const body = await req.json();
+        const { user_id, message, reply_to_message_id, reply_to_username, reply_to_message, image_url } = body;
 
-        if (!message) {
+        if (!user_id || !message) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
@@ -23,25 +18,15 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Wallet auth: user_id comes from payload (no Base44 session)
-        const body2 = { message, reply_to_message_id, reply_to_username, reply_to_message, image_url };
-        const { user_id: uid } = await req.json().catch(() => ({}));
-        // user_id is already destructured from the first req.json() call above
-        // We need to get it from the already-parsed body — re-read from parsed fields
-        // Actually user_id was not in the destructured list — get it separately
-
         const player = await base44.asServiceRole.entities.Player.get(user_id);
         if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
 
         // Check if muted
         if (player.is_muted) {
             if (player.muted_until && new Date() < new Date(player.muted_until)) {
-                const muteEnd = new Date(player.muted_until).toLocaleString();
-                return Response.json({ success: false, error: `You are muted until ${muteEnd}` }, { status: 403 });
+                return Response.json({ success: false, error: `You are muted until ${new Date(player.muted_until).toLocaleString()}` }, { status: 403 });
             } else {
-                await base44.asServiceRole.entities.Player.update(user_id, {
-                    is_muted: false, muted_until: null, muted_by: null
-                });
+                await base44.asServiceRole.entities.Player.update(user_id, { is_muted: false, muted_until: null, muted_by: null });
             }
         }
 
@@ -52,30 +37,27 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Slow down — 3 second cooldown between messages' }, { status: 429 });
         }
 
-        // Daily RP cap from messages
+        // Daily RP cap
         const today = new Date().toISOString().slice(0, 10);
         const sameDay = player.daily_rp_date === today;
         const dailyMsgRp = sameDay ? (player.daily_rp_messages || 0) : 0;
 
         const is_reply = !!reply_to_message_id;
         const has_image = !!image_url;
-        
         let rp_earned = 0;
         if (dailyMsgRp < DAILY_MSG_RP_CAP) {
-            rp_earned = has_image ? 3 : 2;
-            // Don't exceed cap
-            rp_earned = Math.min(rp_earned, DAILY_MSG_RP_CAP - dailyMsgRp);
+            rp_earned = Math.min(has_image ? 3 : 2, DAILY_MSG_RP_CAP - dailyMsgRp);
         }
 
         const newMessage = await base44.asServiceRole.entities.Message.create({
             player_id: user_id,
             username: player.username,
-            message: message,
-            is_reply: is_reply,
+            message,
+            is_reply,
             reply_to_message_id: reply_to_message_id || null,
             reply_to_username: reply_to_username || null,
             reply_to_message: reply_to_message || null,
-            has_image: has_image,
+            has_image,
             image_url: image_url || null,
             is_deleted: false,
             is_flagged: false,
