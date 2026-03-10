@@ -424,191 +424,54 @@ export default function Home() {
     metamask: typeof window.ethereum !== 'undefined',
   });
 
- const connectWallet = async (walletType) => {
+  const connectWallet = async (walletType) => {
+    try {
+      setConnecting(true);
+      setWalletConnectError('');
 
-  try {
+      let address = null;
 
-    setWalletConnecting(true);
-    setWalletConnectError('');
-
-    let address = null;
-    let provider = null;
-
-    // PHANTOM / BACKPACK (SOLANA)
-    if (walletType === "phantom" || walletType === "backpack") {
-
-      provider = window.solana;
-
-      if (!provider) {
-        setWalletConnectError("Solana wallet not installed");
-        setWalletConnecting(false);
-        return;
+      if (walletType === 'x1') {
+        if (!window.x1Wallet) { setWalletConnectError('X1 Wallet not installed'); setConnecting(false); return; }
+        const resp = await window.x1Wallet.connect();
+        address = resp.publicKey.toString();
+      } else if (walletType === 'phantom') {
+        if (!window.phantom?.solana) { setWalletConnectError('Phantom not installed'); setConnecting(false); return; }
+        const resp = await window.phantom.solana.connect();
+        address = resp.publicKey.toString();
+      } else if (walletType === 'backpack') {
+        if (!window.backpack) { setWalletConnectError('Backpack not installed'); setConnecting(false); return; }
+        const resp = await window.backpack.connect();
+        address = resp.publicKey.toString();
+      } else if (walletType === 'metamask') {
+        if (!window.ethereum) { setWalletConnectError('MetaMask not installed'); setConnecting(false); return; }
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        address = accounts[0];
       }
 
-      const resp = await provider.connect();
-      address = resp.publicKey.toString();
-    }
-
-    // METAMASK (ETHEREUM)
-    else if (walletType === "metamask") {
-
-      if (!window.ethereum) {
-        setWalletConnectError("MetaMask not installed");
-        setWalletConnecting(false);
-        return;
-      }
-
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts"
-      });
-
-      address = accounts[0];
-    }
-
-    // X1 WALLET
-    else if (walletType === "x1") {
-
-      if (!window.x1) {
-        setWalletConnectError("X1 Wallet not installed");
-        setWalletConnecting(false);
-        return;
-      }
-
-      const resp = await window.x1.connect();
-      address = resp.address;
-    }
-
-    if (!address) {
-      setWalletConnectError("Wallet connection failed");
-      setWalletConnecting(false);
-      return;
-    }
-
-    // OPTIONAL SIGN MESSAGE
-    const message = "Sign in to 404x1";
-
-    if (provider?.signMessage) {
-
-      const encoded = new TextEncoder().encode(message);
-
-      await provider.signMessage(encoded, "utf8");
-
-    }
-
-    // AUTH REQUEST
-    const response = await base44.functions.invoke("authWallet", {
-      wallet_address: address
-    });
-
-    const data = response.data;
-
-    console.log("AUTH RESPONSE:", data);
-
-    if (data.success && data.user) {
-
-      saveUser(data.user);
-      setUser(data.user);
-
-      setShowWalletModal(false);
-
-      window.dispatchEvent(new Event("userAuthChanged"));
-
-      setWalletConnectSuccess(`Welcome back ${data.user.username}`);
-
-      setTimeout(() => setWalletConnectSuccess(""), 4000);
-
-      setWalletConnecting(false);
-
-      return;
-    }
-
-    if (data.needs_username) {
+      if (!address) { setWalletConnectError('Wallet connection failed'); setConnecting(false); return; }
 
       setTempWalletAddress(address);
-      setShowWalletModal(false);
-      setShowUsernameModal(true);
 
-      setWalletConnecting(false);
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address });
+      const data = response.data;
+      console.log('AUTH RESPONSE:', data);
 
-      return;
-    }
-
-    setWalletConnectError(data.error || "Authentication failed");
-
-    setWalletConnecting(false);
-
-  } catch (err) {
-
-    console.error("Wallet error:", err);
-
-    setWalletConnectError("Wallet connection failed");
-    setWalletConnecting(false);
-  }
-};
-      // Signing step
-      let signature;
-      const message = 'Sign to authenticate to 404x1';
-      const encodedMessage = new TextEncoder().encode(message);
-      if (walletType === 'metamask') {
-        signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, address],
-        });
+      if (data.success && data.user) {
+        saveUser(data.user);
+        setUser(data.user);
+        setShowWalletModal(false);
+        window.dispatchEvent(new Event('userAuthChanged'));
+        setWalletConnectSuccess(`Welcome back, ${data.user.username}! 👾`);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
+      } else if (data.needs_username) {
+        setShowWalletModal(false);
+        setShowUsernameModal(true);
       } else {
-        let signedMessage;
-        if (walletType === 'x1') {
-          signedMessage = await window.x1Wallet.signMessage(encodedMessage);
-        } else if (walletType === 'phantom') {
-          signedMessage = await window.phantom.solana.signMessage(encodedMessage, 'utf8');
-        } else if (walletType === 'backpack') {
-          signedMessage = await window.backpack.signMessage(encodedMessage);
-        }
-        signature = btoa(String.fromCharCode(...signedMessage.signature));
+        setWalletConnectError(data.error || 'Authentication failed');
       }
-      setTempWalletAddress(address);
-      setTempSignature(signature);
-      // Check if wallet already exists
-const response = await base44.functions.invoke("authWallet", {
-  wallet_address: tempWalletAddress,
-  username: usernameInput
-});
-
-const data = response.data;
-
-console.log("AUTH RESPONSE:", data);
-
-// EXISTING USER
-if (data.success) {
-
-  const u = data.user || data.player;
-
-  if (u) {
-    saveUser(u);
-    setUser(u);
-
-    setShowWalletModal(false);
-
-    window.dispatchEvent(new Event('userAuthChanged'));
-
-    setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
-
-    setTimeout(() => setWalletConnectSuccess(''), 4000);
-    return;
-  }
-}
-
-// NEW USER
-else if (data.needs_username || data.error === "USERNAME_REQUIRED") {
-  setShowUsernameModal(true);
-}
-
-// ERROR
-else {
-
-  setWalletConnectError(data.error || "Authentication failed");
-
-}
     } catch (err) {
+      console.error('Wallet error:', err);
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
     } finally {
       setConnecting(false);
@@ -627,12 +490,10 @@ else {
     }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke("authWallet", {
-  body: {
-    wallet_address: tempWalletAddress,
-    username: usernameInput
-  }
-});
+      const response = await base44.functions.invoke('authWallet', {
+        wallet_address: tempWalletAddress,
+        username: usernameInput
+      });
       const data = response.data;
       if (data.success) {
         const u = data.user || data.player;
