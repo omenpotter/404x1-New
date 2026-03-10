@@ -417,9 +417,9 @@ export default function Home() {
 
   const detectWallets = () => ({
     x1: typeof window.x1Wallet !== 'undefined' && window.x1Wallet !== null,
-    phantom: typeof window.phantom?.solana !== 'undefined',
-    backpack: typeof window.backpack !== 'undefined',
-    metamask: typeof window.ethereum !== 'undefined',
+    phantom: typeof window.phantom !== 'undefined' && typeof window.phantom?.solana !== 'undefined',
+    backpack: typeof window.backpack !== 'undefined' && window.backpack !== null,
+    metamask: typeof window.ethereum !== 'undefined' && window.ethereum !== null,
   });
 
   const connectWallet = async (walletType) => {
