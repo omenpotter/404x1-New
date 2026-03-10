@@ -33,9 +33,12 @@ Deno.serve(async (req) => {
         console.log('Found:', existing ? existing.username : 'none');
 
         if (existing) {
-            await base44.asServiceRole.entities.Player.update(existing.id, {
-                last_seen: new Date().toISOString()
-            });
+            // Best-effort update of last_seen (may fail if no auth context, that's OK)
+            try {
+                await base44.asServiceRole.entities.Player.update(existing.id, {
+                    last_seen: new Date().toISOString()
+                });
+            } catch (_) { /* ignore */ }
             return new Response(JSON.stringify({
                 success: true,
                 user: {
