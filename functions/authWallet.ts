@@ -2,24 +2,29 @@ import { base44 } from "@base44/sdk";
 
 export default async function authWallet(req, res) {
 
-  const { wallet_address, username } = req.data || {};
-
-  if (!wallet_address) {
-    return res.json({
-      success: false,
-      error: "WALLET_REQUIRED"
-    });
-  }
-
   try {
 
+    // Get parameters sent from frontend
+    const { wallet_address, username } = req.data || {};
+
+    // Wallet address required
+    if (!wallet_address) {
+      return res.json({
+        success: false,
+        error: "WALLET_REQUIRED"
+      });
+    }
+
+    // Find existing player
     const players = await base44.entities.Player.filter({
       wallet_address: wallet_address
     });
 
-    const existing = players[0];
+    const existing = players.length > 0 ? players[0] : null;
 
+    // ----------------------------------------------------
     // EXISTING USER LOGIN
+    // ----------------------------------------------------
     if (existing && !username) {
 
       await base44.entities.Player.update(existing.id, {
@@ -30,29 +35,30 @@ export default async function authWallet(req, res) {
         success: true,
         user: existing
       });
-
     }
 
-    // WALLET EXISTS BUT USERNAME PROVIDED
+    // ----------------------------------------------------
+    // WALLET EXISTS BUT USERNAME SENT
+    // ----------------------------------------------------
     if (existing && username) {
-
       return res.json({
         success: false,
         error: "WALLET_ALREADY_REGISTERED"
       });
-
     }
 
-    // NEW WALLET
+    // ----------------------------------------------------
+    // NEW WALLET → NEED USERNAME
+    // ----------------------------------------------------
     if (!existing && !username) {
-
       return res.json({
         needs_username: true
       });
-
     }
 
+    // ----------------------------------------------------
     // CREATE NEW USER
+    // ----------------------------------------------------
     if (!existing && username) {
 
       const created = await base44.entities.Player.create({
@@ -65,8 +71,13 @@ export default async function authWallet(req, res) {
         messages_sent: 0,
         user_role: "player",
         is_muted: false,
+        muted_until: null,
+        muted_by: null,
         is_banned: false,
+        banned_by: null,
+        banned_reason: null,
         is_typing: false,
+        typing_since: null,
         last_seen: new Date().toISOString()
       });
 
@@ -74,18 +85,15 @@ export default async function authWallet(req, res) {
         success: true,
         user: created
       });
-
     }
 
-  } catch (err) {
+  } catch (error) {
 
-    console.error("AUTH WALLET ERROR:", err);
+    console.error("AUTH WALLET ERROR:", error);
 
     return res.json({
       success: false,
       error: "SERVER_ERROR"
     });
-
   }
-
 }
