@@ -467,7 +467,7 @@ export default function Home() {
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
         setWalletConnectSuccess(`Welcome back, ${data.user.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
+        setTimeout(() => setWalletConnectSuccess(''), 5000);
       } else if (data.needs_username) {
         setShowWalletModal(false);
         setShowUsernameModal(true);
