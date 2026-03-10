@@ -424,50 +424,127 @@ export default function Home() {
     metamask: typeof window.ethereum !== 'undefined',
   });
 
-  const connectWallet = async (walletType) => {
-    setConnecting(true);
+ const connectWallet = async (walletType) => {
+
+  try {
+
+    setWalletConnecting(true);
     setWalletConnectError('');
-    setWalletConnectSuccess('');
-    let address = '';
-    try {
-      if (walletType === 'x1') {
-        if (!window.x1Wallet) {
-          setWalletConnectError('X1 Wallet not installed. Install from the Chrome Web Store.');
-          setConnecting(false);
-          return;
-        }
-        const res = await window.x1Wallet.connect();
-        address = res.publicKey.toString();
-      } else if (walletType === 'phantom') {
-        if (!window.phantom?.solana) {
-          setWalletConnectError('Phantom not installed. Install from phantom.app');
-          setConnecting(false);
-          return;
-        }
-        const res = await window.phantom.solana.connect();
-        address = res.publicKey.toString();
-      } else if (walletType === 'backpack') {
-        if (!window.backpack) {
-          setWalletConnectError('Backpack not installed. Install from backpack.app');
-          setConnecting(false);
-          return;
-        }
-        const res = await window.backpack.connect();
-        address = res.publicKey.toString();
-      } else if (walletType === 'metamask') {
-        if (!window.ethereum) {
-          setWalletConnectError('MetaMask not installed. Install from metamask.io');
-          setConnecting(false);
-          return;
-        }
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        address = accounts[0];
-      }
-      if (!address) {
-        setWalletConnectError('Could not get wallet address. Please try again.');
-        setConnecting(false);
+
+    let address = null;
+    let provider = null;
+
+    // PHANTOM / BACKPACK (SOLANA)
+    if (walletType === "phantom" || walletType === "backpack") {
+
+      provider = window.solana;
+
+      if (!provider) {
+        setWalletConnectError("Solana wallet not installed");
+        setWalletConnecting(false);
         return;
       }
+
+      const resp = await provider.connect();
+      address = resp.publicKey.toString();
+    }
+
+    // METAMASK (ETHEREUM)
+    else if (walletType === "metamask") {
+
+      if (!window.ethereum) {
+        setWalletConnectError("MetaMask not installed");
+        setWalletConnecting(false);
+        return;
+      }
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts"
+      });
+
+      address = accounts[0];
+    }
+
+    // X1 WALLET
+    else if (walletType === "x1") {
+
+      if (!window.x1) {
+        setWalletConnectError("X1 Wallet not installed");
+        setWalletConnecting(false);
+        return;
+      }
+
+      const resp = await window.x1.connect();
+      address = resp.address;
+    }
+
+    if (!address) {
+      setWalletConnectError("Wallet connection failed");
+      setWalletConnecting(false);
+      return;
+    }
+
+    // OPTIONAL SIGN MESSAGE
+    const message = "Sign in to 404x1";
+
+    if (provider?.signMessage) {
+
+      const encoded = new TextEncoder().encode(message);
+
+      await provider.signMessage(encoded, "utf8");
+
+    }
+
+    // AUTH REQUEST
+    const response = await base44.functions.invoke("authWallet", {
+      wallet_address: address
+    });
+
+    const data = response.data;
+
+    console.log("AUTH RESPONSE:", data);
+
+    if (data.success && data.user) {
+
+      saveUser(data.user);
+      setUser(data.user);
+
+      setShowWalletModal(false);
+
+      window.dispatchEvent(new Event("userAuthChanged"));
+
+      setWalletConnectSuccess(`Welcome back ${data.user.username}`);
+
+      setTimeout(() => setWalletConnectSuccess(""), 4000);
+
+      setWalletConnecting(false);
+
+      return;
+    }
+
+    if (data.needs_username) {
+
+      setTempWalletAddress(address);
+      setShowWalletModal(false);
+      setShowUsernameModal(true);
+
+      setWalletConnecting(false);
+
+      return;
+    }
+
+    setWalletConnectError(data.error || "Authentication failed");
+
+    setWalletConnecting(false);
+
+  } catch (err) {
+
+    console.error("Wallet error:", err);
+
+    setWalletConnectError("Wallet connection failed");
+    setWalletConnecting(false);
+  }
+};
       // Signing step
       let signature;
       const message = 'Sign to authenticate to 404x1';
