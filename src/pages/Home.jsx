@@ -13,10 +13,10 @@ const X1_RPC = 'https://rpc.mainnet.x1.xyz/';
 const TOTAL_SUPPLY = 404404;
 
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
 }
-function saveUser(u) { localStorage.setItem('user', JSON.stringify(u)); }
-function clearUser() { localStorage.removeItem('user'); }
+function saveUser(u) { localStorage.setItem('404x1_user', JSON.stringify(u)); }
+function clearUser() { localStorage.removeItem('404x1_user'); }
 
 async function rpc(method, params) {
   const res = await fetch(X1_RPC, {
