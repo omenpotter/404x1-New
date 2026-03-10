@@ -8,6 +8,7 @@ function getUser() {
 }
 
 const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
+const EMOJI_LIST = ['😂','😍','🔥','💯','🚀','😎','👀','💀','🤣','😭','👏','🎉','💪','🙏','❤️','⚡','🌙','👑','🤝','💎'];
 
 export default function Chat() {
   const [user, setUser]               = useState(null);
@@ -26,6 +27,10 @@ export default function Chat() {
   const [imagePreview, setImagePreview] = useState('');
   const [uploading, setUploading]     = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [reactionPicker, setReactionPicker] = useState(null); // { msgId, x, y }
+  const [tipModal, setTipModal]       = useState(null); // { playerId, username }
+  const [tipAmount, setTipAmount]     = useState('');
   // Human verification
   const [showVerification, setShowVerification] = useState(false);
   const [verifyChallenge, setVerifyChallenge]   = useState(null);
@@ -47,7 +52,7 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    const close = () => setContextMenu(null);
+    const close = () => { setContextMenu(null); setShowEmojiPicker(false); setReactionPicker(null); };
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, []);
@@ -164,6 +169,43 @@ export default function Chat() {
     try { await base44.functions.invoke('chatDelete', { user_id: u.id, message_id: msgId }); } catch {}
   };
 
+  const pinMessage = async (msgId) => {
+    const u = getUser();
+    if (!u) return;
+    try { await base44.functions.invoke('chatPin', { user_id: u.id, message_id: msgId }); toast.success('Message pinned'); } catch {}
+  };
+
+  const reportMessage = async (msgId) => {
+    const u = getUser();
+    if (!u) return;
+    try {
+      await base44.functions.invoke('chatDelete', { user_id: u.id, message_id: msgId, flag_only: true });
+      toast.success('Message reported');
+    } catch {}
+  };
+
+  const sendReaction = async (msgId, emoji) => {
+    const u = getUser();
+    if (!u) return;
+    setReactionPicker(null);
+    try {
+      await base44.functions.invoke('chatReact', { user_id: u.id, message_id: msgId, emoji });
+    } catch {}
+  };
+
+  const sendTip = async () => {
+    const u = getUser();
+    if (!u || !tipModal || !tipAmount) return;
+    const amount = parseInt(tipAmount);
+    if (isNaN(amount) || amount <= 0) { toast.error('Invalid amount'); return; }
+    try {
+      await base44.functions.invoke('chatAwardRp', { from_user_id: u.id, to_player_id: tipModal.playerId, amount, reason: 'Tip from chat' });
+      toast.success(`Tipped ${amount} RP to ${tipModal.username}!`);
+      setTipModal(null);
+      setTipAmount('');
+    } catch (e) { toast.error(e.message || 'Tip failed'); }
+  };
+
   const loadVerificationChallenge = async () => {
     const u = getUser();
     if (!u) return;
@@ -236,8 +278,15 @@ export default function Chat() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const insertEmoji = (emoji) => {
+    setInput(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    inputRef.current?.focus();
+  };
+
   const canModerate    = user && ['moderator', 'admin', 'superuser'].includes(user.user_role);
   const canUploadImage = user && ['trusted', 'moderator', 'admin', 'superuser'].includes(user.user_role);
+  const isSuperuser    = user?.user_role === 'superuser';
 
   const formatTime = (ts) => {
     if (!ts) return '';
@@ -253,7 +302,7 @@ export default function Chat() {
         .online-dot { width:8px;height:8px;border-radius:50%;background:#7dff7d;display:inline-block;margin-right:6px;box-shadow:0 0 6px #7dff7d; }
         .pinned-bar { background:#1a1a1a;border-bottom:1px solid #ffaa00;padding:8px 20px;font-size:11px;color:#ffaa00;display:flex;gap:8px;flex-shrink:0; }
         .messages-area { flex:1;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:2px; }
-        .msg-row { display:flex;gap:10px;padding:4px 0;align-items:flex-start; }
+        .msg-row { display:flex;gap:10px;padding:4px 0;align-items:flex-start;position:relative; }
         .msg-avatar { width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:'Share Tech Mono',monospace;font-weight:bold;border:1px solid #2a2a2a; }
         .msg-body { flex:1;min-width:0; }
         .msg-header { display:flex;align-items:baseline;gap:6px;margin-bottom:2px;flex-wrap:wrap; }
@@ -263,12 +312,20 @@ export default function Chat() {
         .msg-content { font-size:13px;color:#e0e0e0;line-height:1.6;word-break:break-word; }
         .msg-content.deleted { color:#444;font-style:italic; }
         .reply-quote { border-left:2px solid #444;padding:4px 8px;margin-bottom:4px;font-size:11px;color:#888;background:#1a1a1a; }
-        .msg-actions { display:none;gap:4px;margin-left:auto;flex-shrink:0; }
+        .msg-actions { display:none;gap:4px;margin-left:auto;flex-shrink:0;align-items:center; }
         .msg-row:hover .msg-actions { display:flex; }
         .action-btn { padding:2px 8px;border:1px solid #2a2a2a;background:transparent;color:#888;cursor:pointer;font-size:10px;font-family:'Share Tech Mono',monospace;transition:all 0.15s; }
         .action-btn:hover { border-color:#7dff7d;color:#7dff7d; }
+        .reactions-row { display:flex;flex-wrap:wrap;gap:4px;margin-top:4px; }
+        .reaction-chip { display:flex;align-items:center;gap:3px;padding:2px 6px;border:1px solid #2a2a2a;background:#1a1a1a;border-radius:10px;cursor:pointer;font-size:12px;transition:all 0.15s; }
+        .reaction-chip:hover { border-color:#7dff7d; }
+        .reaction-chip.mine { border-color:#5fffff44;background:#5fffff11; }
+        .emoji-picker { position:absolute;bottom:60px;left:0;background:#1a1a1a;border:1px solid #2a2a2a;padding:8px;display:flex;flex-wrap:wrap;gap:4px;width:240px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.8); }
+        .emoji-btn { font-size:18px;padding:4px;cursor:pointer;border-radius:4px;border:none;background:transparent;transition:background 0.15s; }
+        .emoji-btn:hover { background:#2a2a2a; }
+        .reaction-popup { position:fixed;background:#1a1a1a;border:1px solid #2a2a2a;padding:6px;display:flex;flex-wrap:wrap;gap:4px;width:200px;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,0.8);border-radius:4px; }
         .typing-bar { padding:6px 20px;font-size:11px;color:#888;flex-shrink:0;min-height:24px; }
-        .input-area { padding:12px 20px;border-top:1px solid #2a2a2a;background:#111;flex-shrink:0; }
+        .input-area { padding:12px 20px;border-top:1px solid #2a2a2a;background:#111;flex-shrink:0;position:relative; }
         .reply-preview { background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid #5fffff;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#888;display:flex;justify-content:space-between;align-items:center; }
         .input-row { display:flex;gap:8px;align-items:flex-end; }
         .chat-input { flex:1;padding:10px 14px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;resize:none;max-height:100px; }
@@ -289,6 +346,12 @@ export default function Chat() {
         .img-preview-wrap { position:relative;display:inline-block;margin-bottom:8px; }
         .img-preview { max-height:80px;border:1px solid #2a2a2a;border-radius:2px; }
         .img-remove { position:absolute;top:-6px;right:-6px;background:#ff4444;border:none;color:white;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center; }
+        .modal-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px; }
+        .modal-box { background:#111;border:1px solid #2a2a2a;padding:24px;width:100%;max-width:360px; }
+        .modal-title { font-family:'Rubik Mono One',monospace;color:#7dff7d;font-size:14px;margin-bottom:16px;letter-spacing:1px; }
+        .modal-input { width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box; }
+        .modal-input:focus { border-color:#7dff7d; }
+        .modal-btns { display:flex;gap:8px; }
         .verify-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px; }
         .verify-modal { background:#111;border:1px solid #7dff7d;padding:30px;width:100%;max-width:440px;box-shadow:0 0 60px rgba(125,255,125,0.15); }
         .verify-title { font-family:'Rubik Mono One',monospace;color:#7dff7d;font-size:16px;margin-bottom:6px;letter-spacing:2px; }
@@ -299,6 +362,30 @@ export default function Chat() {
         .verify-error { color:#ff4444;font-size:11px;margin-bottom:12px;padding:8px 10px;border:1px solid #ff444433;background:#ff44440a; }
         @media(max-width:600px){ .msg-actions{display:flex;} }
       `}</style>
+
+      {/* Reaction popup */}
+      {reactionPicker && (
+        <div className="reaction-popup" style={{ top: reactionPicker.y, left: reactionPicker.x }} onClick={e => e.stopPropagation()}>
+          {EMOJI_LIST.map(e => (
+            <button key={e} className="emoji-btn" onClick={() => sendReaction(reactionPicker.msgId, e)}>{e}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Tip modal — superuser only */}
+      {tipModal && isSuperuser && (
+        <div className="modal-overlay" onClick={() => setTipModal(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">💎 TIP {tipModal.username.toUpperCase()}</div>
+            <input className="modal-input" type="number" placeholder="Amount (RP)" value={tipAmount}
+              onChange={e => setTipAmount(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendTip()} autoFocus />
+            <div className="modal-btns">
+              <button className="send-btn" style={{ flex:1 }} onClick={sendTip}>SEND TIP</button>
+              <button className="action-btn" style={{ padding:'10px 14px' }} onClick={() => setTipModal(null)}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Context menu */}
       {contextMenu && (
@@ -410,37 +497,70 @@ export default function Chat() {
             const username   = msg.player?.chat_username || msg.username || 'Unknown';
             const content    = msg.content || msg.message;
             const isDeleted  = msg.is_deleted;
+            const msgPlayerId = msg.player?.id || msg.player_id;
+            const reactions  = msg.reactions || {};
 
             return (
-              <div key={msg.id} className="msg-row" style={{ position:'relative' }}>
+              <div key={msg.id} className="msg-row">
                 <div className="msg-avatar" style={{ background: roleColor + '22', color: roleColor, borderColor: roleColor + '44' }}>
                   {username[0]?.toUpperCase()}
                 </div>
                 <div className="msg-body">
                   <div className="msg-header">
                     <span className="msg-username" style={{ color: roleColor }}
-                      onClick={e => { e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, playerId: msg.player?.id || msg.player_id, username }); }}>
+                      onClick={e => { e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, playerId: msgPlayerId, username }); }}>
                       {username}
                     </span>
                     <span className="msg-role-badge" style={{ color: roleColor, borderColor: roleColor + '55' }}>
                       {playerRole.toUpperCase()}
                     </span>
                     <span className="msg-time">{formatTime(msg.created_at || msg.created_date)}</span>
-                    <div className="msg-actions">
-                      {!isDeleted && (
-                        <button className="action-btn" onClick={() => setReplyTo({ id: msg.id, username, content })}>↩ REPLY</button>
-                      )}
-                      {!isDeleted && user && (msg.player?.id || msg.player_id) !== user?.id && (
+
+                    {/* Per-message action buttons (show on hover) */}
+                    {!isDeleted && user && (
+                      <div className="msg-actions">
+                        {/* React — all users */}
                         <button className="action-btn"
-                          onClick={() => window.location.href = createPageUrl('Messages') + '?with=' + (msg.player?.id || msg.player_id)}>
-                          💬 DM
+                          onClick={e => { e.stopPropagation(); setReactionPicker({ msgId: msg.id, x: e.clientX, y: e.clientY }); }}>
+                          😊
                         </button>
-                      )}
-                      {!isDeleted && (isOwn || canModerate) && (
-                        <button className="action-btn" style={{ color:'#ff4444', borderColor:'#ff444433' }}
-                          onClick={() => deleteMessage(msg.id)}>🗑 DEL</button>
-                      )}
-                    </div>
+                        {/* Reply — all users */}
+                        <button className="action-btn" onClick={() => setReplyTo({ id: msg.id, username, content })}>↩</button>
+                        {/* DM — all users, not self */}
+                        {msgPlayerId !== user?.id && (
+                          <button className="action-btn"
+                            onClick={() => window.location.href = createPageUrl('Messages') + '?with=' + msgPlayerId}>
+                            💬
+                          </button>
+                        )}
+                        {/* Tip — superuser ONLY */}
+                        {isSuperuser && msgPlayerId !== user?.id && (
+                          <button className="action-btn" style={{ color:'#aa44ff', borderColor:'#aa44ff33' }}
+                            onClick={() => { setTipModal({ playerId: msgPlayerId, username }); setTipAmount(''); }}>
+                            💎
+                          </button>
+                        )}
+                        {/* Report — all users, not own message */}
+                        {msgPlayerId !== user?.id && (
+                          <button className="action-btn" style={{ color:'#ffaa00', borderColor:'#ffaa0033' }}
+                            onClick={() => reportMessage(msg.id)}>
+                            🚩
+                          </button>
+                        )}
+                        {/* Pin — mod/admin/superuser */}
+                        {canModerate && (
+                          <button className="action-btn" style={{ color:'#ffaa00', borderColor:'#ffaa0033' }}
+                            onClick={() => pinMessage(msg.id)}>
+                            📌
+                          </button>
+                        )}
+                        {/* Delete — own message or moderator+ */}
+                        {(isOwn || canModerate) && (
+                          <button className="action-btn" style={{ color:'#ff4444', borderColor:'#ff444433' }}
+                            onClick={() => deleteMessage(msg.id)}>🗑</button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {msg.reply_to && (
@@ -455,6 +575,19 @@ export default function Chat() {
 
                   {msg.image_url && !isDeleted && (
                     <img src={msg.image_url} alt="" style={{ maxWidth:'320px', maxHeight:'220px', marginTop:'6px', border:'1px solid #2a2a2a', borderRadius:'2px' }} />
+                  )}
+
+                  {/* Reactions */}
+                  {Object.keys(reactions).length > 0 && (
+                    <div className="reactions-row">
+                      {Object.entries(reactions).map(([emoji, data]) => (
+                        <div key={emoji} className={`reaction-chip${data.includes?.(user?.id) ? ' mine' : ''}`}
+                          onClick={() => sendReaction(msg.id, emoji)}>
+                          <span>{emoji}</span>
+                          <span style={{ fontSize:'10px', color:'#888' }}>{data.count || data.length || 0}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -486,8 +619,26 @@ export default function Chat() {
             </div>
           )}
 
+          {/* Emoji picker */}
+          {showEmojiPicker && (
+            <div className="emoji-picker" onClick={e => e.stopPropagation()}>
+              {EMOJI_LIST.map(e => (
+                <button key={e} className="emoji-btn" onClick={() => insertEmoji(e)}>{e}</button>
+              ))}
+            </div>
+          )}
+
           <div className="input-row">
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFileChange} />
+
+            {/* Emoji picker toggle — all users */}
+            {user && !user.is_muted && (
+              <button className="action-btn"
+                onClick={e => { e.stopPropagation(); setShowEmojiPicker(p => !p); }}
+                title="Emoji" style={{ padding:'10px 10px' }}>
+                😊
+              </button>
+            )}
 
             {canUploadImage && (
               <button className="action-btn"
