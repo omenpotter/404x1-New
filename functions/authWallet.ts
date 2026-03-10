@@ -77,15 +77,21 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
 
-        const p = await base44.asServiceRole.entities.Player.create({
-            wallet_address,
-            username,
-            reputation_points: 0,
-            total_score: 0,
-            games_played: 0,
-            user_role: 'member',
-            last_seen: new Date().toISOString()
-        });
+        let p;
+        try {
+            p = await base44.asServiceRole.entities.Player.create({
+                wallet_address,
+                username,
+                reputation_points: 0,
+                total_score: 0,
+                games_played: 0,
+                user_role: 'member',
+                last_seen: new Date().toISOString()
+            });
+        } catch (createErr) {
+            // Catches race condition where two requests pass the uniqueness check simultaneously
+            return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
+        }
 
         return new Response(JSON.stringify({
             success: true,

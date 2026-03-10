@@ -45,16 +45,10 @@ Deno.serve(async (req) => {
                 await base44.asServiceRole.entities.Message.update(message_id, {
                     reaction_count: Math.max(0, message.reaction_count - 1)
                 });
-                // Deduct RP symmetrically
+                // Only deduct RP from reactor — never grief the message author
                 await base44.asServiceRole.entities.Player.update(user_id, {
                     reputation_points: Math.max(0, reactor.reputation_points - 1)
                 });
-                const messageAuthor = await base44.asServiceRole.entities.Player.get(message.player_id);
-                if (messageAuthor) {
-                    await base44.asServiceRole.entities.Player.update(message.player_id, {
-                        reputation_points: Math.max(0, messageAuthor.reputation_points - 1)
-                    });
-                }
                 return Response.json({ success: true, action: 'removed', rp_change: -1 });
             } else {
                 // Switch emoji — no RP change

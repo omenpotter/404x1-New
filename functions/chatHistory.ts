@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
 
         // 4. Build enriched messages
         const messages = paged.map(msg => {
-            const pl = playerMap[msg.player_id] || {};
+            // Fall back to username stored on the message itself (written at send time)
+            // so messages from user #1001+ still show correctly
+            const pl = playerMap[msg.player_id] || { username: msg.username, user_role: 'member' };
 
             // Group reactions by emoji
             const rxMap = {};
