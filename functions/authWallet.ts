@@ -25,11 +25,11 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Find existing player — Player read RLS is open ({}) so no auth needed
-        const allPlayers = await base44.entities.Player.list(null, 1000);
-        console.log('Total players:', allPlayers.length);
+        // Find existing player by wallet address directly — RLS is open ({}) so no auth needed
+        const existingPlayers = await base44.entities.Player.filter({ wallet_address: wallet_address }, null, 1);
+        console.log('Players found by wallet:', existingPlayers.length);
 
-        const existing = allPlayers.find(p => p.wallet_address === wallet_address);
+        const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
         console.log('Found:', existing ? existing.username : 'none');
 
         if (existing) {
@@ -66,7 +66,9 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 200, headers });
         }
 
-        const taken = allPlayers.find(p => p.username && p.username.toLowerCase() === username.toLowerCase() && p.wallet_address !== wallet_address);
+        // Check username taken (excluding same wallet just in case)
+        const takenPlayers = await base44.entities.Player.filter({ username: username }, null, 1);
+        const taken = takenPlayers.find(p => p.wallet_address !== wallet_address);
         if (taken) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
