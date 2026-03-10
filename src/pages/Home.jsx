@@ -13,10 +13,10 @@ const X1_RPC = 'https://rpc.mainnet.x1.xyz/';
 const TOTAL_SUPPLY = 404404;
 
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
 }
-function saveUser(u) { localStorage.setItem('404x1_user', JSON.stringify(u)); }
-function clearUser() { localStorage.removeItem('404x1_user'); }
+function saveUser(u) { localStorage.setItem('user', JSON.stringify(u)); }
+function clearUser() { localStorage.removeItem('user'); }
 
 async function rpc(method, params) {
   const res = await fetch(X1_RPC, {
@@ -183,7 +183,7 @@ export default function Home() {
   const [tempSignature, setTempSignature] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
-  const [connecting, setConnecting] = useState(false);
+  const [walletConnecting, setWalletConnecting] = useState(false);
   const [walletConnectError, setWalletConnectError] = useState('');
   const [walletConnectSuccess, setWalletConnectSuccess] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -426,30 +426,28 @@ export default function Home() {
 
   const connectWallet = async (walletType) => {
     try {
-      setConnecting(true);
+      setWalletConnecting(true);
       setWalletConnectError('');
 
       let address = null;
+      let provider = null;
 
-      if (walletType === 'x1') {
-        if (!window.x1Wallet) { setWalletConnectError('X1 Wallet not installed'); setConnecting(false); return; }
-        const resp = await window.x1Wallet.connect();
-        address = resp.publicKey.toString();
-      } else if (walletType === 'phantom') {
-        if (!window.phantom?.solana) { setWalletConnectError('Phantom not installed'); setConnecting(false); return; }
-        const resp = await window.phantom.solana.connect();
-        address = resp.publicKey.toString();
-      } else if (walletType === 'backpack') {
-        if (!window.backpack) { setWalletConnectError('Backpack not installed'); setConnecting(false); return; }
-        const resp = await window.backpack.connect();
+      if (walletType === 'phantom' || walletType === 'backpack') {
+        provider = window.solana;
+        if (!provider) { setWalletConnectError('Solana wallet not installed'); setWalletConnecting(false); return; }
+        const resp = await provider.connect();
         address = resp.publicKey.toString();
       } else if (walletType === 'metamask') {
-        if (!window.ethereum) { setWalletConnectError('MetaMask not installed'); setConnecting(false); return; }
+        if (!window.ethereum) { setWalletConnectError('MetaMask not installed'); setWalletConnecting(false); return; }
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
+      } else if (walletType === 'x1') {
+        if (!window.x1) { setWalletConnectError('X1 wallet not installed'); setWalletConnecting(false); return; }
+        const resp = await window.x1.connect();
+        address = resp.address;
       }
 
-      if (!address) { setWalletConnectError('Wallet connection failed'); setConnecting(false); return; }
+      if (!address) { setWalletConnectError('Wallet connection failed'); setWalletConnecting(false); return; }
 
       setTempWalletAddress(address);
 
@@ -474,7 +472,7 @@ export default function Home() {
       console.error('Wallet error:', err);
       setWalletConnectError(err.message || 'Connection failed. Please try again.');
     } finally {
-      setConnecting(false);
+      setWalletConnecting(false);
     }
   };
 
@@ -1144,7 +1142,7 @@ export default function Home() {
                 )}
               </div>
 
-              {connecting && (
+              {walletConnecting && (
                 <div
                   style={{
                     textAlign: 'center',
