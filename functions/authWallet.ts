@@ -32,11 +32,10 @@ Deno.serve(async (req) => {
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
 
         if (existing) {
-            try {
-                await base44.asServiceRole.entities.Player.update(existing.id, {
-                    last_seen: new Date().toISOString()
-                });
-            } catch (_) { /* ignore */ }
+            // Best-effort last_seen update — ignore errors (RLS may block without auth context)
+            base44.asServiceRole.entities.Player.update(existing.id, {
+                last_seen: new Date().toISOString()
+            }).catch(() => {});
 
             return new Response(JSON.stringify({
                 success: true,
