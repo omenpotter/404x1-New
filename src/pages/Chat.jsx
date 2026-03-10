@@ -36,6 +36,7 @@ export default function Chat() {
   const [imagePreview, setImagePreview] = useState('');
   const [uploading, setUploading]     = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [showInputEmoji, setShowInputEmoji] = useState(false);
   const bottomRef    = useRef(null);
   const inputRef     = useRef(null);
   const typingTimerRef = useRef(null);
