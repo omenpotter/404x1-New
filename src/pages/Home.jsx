@@ -428,21 +428,23 @@ export default function Home() {
       setWalletConnectError('');
 
       let address = null;
-      let provider = null;
 
-      if (walletType === 'phantom' || walletType === 'backpack') {
-        provider = window.solana;
-        if (!provider) { setWalletConnectError('Solana wallet not installed'); setWalletConnecting(false); return; }
-        const resp = await provider.connect();
+      if (walletType === 'x1') {
+        if (typeof window.x1Wallet === 'undefined') { setWalletConnectError('X1 Wallet not installed'); setWalletConnecting(false); return; }
+        const resp = await window.x1Wallet.connect();
+        address = resp.publicKey.toString();
+      } else if (walletType === 'phantom') {
+        if (!window.phantom?.solana) { setWalletConnectError('Phantom not installed'); setWalletConnecting(false); return; }
+        const resp = await window.phantom.solana.connect();
+        address = resp.publicKey.toString();
+      } else if (walletType === 'backpack') {
+        if (typeof window.backpack === 'undefined') { setWalletConnectError('Backpack not installed'); setWalletConnecting(false); return; }
+        const resp = await window.backpack.connect();
         address = resp.publicKey.toString();
       } else if (walletType === 'metamask') {
         if (!window.ethereum) { setWalletConnectError('MetaMask not installed'); setWalletConnecting(false); return; }
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
-      } else if (walletType === 'x1') {
-        if (!window.x1) { setWalletConnectError('X1 wallet not installed'); setWalletConnecting(false); return; }
-        const resp = await window.x1.connect();
-        address = resp.address;
       }
 
       if (!address) { setWalletConnectError('Wallet connection failed'); setWalletConnecting(false); return; }
