@@ -31,8 +31,8 @@ Deno.serve(async (req) => {
             content: 'Review the last 50 messages in the Message entity for any rule violations. Check for spam, off-topic content, NSFW, scams, hate speech, doxxing, impersonation, and raw CA drops. Take appropriate action on any violations you find and log everything to ModerationLog. Act now.'
         });
 
-        // Wait briefly for agent to write logs, then check for serious new entries
-        await new Promise(r => setTimeout(r, 15000));
+        // Wait for agent to complete (agents typically take 60-90s for full scan)
+        await new Promise(r => setTimeout(r, 75000));
 
         const after = await base44.asServiceRole.entities.ModerationLog.list('-created_date', 100);
         const newEntries = after.filter(e => !beforeIds.has(e.id));
