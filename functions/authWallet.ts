@@ -2,7 +2,7 @@ import { base44 } from "@base44/sdk";
 
 export default async function authWallet(req, res) {
 
-  const { wallet_address, username } = req;
+  const { wallet_address, username } = req.data || {};
 
   if (!wallet_address) {
     return res.json({
@@ -43,7 +43,7 @@ export default async function authWallet(req, res) {
 
     }
 
-    // NEW USER
+    // NEW WALLET
     if (!existing && !username) {
 
       return res.json({
@@ -52,7 +52,7 @@ export default async function authWallet(req, res) {
 
     }
 
-    // CREATE USER
+    // CREATE NEW USER
     if (!existing && username) {
 
       const created = await base44.entities.Player.create({
