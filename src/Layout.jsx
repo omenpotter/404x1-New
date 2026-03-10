@@ -34,7 +34,9 @@ export default function Layout({ children, currentPageName }) {
 
   const logout = () => {
     localStorage.removeItem('404x1_user');
-    window.location.href = createPageUrl('Home');
+    setUser(null);
+    window.dispatchEvent(new Event('userAuthChanged'));
+    navigate(createPageUrl('Home'));
   };
 
   const isMod = user && ['moderator', 'admin', 'superuser'].includes(user.user_role);
