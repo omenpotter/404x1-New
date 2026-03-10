@@ -22,10 +22,13 @@ Deno.serve(async (req) => {
         }
 
         const base44 = createClientFromRequest(req);
-        const authUser = await base44.auth.me();
-        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const user_id = authUser.id;
+        // Wallet auth: user_id comes from payload (no Base44 session)
+        const body2 = { message, reply_to_message_id, reply_to_username, reply_to_message, image_url };
+        const { user_id: uid } = await req.json().catch(() => ({}));
+        // user_id is already destructured from the first req.json() call above
+        // We need to get it from the already-parsed body — re-read from parsed fields
+        // Actually user_id was not in the destructured list — get it separately
 
         const player = await base44.asServiceRole.entities.Player.get(user_id);
         if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
