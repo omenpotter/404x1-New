@@ -938,6 +938,19 @@ export default function Home() {
         </footer>
       </div>
 
+      {/* Welcome Toast */}
+      {walletConnectSuccess && (
+        <div style={{
+          position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(10,20,10,0.97)', border: '1px solid #7dff7d',
+          color: '#7dff7d', padding: '14px 28px', fontFamily: "'Share Tech Mono', monospace",
+          fontSize: '14px', zIndex: 9999, borderRadius: '2px',
+          boxShadow: '0 0 20px rgba(125,255,125,0.3)', whiteSpace: 'nowrap'
+        }}>
+          {walletConnectSuccess}
+        </div>
+      )}
+
       {/* Wallet Selection Modal */}
       {showWalletModal && (() => {
         const w = detectWallets();
