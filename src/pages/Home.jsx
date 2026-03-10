@@ -507,7 +507,7 @@ export default function Home() {
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
         setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 4000);
+        setTimeout(() => setWalletConnectSuccess(''), 5000);
       } else {
         setUsernameError(data.error || 'Registration failed');
       }
