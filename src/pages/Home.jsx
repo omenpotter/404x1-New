@@ -428,29 +428,23 @@ export default function Home() {
       setWalletConnectError('');
 
       let address = null;
-      const signMsg = new TextEncoder().encode(`Sign in to 404x1\nTimestamp: ${Date.now()}`);
 
       if (walletType === 'x1') {
         if (typeof window.x1Wallet === 'undefined') { setWalletConnectError('X1 Wallet not installed'); setWalletConnecting(false); return; }
         const resp = await window.x1Wallet.connect();
         address = resp.publicKey.toString();
-        await window.x1Wallet.signMessage(signMsg);
       } else if (walletType === 'phantom') {
         if (!window.phantom?.solana) { setWalletConnectError('Phantom not installed'); setWalletConnecting(false); return; }
         const resp = await window.phantom.solana.connect();
         address = resp.publicKey.toString();
-        await window.phantom.solana.signMessage(signMsg);
       } else if (walletType === 'backpack') {
         if (typeof window.backpack === 'undefined') { setWalletConnectError('Backpack not installed'); setWalletConnecting(false); return; }
         const resp = await window.backpack.connect();
         address = resp.publicKey.toString();
-        await window.backpack.signMessage(signMsg);
       } else if (walletType === 'metamask') {
         if (!window.ethereum) { setWalletConnectError('MetaMask not installed'); setWalletConnecting(false); return; }
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         address = accounts[0];
-        const msgHex = '0x' + Array.from(signMsg).map(b => b.toString(16).padStart(2, '0')).join('');
-        await window.ethereum.request({ method: 'personal_sign', params: [msgHex, address] });
       }
 
       if (!address) { setWalletConnectError('Wallet connection failed'); setWalletConnecting(false); return; }
@@ -467,7 +461,7 @@ export default function Home() {
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
         setWalletConnectSuccess(`Welcome back, ${data.user.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 5000);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
       } else if (data.needs_username) {
         setShowWalletModal(false);
         setShowUsernameModal(true);
@@ -507,7 +501,7 @@ export default function Home() {
         setShowWalletModal(false);
         window.dispatchEvent(new Event('userAuthChanged'));
         setWalletConnectSuccess(`Welcome to 404x1, ${u.username}! 👾`);
-        setTimeout(() => setWalletConnectSuccess(''), 5000);
+        setTimeout(() => setWalletConnectSuccess(''), 4000);
       } else {
         setUsernameError(data.error || 'Registration failed');
       }
@@ -937,19 +931,6 @@ export default function Home() {
           </div>
         </footer>
       </div>
-
-      {/* Welcome Toast */}
-      {walletConnectSuccess && (
-        <div style={{
-          position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(10,20,10,0.97)', border: '1px solid #7dff7d',
-          color: '#7dff7d', padding: '14px 28px', fontFamily: "'Share Tech Mono', monospace",
-          fontSize: '14px', zIndex: 9999, borderRadius: '2px',
-          boxShadow: '0 0 20px rgba(125,255,125,0.3)', whiteSpace: 'nowrap'
-        }}>
-          {walletConnectSuccess}
-        </div>
-      )}
 
       {/* Wallet Selection Modal */}
       {showWalletModal && (() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
@@ -15,7 +15,6 @@ export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const navigate = useNavigate();
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -34,9 +33,7 @@ export default function Layout({ children, currentPageName }) {
 
   const logout = () => {
     localStorage.removeItem('404x1_user');
-    setUser(null);
-    window.dispatchEvent(new Event('userAuthChanged'));
-    navigate(createPageUrl('Home'));
+    window.location.href = createPageUrl('Home');
   };
 
   const isMod = user && ['moderator', 'admin', 'superuser'].includes(user.user_role);
