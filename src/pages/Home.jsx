@@ -500,21 +500,23 @@ const data = response.data;
 console.log("AUTH RESPONSE:", data);
 
 // EXISTING USER
-if (data.success && data.user) {
+if (data.success) {
 
-  const u = data.user;
+  const u = data.user || data.player;
 
-  saveUser(u);
-  setUser(u);
+  if (u) {
+    saveUser(u);
+    setUser(u);
 
-  setShowWalletModal(false);
+    setShowWalletModal(false);
 
-  window.dispatchEvent(new Event('userAuthChanged'));
+    window.dispatchEvent(new Event('userAuthChanged'));
 
-  setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
+    setWalletConnectSuccess(`Welcome back, ${u.username}! 👾`);
 
-  setTimeout(() => setWalletConnectSuccess(''), 4000);
-
+    setTimeout(() => setWalletConnectSuccess(''), 4000);
+    return;
+  }
 }
 
 // NEW USER
