@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
 
         const base44 = createClientFromRequest(req);
 
-        // Find existing player using same pattern as chatHistory (which works)
-        const allPlayers = await base44.asServiceRole.entities.Player.list(null, 1000);
+        // Find existing player — Player read RLS is open ({}) so no auth needed
+        const allPlayers = await base44.entities.Player.list(null, 1000);
         console.log('Total players:', allPlayers.length);
 
         const existing = allPlayers.find(p => p.wallet_address === wallet_address);
