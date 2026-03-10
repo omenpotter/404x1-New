@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
                     id: pl.id,
                     chat_username: pl.username,
                     user_role: pl.user_role || 'member',
+                    // wallet_address intentionally omitted for privacy
                 },
                 reactions: Object.values(rxMap),
                 reply_to: msg.reply_to_message_id ? {

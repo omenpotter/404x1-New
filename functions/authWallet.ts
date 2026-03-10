@@ -1,5 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+const RESERVED_USERNAMES = [
+    'admin','mod','moderator','superuser','system','bot','staff',
+    '404x1','x1','owner','root','support','help','official','null','undefined'
+];
+
 Deno.serve(async (req) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -16,29 +21,23 @@ Deno.serve(async (req) => {
         const wallet_address = payload.wallet_address;
         const username = payload.username;
 
-        console.log('wallet_address:', wallet_address);
-        console.log('username:', username);
-
         if (!wallet_address) {
             return new Response(JSON.stringify({ success: false, error: 'wallet_address is required' }), { status: 200, headers });
         }
 
         const base44 = createClientFromRequest(req);
 
-        // Find existing player by wallet address directly — RLS is open ({}) so no auth needed
-        const existingPlayers = await base44.entities.Player.filter({ wallet_address: wallet_address }, null, 1);
-        console.log('Players found by wallet:', existingPlayers.length);
-
+        // O(1) indexed lookup — works at any user count, no list+find collapse
+        const existingPlayers = await base44.entities.Player.filter({ wallet_address }, null, 1);
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
-        console.log('Found:', existing ? existing.username : 'none');
 
         if (existing) {
-            // Best-effort update of last_seen (may fail if no auth context, that's OK)
             try {
                 await base44.asServiceRole.entities.Player.update(existing.id, {
                     last_seen: new Date().toISOString()
                 });
             } catch (_) { /* ignore */ }
+
             return new Response(JSON.stringify({
                 success: true,
                 user: {
@@ -53,15 +52,12 @@ Deno.serve(async (req) => {
             }), { status: 200, headers });
         }
 
-        // New wallet — no username yet
+        // New wallet — needs username
         if (!username) {
-            return new Response(JSON.stringify({
-                success: false,
-                needs_username: true
-            }), { status: 200, headers });
+            return new Response(JSON.stringify({ success: false, needs_username: true }), { status: 200, headers });
         }
 
-        // Validate username
+        // Validate username format
         if (username.length < 3 || username.length > 16) {
             return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 200, headers });
         }
@@ -69,8 +65,13 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 200, headers });
         }
 
-        // Check username taken (excluding same wallet just in case)
-        const takenPlayers = await base44.entities.Player.filter({ username: username }, null, 1);
+        // Block reserved usernames
+        if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+            return new Response(JSON.stringify({ success: false, error: 'This username is reserved. Please choose another.' }), { status: 200, headers });
+        }
+
+        // Check username taken
+        const takenPlayers = await base44.entities.Player.filter({ username }, null, 1);
         const taken = takenPlayers.find(p => p.wallet_address !== wallet_address);
         if (taken) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });

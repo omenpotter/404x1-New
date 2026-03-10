@@ -1,5 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+const MAX_SCORE = 50000;           // hard cap — reject impossibly high scores
+const DAILY_GAME_RP_CAP = 500;     // max RP from games per day
+const MAX_SCORE_PER_SECOND = 50;   // plausibility: score/time sanity check
+
 Deno.serve(async (req) => {
     try {
         const { score, level_reached, deaths, time_seconds } = await req.json();
@@ -12,45 +16,58 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid score' }, { status: 400 });
         }
 
+        // Hard cap — reject spoofed scores
+        if (score > MAX_SCORE) {
+            return Response.json({ error: `Score exceeds maximum allowed (${MAX_SCORE})` }, { status: 400 });
+        }
+
+        // Plausibility check: score per second must be achievable
+        if (time_seconds && time_seconds > 0 && score > 0) {
+            const scorePerSecond = score / time_seconds;
+            if (scorePerSecond > MAX_SCORE_PER_SECOND) {
+                return Response.json({ error: 'Score/time ratio is not plausible' }, { status: 400 });
+            }
+        }
+
         const base44 = createClientFromRequest(req);
         const authUser = await base44.auth.me();
         if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const user_id = authUser.id;
 
-        // Get player
         const player = await base44.asServiceRole.entities.Player.get(user_id);
-        
-        if (!player) {
-            return Response.json({ error: 'Player not found' }, { status: 404 });
-        }
+        if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
 
-        // Create score record with all fields
         const scoreRecord = await base44.asServiceRole.entities.Score.create({
             player_id: user_id,
             username: player.username,
-            score: score,
+            score,
             level_reached: level_reached || 1,
             deaths: deaths || 0,
             time_seconds: time_seconds || 0
         });
 
-        // Calculate RP reward (1 RP per 100 points)
-        const rpReward = Math.floor(score / 100);
+        // Daily game RP cap
+        const today = new Date().toISOString().slice(0, 10);
+        const sameDay = player.daily_rp_date === today;
+        const dailyGameRp = sameDay ? (player.daily_rp_games || 0) : 0;
 
-        // Update high_score if beaten
+        let rpReward = Math.floor(score / 100);
+        rpReward = Math.min(rpReward, DAILY_GAME_RP_CAP - dailyGameRp);
+        rpReward = Math.max(0, rpReward);
+
         const newHighScore = score > (player.high_score || 0) ? score : (player.high_score || 0);
 
-        // Update player stats
         await base44.asServiceRole.entities.Player.update(user_id, {
             total_score: (player.total_score || 0) + score,
             games_played: (player.games_played || 0) + 1,
             reputation_points: (player.reputation_points || 0) + rpReward,
             high_score: newHighScore,
-            last_seen: new Date().toISOString()
+            last_seen: new Date().toISOString(),
+            daily_rp_date: today,
+            daily_rp_games: dailyGameRp + rpReward
         });
 
-        // Calculate rank
         const allScores = await base44.asServiceRole.entities.Score.list('-score', 1000);
         const rank = allScores.findIndex(s => s.id === scoreRecord.id) + 1;
 
@@ -58,7 +75,7 @@ Deno.serve(async (req) => {
             success: true,
             score: scoreRecord,
             rp_earned: rpReward,
-            rank: rank,
+            rank,
             total_rp: (player.reputation_points || 0) + rpReward
         });
 

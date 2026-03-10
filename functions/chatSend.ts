@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+const COOLDOWN_MS = 3000;          // 3 seconds between messages
+const DAILY_MSG_RP_CAP = 200;      // max RP from messages per day
+
 Deno.serve(async (req) => {
     try {
         const { 
@@ -24,45 +27,43 @@ Deno.serve(async (req) => {
 
         const user_id = authUser.id;
 
-        // Get player info
         const player = await base44.asServiceRole.entities.Player.get(user_id);
-
-        if (!player) {
-            return Response.json({ error: 'Player not found' }, { status: 404 });
-        }
+        if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
 
         // Check if muted
         if (player.is_muted) {
             if (player.muted_until && new Date() < new Date(player.muted_until)) {
                 const muteEnd = new Date(player.muted_until).toLocaleString();
-                return Response.json({ 
-                    success: false, 
-                    error: `You are muted until ${muteEnd}` 
-                }, { status: 403 });
+                return Response.json({ success: false, error: `You are muted until ${muteEnd}` }, { status: 403 });
             } else {
-                // Unmute if time has passed
                 await base44.asServiceRole.entities.Player.update(user_id, {
-                    is_muted: false,
-                    muted_until: null,
-                    muted_by: null
+                    is_muted: false, muted_until: null, muted_by: null
                 });
             }
         }
 
-        // Determine RP reward based on message type
+        // Rate limit: 3s cooldown
+        const now = Date.now();
+        const lastMsg = player.last_message_at ? new Date(player.last_message_at).getTime() : 0;
+        if (now - lastMsg < COOLDOWN_MS) {
+            return Response.json({ error: 'Slow down — 3 second cooldown between messages' }, { status: 429 });
+        }
+
+        // Daily RP cap from messages
+        const today = new Date().toISOString().slice(0, 10);
+        const sameDay = player.daily_rp_date === today;
+        const dailyMsgRp = sameDay ? (player.daily_rp_messages || 0) : 0;
+
         const is_reply = !!reply_to_message_id;
         const has_image = !!image_url;
         
         let rp_earned = 0;
-        if (has_image) {
-            rp_earned = 3;  // Image post: +3 RP
-        } else if (is_reply) {
-            rp_earned = 2;  // Reply: +2 RP
-        } else {
-            rp_earned = 2;  // New post: +2 RP
+        if (dailyMsgRp < DAILY_MSG_RP_CAP) {
+            rp_earned = has_image ? 3 : 2;
+            // Don't exceed cap
+            rp_earned = Math.min(rp_earned, DAILY_MSG_RP_CAP - dailyMsgRp);
         }
 
-        // Create message
         const newMessage = await base44.asServiceRole.entities.Message.create({
             player_id: user_id,
             username: player.username,
@@ -78,18 +79,16 @@ Deno.serve(async (req) => {
             reaction_count: 0
         });
 
-        // Award RP
         await base44.asServiceRole.entities.Player.update(user_id, {
             reputation_points: player.reputation_points + rp_earned,
             messages_sent: (player.messages_sent || 0) + 1,
-            last_seen: new Date().toISOString()
+            last_seen: new Date().toISOString(),
+            last_message_at: new Date().toISOString(),
+            daily_rp_date: today,
+            daily_rp_messages: dailyMsgRp + rp_earned
         });
 
-        return Response.json({
-            success: true,
-            message: newMessage,
-            rp_earned: rp_earned
-        });
+        return Response.json({ success: true, message: newMessage, rp_earned });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
