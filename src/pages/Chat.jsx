@@ -8,7 +8,13 @@ function getUser() {
 }
 
 const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
-const EMOJIS = ['👍','❤️','😂','🔥','💯','👏','🚀','💎','⚡','🎮'];
+const EMOJIS = [
+  '👍','👎','❤️','😂','😍','🥹','😭','😡','🤔','🤯',
+  '🔥','💯','👏','🚀','💎','⚡','🎮','🏆','💀','👻',
+  '🐸','🦊','🐉','🦄','🍕','🍔','🎉','🎊','✨','💫',
+  '🌙','⭐','🌈','❄️','💥','🎯','🎲','🃏','🔑','🧠',
+  '💪','🤝','🙏','🫡','🤌','✌️','🫶','😎','🥶','🫠'
+];
 
 export default function Chat() {
   const [user, setUser]               = useState(null);
