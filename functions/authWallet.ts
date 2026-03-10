@@ -2,7 +2,7 @@ import { base44 } from "@base44/sdk";
 
 export default async function authWallet(req, res) {
 
-  const { wallet_address, username } = req.body;
+  const { wallet_address, username } = req;
 
   if (!wallet_address) {
     return res.json({
