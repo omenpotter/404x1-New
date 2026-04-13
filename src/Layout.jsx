@@ -42,7 +42,6 @@ export default function Layout({ children, currentPageName }) {
   const navLinks = [
     { name: 'Home', page: 'Home', label: 'HOME' },
     { name: 'Chat', page: 'Chat', label: 'CHAT' },
-    { name: 'Game', page: 'Game', label: 'GAME' },
     { name: 'Leaderboard', page: 'Leaderboard', label: 'RANKS' },
     { name: 'Messages', page: 'Messages', label: 'DMs' },
     { name: 'Profile', page: 'Profile', label: 'PROFILE' },

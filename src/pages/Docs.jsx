@@ -139,29 +139,6 @@ const sections = [
     ]
   },
   {
-    id: 'game',
-    title: 'GAME',
-    icon: '🎮',
-    content: [
-      {
-        heading: 'How to Play',
-        body: 'Use arrow keys or WASD (desktop) or on-screen buttons (mobile) to move your character. Collect green tokens to score points. Avoid red enemies — they end your run on contact.'
-      },
-      {
-        heading: 'Scoring',
-        body: 'Each token collected = points. Enemies increase in speed and number as your score grows. The higher your score, the more RP you earn on submission.'
-      },
-      {
-        heading: 'RP Rewards',
-        body: 'After each game session, your score is submitted to the server. RP is awarded based on your performance tier. High scores are tracked on the leaderboard.'
-      },
-      {
-        heading: 'Leaderboard',
-        body: 'The game leaderboard tracks total score, high score, and games played. Chat RP is tracked separately on the chat leaderboard. Both tabs are visible on the Leaderboard page.'
-      }
-    ]
-  },
-  {
     id: 'token',
     title: 'TOKEN INFO',
     icon: '📊',
@@ -286,7 +263,7 @@ export default function Docs() {
 
         <div className="docs-cta">
           <a href={createPageUrl('Chat')} className="docs-cta-btn">→ ENTER CHAT</a>
-          <a href={createPageUrl('Game')} className="docs-cta-btn">→ PLAY GAME</a>
+
           <a href={createPageUrl('Home')} className="docs-cta-btn">→ TOKEN DASHBOARD</a>
         </div>
       </div>

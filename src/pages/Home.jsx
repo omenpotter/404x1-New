@@ -921,9 +921,6 @@ export default function Home() {
                 CONNECT WALLET
               </button>
             )}
-            <a href={createPageUrl('Game')} className="cta-btn404 cta-secondary404">
-              PLAY GAME
-            </a>
           </div>
 
           {/* RP Cards */}
@@ -933,11 +930,7 @@ export default function Home() {
               <div className="rp-title404">Reputation Points</div>
               <p className="rp-text404">Earn RP through chat participation and game progression.</p>
             </div>
-            <div className="rp-card404">
-              <div className="rp-icon404">🎮</div>
-              <div className="rp-title404">Runner Game</div>
-              <p className="rp-text404">Dodge enemies, collect tokens, score points. Submit for RP.</p>
-            </div>
+
             <div className="rp-card404">
               <div className="rp-icon404">🏆</div>
               <div className="rp-title404">Leaderboards</div>
