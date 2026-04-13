@@ -4,6 +4,8 @@ import { createPageUrl } from '@/utils';
 
 const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
+const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+
 function getCurrentUser() {
   try {
     const s = localStorage.getItem('404x1_user');
@@ -13,21 +15,50 @@ function getCurrentUser() {
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
+  const [rp, setRp] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
+  const refreshRp = async (u) => {
+    if (!u?.id) return;
+    try {
+      const res = await fetch(BASE + 'gameStats?user_id=' + u.id);
+      const data = await res.json();
+      if (data.success && data.stats) {
+        setRp(data.stats.reputation_points || 0);
+        // Update localStorage so other reads are fresher
+        const updated = { ...u, reputation_points: data.stats.reputation_points || 0 };
+        localStorage.setItem('404x1_user', JSON.stringify(updated));
+      }
+    } catch {}
+  };
+
   useEffect(() => {
-    setUser(getCurrentUser());
+    const u = getCurrentUser();
+    setUser(u);
+    setRp(u?.reputation_points || 0);
+    if (u) refreshRp(u);
     try {
       const convs = JSON.parse(localStorage.getItem('404x1_conversations') || '[]');
       setUnread(convs.reduce((acc, c) => acc + (c.unread_count || 0), 0));
     } catch {}
-    const onAuth = () => setUser(getCurrentUser());
+    const onAuth = () => {
+      const freshUser = getCurrentUser();
+      setUser(freshUser);
+      setRp(freshUser?.reputation_points || 0);
+      if (freshUser) refreshRp(freshUser);
+    };
     window.addEventListener('storage', onAuth);
     window.addEventListener('userAuthChanged', onAuth);
+    // Poll every 30s to keep RP fresh
+    const interval = setInterval(() => {
+      const u2 = getCurrentUser();
+      if (u2) refreshRp(u2);
+    }, 30000);
     return () => {
       window.removeEventListener('storage', onAuth);
       window.removeEventListener('userAuthChanged', onAuth);
+      clearInterval(interval);
     };
   }, [currentPageName]);
 
@@ -182,7 +213,7 @@ export default function Layout({ children, currentPageName }) {
           {user ? (
             <>
               <span className="nav-user">{user.username || user.chat_username}</span>
-              <span className="nav-rp">{(user.reputation_points || 0).toLocaleString()} RP</span>
+              <span className="nav-rp">{rp.toLocaleString()} RP</span>
               <button className="nav-btn" onClick={logout}>LOGOUT</button>
             </>
           ) : (

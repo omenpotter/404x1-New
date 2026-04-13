@@ -145,7 +145,8 @@ export default function Profile() {
   const displayUser = (viewId && viewedPlayer) ? viewedPlayer : user;
   const role = displayUser?.user_role || 'member';
   const roleColor = ROLE_COLORS[role] || '#888';
-  const rp = displayUser?.reputation_points || 0;
+  // Prefer fresh stats data over potentially stale localStorage user
+  const rp = (isOwnProfile ? (stats?.reputation_points ?? displayUser?.reputation_points) : displayUser?.reputation_points) || 0;
   const RP_THRESHOLD = 10000;
   const progressToTrusted = role === 'member' ? Math.min((rp / RP_THRESHOLD) * 100, 100) : 100;
 
