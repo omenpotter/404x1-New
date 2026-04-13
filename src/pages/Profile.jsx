@@ -158,11 +158,7 @@ export default function Profile() {
     { cond: (displayUser?.messages_sent || 0) >= 1,    label: '💬 First Message' },
     { cond: (displayUser?.messages_sent || 0) >= 100,  label: '🗣 100 Messages' },
     { cond: (displayUser?.messages_sent || 0) >= 1000, label: '📢 1K Messages', color: '#5fffff' },
-    { cond: (stats?.games_played || 0) >= 1,      label: '🎮 First Game' },
-    { cond: (stats?.games_played || 0) >= 10,     label: '🕹 10 Games' },
-    { cond: (stats?.games_played || 0) >= 50,     label: '🎯 50 Games', color: '#aa44ff' },
-    { cond: (stats?.high_score || 0) >= 1000,     label: '🏆 1K Score' },
-    { cond: (stats?.high_score || 0) >= 10000,    label: '🥇 10K Score', color: '#7dff7d' },
+
     { cond: role !== 'member',                    label: `👑 ${role.toUpperCase()}`, color: roleColor },
   ].filter(b => b.cond);
 
@@ -293,8 +289,6 @@ export default function Profile() {
           {[
             { val: rp.toLocaleString(), lbl: 'REPUTATION POINTS', color: '#7dff7d' },
             { val: (displayUser?.messages_sent || 0).toLocaleString(), lbl: 'MESSAGES SENT', color: '#5fffff' },
-            { val: (stats?.games_played || 0).toLocaleString(), lbl: 'GAMES PLAYED', color: '#ffaa00' },
-            { val: (stats?.high_score || 0).toLocaleString(), lbl: 'HIGH SCORE', color: '#aa44ff' },
           ].map(s => (
             <div key={s.lbl} className="stat-card">
               <div className="stat-val" style={{ color:s.color }}>{s.val}</div>
@@ -305,7 +299,7 @@ export default function Profile() {
 
         {/* Tabs */}
         <div className="tabs">
-          {['overview','game','badges','activity','messages',...(isOwnProfile ? ['economy'] : [])].map(t => (
+          {['overview','badges','activity','messages',...(isOwnProfile ? ['economy'] : [])].map(t => (
             <button key={t} className={`tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>
               {t.toUpperCase()}
             </button>
@@ -321,7 +315,6 @@ export default function Profile() {
               { label:'Role', value:role.toUpperCase(), color:roleColor },
               { label:'Reputation Points', value:rp.toLocaleString(), color:'#7dff7d' },
               { label:'Messages Sent', value:(displayUser?.messages_sent||0).toLocaleString() },
-              { label:'Total Game Score', value:(stats?.total_score||0).toLocaleString(), color:'#5fffff' },
               ...(isOwnProfile ? [{ label:'Member Since', value:user?.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A' }] : []),
             ].map(item => (
               <div key={item.label} className="info-row">
@@ -391,43 +384,6 @@ export default function Profile() {
               )}
               {bioMsg && <div style={{ color:'#7dff7d', fontSize:'11px', marginTop:'6px' }}>✓ {bioMsg}</div>}
             </div>
-          </div>
-        )}
-
-        {/* GAME */}
-        {tab === 'game' && (
-          <div className="section-card">
-            <div className="section-title">GAME STATISTICS</div>
-            {loading ? (
-              <div className="empty-state">Loading...</div>
-            ) : (
-              <>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'20px' }}>
-                  {[
-                    { label:'Games Played', value:stats?.games_played||0, color:'#ffaa00' },
-                    { label:'High Score', value:(stats?.high_score||0).toLocaleString(), color:'#7dff7d' },
-                    { label:'Average Score', value:(stats?.average_score||0).toLocaleString(), color:'#5fffff' },
-                    { label:'Total Score', value:(stats?.total_score||0).toLocaleString(), color:'#aa44ff' },
-                  ].map(item => (
-                    <div key={item.label} style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'14px', textAlign:'center' }}>
-                      <div style={{ color:item.color, fontSize:'20px', fontFamily:"'Rubik Mono One',monospace", marginBottom:'4px' }}>{item.value}</div>
-                      <div style={{ color:'#888', fontSize:'10px' }}>{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-                {stats?.recent_games?.length > 0 && (
-                  <>
-                    <div className="section-title">RECENT GAMES</div>
-                    {stats.recent_games.map((g, i) => (
-                      <div key={i} className="info-row">
-                        <span style={{ color:'#888' }}>Game #{i+1}</span>
-                        <span style={{ color:'#7dff7d' }}>{(g.score||g).toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
           </div>
         )}
 
