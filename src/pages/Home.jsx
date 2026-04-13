@@ -316,22 +316,52 @@ export default function Home() {
   };
 
   const fetchPrice = async () => {
-    // 1. Pool reserves — spot price = XNT_reserve / 404_reserve (matches xdex.xyz / x1.ninja)
-    const poolP = await fetchPriceFromPool();
-    if (poolP > 0) applyPrice(poolP);
+    // 1. Bulk USD prices → divide to get XNT-denominated price
+    //    USD_404 / USD_XNT = how many XNT per 1 token (correct conversion)
+    try {
+      const resp = await xdex(`/api/token-price/prices?network=X1%20Mainnet&token_addresses=${TOKEN_CA},${WXNT_ADDRESS}`);
+      const prices = resp?.data || resp || {};
 
-    // 2. xdex API — used for 24h change; also sets price if pool query returned nothing
+      const extractPrice = (entry) => parseFloat(entry?.price ?? entry ?? 0);
+      const extractChange = (entry) => entry?.change_24h ?? null;
+
+      let usd404 = 0, usdXNT = 0, ch = null;
+      if (prices[TOKEN_CA] !== undefined) {
+        usd404 = extractPrice(prices[TOKEN_CA]);
+        ch = extractChange(prices[TOKEN_CA]);
+        usdXNT = extractPrice(prices[WXNT_ADDRESS]);
+      } else if (Array.isArray(prices)) {
+        const tok = prices.find(x => x.address === TOKEN_CA || x.mint === TOKEN_CA);
+        const xnt = prices.find(x => x.address === WXNT_ADDRESS || x.mint === WXNT_ADDRESS);
+        usd404 = extractPrice(tok);
+        usdXNT = extractPrice(xnt);
+        ch = tok?.change_24h ?? null;
+      }
+
+      if (usd404 > 0 && usdXNT > 0) {
+        applyPrice(usd404 / usdXNT);
+        if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
+        return;
+      }
+    } catch {}
+
+    // 2. Single token price endpoint (may return XNT price directly)
     try {
       const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
       const p1 = parseFloat(d1?.data?.price ?? d1?.price ?? 0);
-      if (!poolP && p1 > 0) applyPrice(p1);
-      const ch = d1?.data?.change_24h ?? d1?.change_24h;
-      if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
+      if (p1 > 0) {
+        applyPrice(p1);
+        const ch = d1?.data?.change_24h ?? d1?.change_24h;
+        if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
+        return;
+      }
     } catch {}
 
-    if (poolP > 0) return;
+    // 3. Pool reserves spot price fallback
+    const poolP = await fetchPriceFromPool();
+    if (poolP > 0) { applyPrice(poolP); return; }
 
-    // 3. Swap quote fallback
+    // 4. Swap quote last resort
     try {
       const d2 = await xdex(`/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
       const out2 = findOutputAmount(d2);
