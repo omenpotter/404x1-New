@@ -494,6 +494,12 @@ export default function Chat() {
             const isOwn      = user && (msg.player_id === user.id || msg.player?.id === user.id);
             const playerRole = msg.player?.user_role || 'member';
             const roleColor  = ROLE_COLORS[playerRole] || '#888';
+            const now = Date.now();
+            const usernameColor = (msg.player?.username_color && msg.player?.username_color_expires_at && new Date(msg.player.username_color_expires_at) > now)
+              ? msg.player.username_color : roleColor;
+            const FRAME_GLOW = { green_glow: '0 0 6px #7dff7d', cyan_pulse: '0 0 6px #5fffff', purple_flame: '0 0 6px #aa44ff' };
+            const frameGlow = (msg.player?.profile_frame && msg.player?.profile_frame_expires_at && new Date(msg.player.profile_frame_expires_at) > now)
+              ? FRAME_GLOW[msg.player.profile_frame] : undefined;
             const username   = msg.player?.chat_username || msg.username || 'Unknown';
             const content    = msg.content || msg.message;
             const isDeleted  = msg.is_deleted;
@@ -502,12 +508,12 @@ export default function Chat() {
 
             return (
               <div key={msg.id} className="msg-row">
-                <div className="msg-avatar" style={{ background: roleColor + '22', color: roleColor, borderColor: roleColor + '44' }}>
+                <div className="msg-avatar" style={{ background: roleColor + '22', color: roleColor, borderColor: roleColor + '44', boxShadow: frameGlow }}>
                   {username[0]?.toUpperCase()}
                 </div>
                 <div className="msg-body">
                   <div className="msg-header">
-                    <span className="msg-username" style={{ color: roleColor }}
+                    <span className="msg-username" style={{ color: usernameColor }}
                       onClick={e => { e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, playerId: msgPlayerId, username }); }}>
                       {username}
                     </span>

@@ -54,6 +54,10 @@ Deno.serve(async (req) => {
                     id: pl.id,
                     chat_username: pl.username,
                     user_role: pl.user_role || 'member',
+                    username_color: pl.username_color || null,
+                    username_color_expires_at: pl.username_color_expires_at || null,
+                    profile_frame: pl.profile_frame || null,
+                    profile_frame_expires_at: pl.profile_frame_expires_at || null,
                     // wallet_address intentionally omitted for privacy
                 },
                 reactions: Object.values(rxMap),

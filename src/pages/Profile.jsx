@@ -22,6 +22,16 @@ export default function Profile() {
   const [bioInput, setBioInput]       = useState('');
   const [savingBio, setSavingBio]     = useState(false);
   const [bioMsg, setBioMsg]           = useState('');
+  const [showConvert, setShowConvert]   = useState(false);
+  const [convertAmount, setConvertAmount] = useState('');
+  const [convertMsg, setConvertMsg]     = useState('');
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [spendLoading, setSpendLoading] = useState({});
+  const [spendMsg, setSpendMsg]         = useState({});
+  const [selectedColor, setSelectedColor] = useState('#ff44ff');
+  const [selectedFrame, setSelectedFrame] = useState('green_glow');
+  const [colorWeeks, setColorWeeks]     = useState(1);
+  const [frameWeeks, setFrameWeeks]     = useState(1);
 
   const params = new URLSearchParams(window.location.search);
   const viewId = params.get('id');
@@ -89,6 +99,38 @@ export default function Profile() {
     setSavingBio(false);
   };
 
+  const handleConvert = async () => {
+    const amount = parseInt(convertAmount);
+    if (!amount || amount < 500 || amount % 500 !== 0) { setConvertMsg('Amount must be a multiple of 500, min 500'); return; }
+    setConvertLoading(true); setConvertMsg('');
+    try {
+      const res = await base44.functions.invoke('convertRp', { amount });
+      const data = res.data;
+      if (data.success) {
+        setConvertMsg(`✅ Converted! You received ${data.rpx_earned} RPx`);
+        setConvertAmount('');
+        const u = getUser();
+        if (u) { fetchStats(u.id); fetchActivity(u.id); }
+      } else { setConvertMsg(data.error || 'Conversion failed'); }
+    } catch (e) { setConvertMsg(e.message || 'Conversion failed'); }
+    setConvertLoading(false);
+  };
+
+  const handleSpend = async (action, extraParams = {}) => {
+    setSpendLoading(p => ({ ...p, [action]: true }));
+    setSpendMsg(p => ({ ...p, [action]: '' }));
+    try {
+      const res = await base44.functions.invoke('spendRp', { action, ...extraParams });
+      const data = res.data;
+      if (data.success) {
+        setSpendMsg(p => ({ ...p, [action]: `✅ Done! Cost: ${data.cost} RP burned: ${data.burned_rp}` }));
+        const u = getUser();
+        if (u) { fetchStats(u.id); fetchActivity(u.id); }
+      } else { setSpendMsg(p => ({ ...p, [action]: data.error || 'Failed' })); }
+    } catch (e) { setSpendMsg(p => ({ ...p, [action]: e.message || 'Failed' })); }
+    setSpendLoading(p => ({ ...p, [action]: false }));
+  };
+
   if (!user && isOwnProfile) {
     return (
       <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
@@ -124,6 +166,14 @@ export default function Profile() {
     { cond: role !== 'member',                    label: `👑 ${role.toUpperCase()}`, color: roleColor },
   ].filter(b => b.cond);
 
+  const economyPlayer = activity?.player || user || {};
+  const lockedRp = economyPlayer.locked_rp || 0;
+  const eligibleRp = economyPlayer.is_404_holder
+    ? Math.max(0, (economyPlayer.reputation_points || 0) - lockedRp - 10000)
+    : Math.max(0, (economyPlayer.reputation_points || 0) - lockedRp);
+  const weeklyRemaining = Math.max(0, 3000 - (economyPlayer.conversion_week_rp || 0));
+  const halvingRate = 1 / Math.pow(2, Math.floor(Math.max(0, (Date.now() - new Date('2025-01-01').getTime()) / (365.25 * 24 * 3600 * 1000)) / 2));
+
   return (
     <div style={{ minHeight: 'calc(100vh - 54px)', background: '#0a0a0a', padding: '20px', fontFamily: "'Share Tech Mono', monospace" }}>
       <style>{`
@@ -158,6 +208,48 @@ export default function Profile() {
         .bio-textarea:focus { border-color:#7dff7d; }
         .empty-state { color:#444; font-size:12px; text-align:center; padding:32px; }
       `}</style>
+
+      {/* Convert Modal */}
+      {showConvert && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.88)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+          <div style={{ background:'#111', border:'2px solid #aa44ff', padding:'28px', width:'100%', maxWidth:'420px', fontFamily:"'Share Tech Mono',monospace" }}>
+            <div style={{ fontFamily:"'Rubik Mono One',monospace", color:'#aa44ff', fontSize:'16px', marginBottom:'20px', letterSpacing:'2px' }}>CONVERT RP → RPx</div>
+            <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'12px', marginBottom:'16px', fontSize:'13px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
+                <span style={{ color:'#888' }}>Eligible RP</span><span style={{ color:'#aa44ff' }}>{eligibleRp.toLocaleString()}</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
+                <span style={{ color:'#888' }}>Current Rate</span><span style={{ color:'#7dff7d' }}>1 RP → {halvingRate} RPx</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ color:'#888' }}>Weekly Remaining</span><span style={{ color:'#ffaa00' }}>{weeklyRemaining.toLocaleString()} RP</span>
+              </div>
+            </div>
+            <input
+              type="number" step="500" min="500" max={Math.min(eligibleRp, weeklyRemaining)}
+              value={convertAmount} onChange={e => setConvertAmount(e.target.value)}
+              placeholder="Amount (multiples of 500)"
+              style={{ width:'100%', padding:'10px 12px', background:'#1a1a1a', border:'1px solid #aa44ff', color:'#e0e0e0', fontFamily:"'Share Tech Mono',monospace", fontSize:'14px', outline:'none', marginBottom:'8px', boxSizing:'border-box' }}
+            />
+            {convertAmount && parseInt(convertAmount) >= 500 && (
+              <div style={{ fontSize:'12px', color:'#aa44ff', marginBottom:'8px' }}>You will receive: {(parseInt(convertAmount) * halvingRate).toFixed(4)} RPx</div>
+            )}
+            {convertMsg && (
+              <div style={{ fontSize:'12px', marginBottom:'12px', color: convertMsg.startsWith('✅') ? '#7dff7d' : '#ff4444' }}>{convertMsg}</div>
+            )}
+            <div style={{ display:'flex', gap:'8px' }}>
+              <button
+                style={{ flex:1, padding:'10px', border:'1px solid #aa44ff', background:'transparent', color:'#aa44ff', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px' }}
+                onClick={handleConvert} disabled={convertLoading}
+              >{convertLoading ? 'CONVERTING...' : 'CONFIRM'}</button>
+              <button
+                style={{ padding:'10px 16px', border:'1px solid #2a2a2a', background:'transparent', color:'#888', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px' }}
+                onClick={() => { setShowConvert(false); setConvertMsg(''); setConvertAmount(''); }}
+              >CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="profile-wrap">
         {/* Hero */}
@@ -213,7 +305,7 @@ export default function Profile() {
 
         {/* Tabs */}
         <div className="tabs">
-          {['overview','game','badges','activity','messages'].map(t => (
+          {['overview','game','badges','activity','messages',...(isOwnProfile ? ['economy'] : [])].map(t => (
             <button key={t} className={`tab-btn${tab===t?' active':''}`} onClick={() => setTab(t)}>
               {t.toUpperCase()}
             </button>
@@ -237,6 +329,32 @@ export default function Profile() {
                 <span style={{ color:item.color||'#e0e0e0' }}>{item.value}</span>
               </div>
             ))}
+
+            {/* Economy Stats (own profile) */}
+            {isOwnProfile && (
+              <>
+                <div style={{ marginTop:'20px', paddingTop:'16px', borderTop:'1px solid #1a1a1a' }}>
+                  <div style={{ fontSize:'11px', color:'#888', letterSpacing:'1px', marginBottom:'10px' }}>RP ECONOMY</div>
+                  {[
+                    { label:'RPx Balance', value:(economyPlayer.rpx_balance||0).toFixed(2), color:'#aa44ff' },
+                    { label:'Locked RP', value:(lockedRp).toLocaleString(), color:'#ffaa00', note:'Cannot be spent or converted' },
+                    { label:'Total Converted', value:(economyPlayer.total_rp_converted||0).toLocaleString(), color:'#5fffff' },
+                    { label:'Weekly Cap Left', value:weeklyRemaining.toLocaleString(), color:'#7dff7d', note:'Resets Monday' },
+                  ].map(item => (
+                    <div key={item.label} className="info-row">
+                      <span style={{ color:'#888' }}>{item.label}{item.note ? <span style={{ color:'#444', fontSize:'9px', marginLeft:'6px' }}>({item.note})</span> : ''}</span>
+                      <span style={{ color:item.color }}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop:'12px' }}>
+                  <button
+                    style={{ padding:'8px 16px', border:'1px solid #aa44ff', background:'transparent', color:'#aa44ff', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px', transition:'all 0.2s' }}
+                    onClick={() => { setShowConvert(true); setConvertMsg(''); }}
+                  >CONVERT RP → RPx</button>
+                </div>
+              </>
+            )}
 
             {/* Bio */}
             <div style={{ marginTop:'20px', paddingTop:'16px', borderTop:'1px solid #1a1a1a' }}>
@@ -395,6 +513,96 @@ export default function Profile() {
             ) : (
               <div className="empty-state">No recent messages.</div>
             )}
+          </div>
+        )}
+
+        {/* ECONOMY */}
+        {tab === 'economy' && isOwnProfile && (
+          <div className="section-card">
+            <div className="section-title">RP ECONOMY — SPEND RP ON PERKS</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'12px' }}>
+
+              {/* Highlight Message */}
+              <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'16px' }}>
+                <div style={{ color:'#7dff7d', fontSize:'13px', marginBottom:'6px', fontFamily:"'Rubik Mono One',monospace" }}>HIGHLIGHT MESSAGE</div>
+                <div style={{ color:'#888', fontSize:'11px', marginBottom:'10px', lineHeight:1.5 }}>Highlight your next message in chat</div>
+                <div style={{ color:'#ffaa00', fontSize:'12px', marginBottom:'8px' }}>25 RP — one-time</div>
+                {economyPlayer.highlight_expires_at && new Date(economyPlayer.highlight_expires_at) > Date.now() && (
+                  <div style={{ color:'#7dff7d', fontSize:'11px', marginBottom:'8px' }}>✓ Active until {new Date(economyPlayer.highlight_expires_at).toLocaleTimeString()}</div>
+                )}
+                {spendMsg['highlight_message'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['highlight_message'].startsWith('✅')?'#7dff7d':'#ff4444' }}>{spendMsg['highlight_message']}</div>}
+                <button style={{ padding:'7px 14px', border:'1px solid #7dff7d', background:'transparent', color:'#7dff7d', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'11px', marginBottom:'6px' }}
+                  onClick={() => handleSpend('highlight_message')} disabled={spendLoading['highlight_message']}
+                >{spendLoading['highlight_message'] ? '...' : 'BUY — 25 RP'}</button>
+                <div style={{ color:'#444', fontSize:'10px' }}>25% of cost is permanently burned</div>
+              </div>
+
+              {/* Pin Message */}
+              <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'16px' }}>
+                <div style={{ color:'#ffaa00', fontSize:'13px', marginBottom:'6px', fontFamily:"'Rubik Mono One',monospace" }}>PIN MESSAGE</div>
+                <div style={{ color:'#888', fontSize:'11px', marginBottom:'10px', lineHeight:1.5 }}>Request a message pin (mod review required)</div>
+                <div style={{ color:'#ffaa00', fontSize:'12px', marginBottom:'8px' }}>100 RP — one-time</div>
+                {spendMsg['pin_message'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['pin_message'].startsWith('✅')?'#7dff7d':'#ff4444' }}>{spendMsg['pin_message']}</div>}
+                <button style={{ padding:'7px 14px', border:'1px solid #ffaa00', background:'transparent', color:'#ffaa00', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'11px', marginBottom:'6px' }}
+                  onClick={() => handleSpend('pin_message')} disabled={spendLoading['pin_message']}
+                >{spendLoading['pin_message'] ? '...' : 'BUY — 100 RP'}</button>
+                <div style={{ color:'#444', fontSize:'10px' }}>25% of cost is permanently burned</div>
+              </div>
+
+              {/* Username Color */}
+              <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'16px' }}>
+                <div style={{ color:'#5fffff', fontSize:'13px', marginBottom:'6px', fontFamily:"'Rubik Mono One',monospace" }}>USERNAME COLOR</div>
+                <div style={{ color:'#888', fontSize:'11px', marginBottom:'10px', lineHeight:1.5 }}>Custom username color in chat</div>
+                <div style={{ color:'#ffaa00', fontSize:'12px', marginBottom:'8px' }}>500 RP/week</div>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px' }}>
+                  <input type="color" value={selectedColor} onChange={e => setSelectedColor(e.target.value)}
+                    style={{ width:'32px', height:'32px', cursor:'pointer', border:'1px solid #2a2a2a', background:'none', borderRadius:'2px' }} />
+                  <span style={{ color:'#888', fontSize:'11px' }}>{selectedColor}</span>
+                </div>
+                <div style={{ display:'flex', gap:'6px', marginBottom:'8px' }}>
+                  {[1,2,4].map(w => (
+                    <button key={w} onClick={() => setColorWeeks(w)} style={{ padding:'4px 10px', border:`1px solid ${colorWeeks===w?'#5fffff':'#2a2a2a'}`, background:'transparent', color:colorWeeks===w?'#5fffff':'#888', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'10px' }}>{w}W</button>
+                  ))}
+                </div>
+                {economyPlayer.username_color_expires_at && new Date(economyPlayer.username_color_expires_at) > Date.now() && (
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'8px' }}>
+                    <div style={{ width:'12px', height:'12px', borderRadius:'50%', background: economyPlayer.username_color || '#fff' }} />
+                    <span style={{ color:'#7dff7d', fontSize:'11px' }}>Active until {new Date(economyPlayer.username_color_expires_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {spendMsg['username_color'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['username_color'].startsWith('✅')?'#7dff7d':'#ff4444' }}>{spendMsg['username_color']}</div>}
+                <button style={{ padding:'7px 14px', border:'1px solid #5fffff', background:'transparent', color:'#5fffff', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'11px', marginBottom:'6px' }}
+                  onClick={() => handleSpend('username_color', { color: selectedColor, duration_weeks: colorWeeks })} disabled={spendLoading['username_color']}
+                >{spendLoading['username_color'] ? '...' : `BUY — ${500*colorWeeks} RP`}</button>
+                <div style={{ color:'#444', fontSize:'10px' }}>25% of cost is permanently burned</div>
+              </div>
+
+              {/* Profile Frame */}
+              <div style={{ background:'#1a1a1a', border:'1px solid #2a2a2a', padding:'16px' }}>
+                <div style={{ color:'#aa44ff', fontSize:'13px', marginBottom:'6px', fontFamily:"'Rubik Mono One',monospace" }}>PROFILE FRAME</div>
+                <div style={{ color:'#888', fontSize:'11px', marginBottom:'10px', lineHeight:1.5 }}>Glowing profile frame</div>
+                <div style={{ color:'#ffaa00', fontSize:'12px', marginBottom:'8px' }}>300 RP/week</div>
+                <div style={{ display:'flex', gap:'4px', flexWrap:'wrap', marginBottom:'8px' }}>
+                  {['green_glow','cyan_pulse','purple_flame'].map(f => (
+                    <button key={f} onClick={() => setSelectedFrame(f)} style={{ padding:'4px 8px', border:`1px solid ${selectedFrame===f?'#aa44ff':'#2a2a2a'}`, background:'transparent', color:selectedFrame===f?'#aa44ff':'#888', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'9px' }}>{f.replace('_',' ').toUpperCase()}</button>
+                  ))}
+                </div>
+                <div style={{ display:'flex', gap:'6px', marginBottom:'8px' }}>
+                  {[1,2,4].map(w => (
+                    <button key={w} onClick={() => setFrameWeeks(w)} style={{ padding:'4px 10px', border:`1px solid ${frameWeeks===w?'#aa44ff':'#2a2a2a'}`, background:'transparent', color:frameWeeks===w?'#aa44ff':'#888', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'10px' }}>{w}W</button>
+                  ))}
+                </div>
+                {economyPlayer.profile_frame_expires_at && new Date(economyPlayer.profile_frame_expires_at) > Date.now() && (
+                  <div style={{ color:'#7dff7d', fontSize:'11px', marginBottom:'8px' }}>✓ Active until {new Date(economyPlayer.profile_frame_expires_at).toLocaleDateString()}</div>
+                )}
+                {spendMsg['profile_frame'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['profile_frame'].startsWith('✅')?'#7dff7d':'#ff4444' }}>{spendMsg['profile_frame']}</div>}
+                <button style={{ padding:'7px 14px', border:'1px solid #aa44ff', background:'transparent', color:'#aa44ff', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'11px', marginBottom:'6px' }}
+                  onClick={() => handleSpend('profile_frame', { frame: selectedFrame, duration_weeks: frameWeeks })} disabled={spendLoading['profile_frame']}
+                >{spendLoading['profile_frame'] ? '...' : `BUY — ${300*frameWeeks} RP`}</button>
+                <div style={{ color:'#444', fontSize:'10px' }}>25% of cost is permanently burned</div>
+              </div>
+
+            </div>
           </div>
         )}
       </div>
