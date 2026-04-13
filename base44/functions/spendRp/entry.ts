@@ -36,9 +36,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'frame field is required' }, { status: 400, headers });
     }
 
-    const players = await base44.asServiceRole.entities.Player.filter({ wallet_address: user.wallet_address });
-    if (!players.length) return Response.json({ error: 'Player not found' }, { status: 404, headers });
-    const player = players[0];
+    const player = await base44.asServiceRole.entities.Player.get(user.id);
+    if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
 
     const spendableRp = (player.reputation_points || 0) - (player.locked_rp || 0);
     if (spendableRp < cost) {

@@ -16,9 +16,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Amount must be a multiple of 500, minimum 500' }, { status: 400, headers });
     }
 
-    const players = await base44.asServiceRole.entities.Player.filter({ wallet_address: user.wallet_address });
-    if (!players.length) return Response.json({ error: 'Player not found' }, { status: 404, headers });
-    const player = players[0];
+    const player = await base44.asServiceRole.entities.Player.get(user.id);
+    if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
 
     // Eligibility check
     const lockedRp = player.locked_rp || 0;
