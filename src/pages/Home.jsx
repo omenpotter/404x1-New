@@ -11,6 +11,7 @@ const TOKEN_CA = '4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2';
 const WXNT_ADDRESS = 'So11111111111111111111111111111111111111112';
 const X1_RPC = 'https://rpc.mainnet.x1.xyz/';
 const TOTAL_SUPPLY = 404404;
+const PAIR_ADDRESS = 'DY9uWCwiue23mmq14G2YVYWyXHSYn8ZjSvYJ36CAvmq1';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -26,6 +27,37 @@ async function rpc(method, params) {
   });
   const d = await res.json();
   return d.result;
+}
+
+// Derive spot price from AMM pool reserves: XNT_reserve / 404_reserve
+// This matches what xdex.xyz and x1.ninja display for the pair.
+async function fetchPriceFromPool() {
+  try {
+    const [r1, r2, solBal] = await Promise.all([
+      rpc('getTokenAccountsByOwner', [PAIR_ADDRESS,
+        { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
+        { encoding: 'jsonParsed' }
+      ]).catch(() => null),
+      rpc('getTokenAccountsByOwner', [PAIR_ADDRESS,
+        { programId: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' },
+        { encoding: 'jsonParsed' }
+      ]).catch(() => null),
+      rpc('getBalance', [PAIR_ADDRESS]).catch(() => null),
+    ]);
+    const accounts = [...(r1?.value || []), ...(r2?.value || [])];
+    let wxntAmt = 0, tokAmt = 0;
+    for (const a of accounts) {
+      const info = a.account?.data?.parsed?.info;
+      if (!info) continue;
+      const ui = info.tokenAmount?.uiAmount || 0;
+      if (info.mint === WXNT_ADDRESS) wxntAmt = ui;
+      if (info.mint === TOKEN_CA) tokAmt = ui;
+    }
+    // Pool may hold native XNT rather than wrapped WXNT token
+    if (wxntAmt === 0 && solBal > 0) wxntAmt = solBal / 1e9;
+    if (wxntAmt > 0 && tokAmt > 0) return wxntAmt / tokAmt;
+  } catch {}
+  return 0;
 }
 
 function getUiAmount(entry) {
@@ -246,6 +278,7 @@ export default function Home() {
         }
       } else if (msg.type === 'ohlcv') {
         setOhlcv({ o: msg.o, h: msg.h, l: msg.l, c: msg.cl, v: msg.v });
+        if (msg.cl > 0) applyPrice(msg.cl);
       }
     };
     window.addEventListener('message', handler);
@@ -283,22 +316,26 @@ export default function Home() {
   };
 
   const fetchPrice = async () => {
+    // 1. Pool reserves — spot price = XNT_reserve / 404_reserve (matches xdex.xyz / x1.ninja)
+    const poolP = await fetchPriceFromPool();
+    if (poolP > 0) applyPrice(poolP);
+
+    // 2. xdex API — used for 24h change; also sets price if pool query returned nothing
     try {
       const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
-      const p1 = parseFloat(d1?.data?.price || 0);
-      if (p1 > 0) {
-        applyPrice(p1);
-        const ch = d1?.data?.change_24h;
-        if (ch != null) {
-          setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
-        }
-        return;
-      }
+      const p1 = parseFloat(d1?.data?.price ?? d1?.price ?? 0);
+      if (!poolP && p1 > 0) applyPrice(p1);
+      const ch = d1?.data?.change_24h ?? d1?.change_24h;
+      if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
     } catch {}
+
+    if (poolP > 0) return;
+
+    // 3. Swap quote fallback
     try {
       const d2 = await xdex(`/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
       const out2 = findOutputAmount(d2);
-      if (out2 && out2 > 0) { applyPrice(1 / out2); }
+      if (out2 && out2 > 0) applyPrice(1 / out2);
     } catch (e) {
       console.warn('Price fetch failed:', e.message);
     }
