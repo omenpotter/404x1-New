@@ -36,7 +36,7 @@ function getUiAmount(entry) {
   return parseFloat(raw) / Math.pow(10, decimals);
 }
 
-function parseTrade(tx) {
+function parseTrade(tx, signature = '') {
   try {
     const pre = tx.meta?.preTokenBalances || [];
     const post = tx.meta?.postTokenBalances || [];
@@ -49,7 +49,19 @@ function parseTrade(tx) {
       if (mint === WXNT_ADDRESS) xntChange = diff;
       if (mint === TOKEN_CA) tokChange = diff;
     }
+    // Fallback to native SOL balance diff if no WXNT change found
+    if (Math.abs(xntChange) < 0.000001) {
+      const preB = tx.meta?.preBalances || [];
+      const postB = tx.meta?.postBalances || [];
+      let maxSol = 0;
+      for (let i = 0; i < Math.min(preB.length, postB.length); i++) {
+        const diff = (postB[i] - preB[i]) / 1e9;
+        if (Math.abs(diff) > Math.abs(maxSol)) maxSol = diff;
+      }
+      xntChange = maxSol;
+    }
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
+    if (Math.abs(tokChange) < 0.01) return null;
     const price = Math.abs(xntChange / tokChange);
     if (price < 0.0001 || price > 0.1) return null;
     return {
@@ -58,7 +70,8 @@ function parseTrade(tx) {
       tok: Math.abs(tokChange),
       price,
       side: xntChange < 0 ? 'SELL' : 'BUY',
-      maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || ''
+      maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || '',
+      sig: signature
     };
   } catch { return null; }
 }
@@ -265,17 +278,17 @@ export default function Home() {
     setChartPrice(p.toFixed(6));
     const cap = p * TOTAL_SUPPLY;
     if (cap >= 1_000_000) setMarketCap((cap / 1_000_000).toFixed(2) + 'M XNT');
-    else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(1) + 'k XNT');
+    else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(2) + 'K XNT');
     else setMarketCap(cap.toFixed(2) + ' XNT');
   };
 
   const fetchPrice = async () => {
     try {
-      const d1 = await xdex(`/api/token-price/price?network=X1 Mainnet&token_address=${TOKEN_CA}`);
-      const p1 = parseFloat(d1.data?.price || d1.price || d1.usdPrice || 0);
+      const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
+      const p1 = parseFloat(d1?.data?.price || 0);
       if (p1 > 0) {
         applyPrice(p1);
-        const ch = d1.change_24h ?? d1.data?.change_24h;
+        const ch = d1?.data?.change_24h;
         if (ch != null) {
           setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
         }
@@ -297,36 +310,49 @@ export default function Home() {
 
   const fetchTradesFromRpc = async () => {
     const cacheKey = 'chart_trades_cache';
-    const cacheTs = 'chart_trades_ts';
     const now = Date.now();
-    const cached = localStorage.getItem(cacheKey);
-    const ts = parseInt(localStorage.getItem(cacheTs) || '0');
-    if (cached && now - ts < 5 * 60 * 1000) {
-      const trades = JSON.parse(cached);
-      sendTradesToChart(trades);
-      buildTransactions(trades);
-      return;
-    }
     try {
-      const sigs = await rpc('getSignaturesForAddress', [TOKEN_CA, { limit: 200 }]);
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (cached && now - cached.timestamp < 5 * 60 * 1000) {
+        sendTradesToChart(cached.trades);
+        buildTransactions(cached.trades);
+        syncPriceFromTrades(cached.trades);
+        return;
+      }
+    } catch {}
+    try {
+      const sigs = await rpc('getSignaturesForAddress', [TOKEN_CA, { limit: 1000 }]);
       if (!sigs?.length) return;
       const trades = [];
-      for (let i = 0; i < Math.min(sigs.length, 100); i += 10) {
-        const batch = sigs.slice(i, i + 10);
-        const txs = await Promise.all(batch.map(s =>
-          rpc('getTransaction', [s.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }])
-        ));
-        for (const tx of txs) {
+      for (let i = 0; i < sigs.length; i += 20) {
+        const batch = sigs.slice(i, i + 20);
+        const batchReqs = batch.map((s, j) => ({
+          jsonrpc: '2.0', id: j,
+          method: 'getTransaction',
+          params: [s.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+        }));
+        let results;
+        try {
+          const resp = await fetch(X1_RPC, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(batchReqs)
+          });
+          results = await resp.json();
+        } catch { continue; }
+        if (!Array.isArray(results)) continue;
+        for (let k = 0; k < results.length; k++) {
+          const tx = results[k]?.result;
           if (!tx) continue;
-          const t = parseTrade(tx);
+          const t = parseTrade(tx, batch[k].signature);
           if (t) trades.push(t);
         }
       }
       trades.sort((a, b) => a.time - b.time);
-      localStorage.setItem(cacheKey, JSON.stringify(trades));
-      localStorage.setItem(cacheTs, String(now));
+      localStorage.setItem(cacheKey, JSON.stringify({ trades, timestamp: now }));
       sendTradesToChart(trades);
       buildTransactions(trades);
+      syncPriceFromTrades(trades);
     } catch (e) {
       console.warn('RPC trades fetch failed:', e.message);
     }
@@ -350,8 +376,14 @@ export default function Home() {
     }
   };
 
+  const syncPriceFromTrades = (trades) => {
+    if (!trades?.length) return;
+    const latest = trades[trades.length - 1];
+    if (latest?.price > 0) applyPrice(latest.price);
+  };
+
   const buildTransactions = (trades) => {
-    setTransactions([...trades].reverse().slice(0, 50));
+    setTransactions([...trades].reverse().slice(0, 20));
   };
 
   const fetchHolders = async () => {
@@ -850,9 +882,13 @@ export default function Home() {
                   <div className="feed-list404">
                     {transactions.length === 0 && <div className="loading-row404">Loading transactions from X1 RPC...</div>}
                     {transactions.map((tx, i) => (
-                      <div
+                      <a
                         key={i}
+                        href={`https://explorer.mainnet.x1.xyz/tx/${tx.sig}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={`txn-row404 ${tx.side === 'BUY' ? 'txn-buy404' : 'txn-sell404'}`}
+                        style={{ textDecoration: 'none', display: 'grid', gridTemplateColumns: '80px 60px 1fr 1fr 1fr 80px' }}
                       >
                         <span style={{ color: '#666' }}>
                           {new Date(tx.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -864,7 +900,7 @@ export default function Home() {
                         <span>{tx.tok.toFixed(0)}</span>
                         <span style={{ color: '#5fffff' }}>{tx.price.toFixed(6)}</span>
                         <span style={{ color: '#666' }}>{truncWallet(tx.maker)}</span>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </>
@@ -878,7 +914,14 @@ export default function Home() {
                   <div className="feed-list404">
                     {holderList.length === 0 && <div className="loading-row404">Loading holder data from xDEX...</div>}
                     {holderList.map((h, i) => (
-                      <div key={i} className="hld-row404">
+                      <a
+                        key={i}
+                        href={`https://explorer.mainnet.x1.xyz/address/${h.wallet}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hld-row404"
+                        style={{ textDecoration: 'none', display: 'grid', gridTemplateColumns: '50px 1fr 1fr 80px' }}
+                      >
                         <span style={{ color: '#888' }}>#{i + 1}</span>
                         <span style={{ color: '#5fffff' }}>{h.label || truncWallet(h.wallet)}</span>
                         <span style={{ color: '#e0e0e0' }}>
@@ -887,7 +930,7 @@ export default function Home() {
                         <span style={{ color: '#7dff7d' }}>
                           {((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%
                         </span>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </>
