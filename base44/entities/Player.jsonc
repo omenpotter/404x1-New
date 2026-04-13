@@ -1,0 +1,194 @@
+{
+  "name": "Player",
+  "type": "object",
+  "properties": {
+    "wallet_address": {
+      "type": "string",
+      "description": "Unique wallet address for Web3 authentication"
+    },
+    "username": {
+      "type": "string",
+      "description": "Unique username (3-16 characters)"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Short user bio (max 300 chars)"
+    },
+    "reputation_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Reputation points earned through activities"
+    },
+    "total_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Cumulative game score"
+    },
+    "games_played": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of games played"
+    },
+    "messages_sent": {
+      "type": "number",
+      "default": 0,
+      "description": "Total messages sent"
+    },
+    "high_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Personal best game score"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last message sent"
+    },
+    "daily_rp_date": {
+      "type": "string",
+      "description": "Date string (YYYY-MM-DD) for daily RP cap tracking"
+    },
+    "daily_rp_messages": {
+      "type": "number",
+      "default": 0,
+      "description": "RP earned from messages today"
+    },
+    "daily_rp_reactions": {
+      "type": "number",
+      "default": 0,
+      "description": "RP earned from reactions today"
+    },
+    "daily_rp_games": {
+      "type": "number",
+      "default": 0,
+      "description": "RP earned from games today"
+    },
+    "user_role": {
+      "type": "string",
+      "enum": [
+        "member",
+        "trusted",
+        "moderator",
+        "admin",
+        "superuser"
+      ],
+      "default": "member",
+      "description": "Role in the platform"
+    },
+    "is_muted": {
+      "type": "boolean",
+      "default": false
+    },
+    "muted_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "muted_by": {
+      "type": "string"
+    },
+    "is_banned": {
+      "type": "boolean",
+      "default": false
+    },
+    "banned_by": {
+      "type": "string"
+    },
+    "banned_reason": {
+      "type": "string"
+    },
+    "is_typing": {
+      "type": "boolean",
+      "default": false
+    },
+    "typing_since": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether human verification has been passed"
+    },
+    "verified_locked_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Lockout timestamp after too many failed verification attempts"
+    },
+    "verification_attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of failed verification attempts"
+    },
+    "locked_rp": {
+      "type": "number",
+      "default": 0,
+      "description": "RP that is locked and cannot be converted or spent. Used for 404 holders."
+    },
+    "conversion_week_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of the current weekly conversion window"
+    },
+    "conversion_week_rp": {
+      "type": "number",
+      "default": 0,
+      "description": "Total RP converted this week"
+    },
+    "total_rp_converted": {
+      "type": "number",
+      "default": 0,
+      "description": "Lifetime total RP converted to RPx"
+    },
+    "rpx_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "Current RPx token balance"
+    },
+    "is_404_holder": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this wallet holds 404 tokens (set manually by superuser)"
+    },
+    "highlight_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the paid message highlight expires"
+    },
+    "username_color": {
+      "type": "string",
+      "description": "Custom username color hex code"
+    },
+    "username_color_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the paid color expires"
+    },
+    "profile_frame": {
+      "type": "string",
+      "description": "Profile frame style name"
+    },
+    "profile_frame_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the paid frame expires"
+    }
+  },
+  "required": [
+    "wallet_address",
+    "username"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}
