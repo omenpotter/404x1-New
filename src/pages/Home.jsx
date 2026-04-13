@@ -211,6 +211,7 @@ const CHART_IFRAME_SRC = `
 export default function Home() {
   const [user, setUser] = useState(getUser());
   const [price, setPrice] = useState('Loading...');
+  const [priceUSD, setPriceUSD] = useState('');
   const [holders, setHolders] = useState('Loading...');
   const [marketCap, setMarketCap] = useState('Loading...');
   const [chartPrice, setChartPrice] = useState('Loading...');
@@ -340,6 +341,7 @@ export default function Home() {
 
       if (usd404 > 0 && usdXNT > 0) {
         applyPrice(usd404 / usdXNT);
+        setPriceUSD('$' + usd404.toFixed(6));
         if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
         return;
       }
@@ -835,6 +837,7 @@ export default function Home() {
               <div className="stat-card404">
                 <div className="stat-label404">PRICE XNT</div>
                 <div className="stat-val404">{price}</div>
+                {priceUSD && <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{priceUSD}</div>}
               </div>
               <div className="stat-card404">
                 <div className="stat-label404">HOLDERS</div>
