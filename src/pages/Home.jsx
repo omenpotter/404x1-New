@@ -278,7 +278,6 @@ export default function Home() {
         }
       } else if (msg.type === 'ohlcv') {
         setOhlcv({ o: msg.o, h: msg.h, l: msg.l, c: msg.cl, v: msg.v });
-        if (msg.cl > 0) applyPrice(msg.cl);
       }
     };
     window.addEventListener('message', handler);
