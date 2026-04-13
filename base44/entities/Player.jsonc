@@ -4,11 +4,13 @@
   "properties": {
     "wallet_address": {
       "type": "string",
-      "description": "Unique wallet address for Web3 authentication"
+      "description": "Unique wallet address for Web3 authentication",
+      "unique": true
     },
     "username": {
       "type": "string",
-      "description": "Unique username (3-16 characters)"
+      "description": "Unique username (3-16 characters)",
+      "unique": true
     },
     "bio": {
       "type": "string",
