@@ -84,6 +84,36 @@ Time: ${time}`
             }
         }
 
+        // Alert: suspicious RP accumulation — players with very high RP earned recently
+        const allPlayers = await base44.asServiceRole.entities.Player.list('-reputation_points', 50);
+        const suspiciousRp = allPlayers.filter(p => (p.daily_rp_messages || 0) + (p.daily_rp_reactions || 0) > 500);
+        if (suspiciousRp.length > 0) {
+            const lines = suspiciousRp.map(p => `  · ${p.username}: ${(p.daily_rp_messages||0)+(p.daily_rp_reactions||0)} daily RP`).join('\n');
+            await sendTelegram(
+`🚨 <b>SUSPICIOUS RP ACCUMULATION</b>
+
+${suspiciousRp.length} player(s) earning abnormally high RP today:
+${lines}
+
+Possible RP farming — manual review recommended.
+Time: ${new Date().toISOString()}`
+            );
+        }
+
+        // Alert: high concurrent users (active in last 5 min)
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const activePlayers = allPlayers.filter(p => p.last_seen && p.last_seen > fiveMinAgo);
+        if (activePlayers.length > 50) {
+            await sendTelegram(
+`📊 <b>HIGH CONCURRENT USERS</b>
+
+${activePlayers.length} players active in the last 5 minutes
+Monitor for performance degradation.
+
+Time: ${new Date().toISOString()}`
+            );
+        }
+
         return Response.json({ success: true, conversation_id: conversation.id, new_logs: newEntries.length });
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });

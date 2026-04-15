@@ -1,0 +1,88 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "type": "string",
+      "description": "Reference to Player entity ID"
+    },
+    "username": {
+      "type": "string",
+      "description": "Username of message sender"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message content"
+    },
+    "is_reply": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is this a reply to another message"
+    },
+    "reply_to_message_id": {
+      "type": "string",
+      "description": "ID of message being replied to"
+    },
+    "reply_to_username": {
+      "type": "string",
+      "description": "Username of message author being replied to"
+    },
+    "reply_to_message": {
+      "type": "string",
+      "description": "Quoted text of the message being replied to"
+    },
+    "has_image": {
+      "type": "boolean",
+      "default": false,
+      "description": "Does message contain an image"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL of attached image"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has message been deleted by moderator"
+    },
+    "deleted_by": {
+      "type": "string",
+      "description": "Player ID who deleted message"
+    },
+    "is_flagged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Has message been flagged for review"
+    },
+    "flagged_by": {
+      "type": "string",
+      "description": "Player ID who flagged message"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Is message pinned in chat"
+    },
+    "reaction_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of reactions"
+    },
+    "is_stress_test": {
+      "type": "boolean",
+      "default": false,
+      "description": "Tagged true for messages created during stress tests \u2014 used for cleanup"
+    }
+  },
+  "required": [
+    "player_id",
+    "username",
+    "message"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {}
+  }
+}

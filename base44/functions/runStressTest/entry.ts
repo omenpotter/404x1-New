@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const now = new Date().toISOString();
-    const stats = { wave: 0, created: 0, sent: 0, banned: 0, active: 0, respawned: false };
+    const testStart = Date.now();
+    const stats = { wave: 0, created: 0, sent: 0, banned: 0, active: 0, respawned: false, errors: 0, duration_ms: 0, avg_latency_ms: 0, max_latency_ms: 0 };
 
     // STEP 1: Get all existing stress bots
     const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 500);
@@ -141,11 +142,13 @@ Deno.serve(async (req) => {
 
     // STEP 4: Send attack messages
     const waveAttackTypes = [];
+    const opLatencies = [];
     for (const bot of wave) {
       const attackType = pick(ATTACK_TYPES);
       const message = pick(ATTACKS[attackType]);
       waveAttackTypes.push(attackType);
       try {
+        const opStart = Date.now();
         await base44.asServiceRole.entities.Message.create({
           player_id: bot.id,
           username: bot.username,
@@ -153,8 +156,10 @@ Deno.serve(async (req) => {
           is_reply: false,
           is_deleted: false,
           is_flagged: false,
-          reaction_count: 0
+          reaction_count: 0,
+          is_stress_test: true
         });
+        opLatencies.push(Date.now() - opStart);
 
         await base44.asServiceRole.entities.Player.update(bot.id, {
           messages_sent: (bot.messages_sent || 0) + 1,
@@ -165,6 +170,15 @@ Deno.serve(async (req) => {
       } catch(e) {}
     }
 
+    // Compute performance metrics
+    const totalDuration = Date.now() - testStart;
+    const avgLatency = opLatencies.length > 0 ? Math.round(opLatencies.reduce((a, b) => a + b, 0) / opLatencies.length) : 0;
+    const maxLatency = opLatencies.length > 0 ? Math.max(...opLatencies) : 0;
+    stats.duration_ms = totalDuration;
+    stats.avg_latency_ms = avgLatency;
+    stats.max_latency_ms = maxLatency;
+    stats.errors = wave.length - stats.sent;
+
     // STEP 5: Telegram summary
     const respawnNote = stats.respawned ? `\n🔄 <b>RESPAWNED:</b> Old bots retired, 100 fresh bots created` : '';
     const uniqueTypes = [...new Set(waveAttackTypes)];
@@ -173,7 +187,8 @@ Deno.serve(async (req) => {
       '🤖 <b>STRESS TEST WAVE</b>',
       `Active bots: ${stats.active} (${stats.banned} banned)`,
       `Wave size: ${stats.wave} bots attacked this run`,
-      `Messages sent: ${stats.sent}`,
+      `Messages sent: ${stats.sent} (${stats.errors} errors)`,
+      `Duration: ${totalDuration}ms | Avg latency: ${avgLatency}ms | Max: ${maxLatency}ms`,
       respawnNote,
       '',
       '⚔️ Attack types this wave:',

@@ -216,6 +216,34 @@ Deno.serve(async (req) => {
             await new Promise(r => setTimeout(r, 200));
         }
 
+        // Alert: high message volume in last 15 min
+        if (recentMessages.length > 80) {
+            await sendTelegram(
+`⚠️ <b>HIGH MESSAGE VOLUME</b>
+
+${recentMessages.length} messages in last 15 minutes
+Deleted: ${stats.deleted} | Muted: ${stats.muted}
+
+This may indicate bot activity or a spam attack.
+Time: ${new Date().toISOString()}`
+            );
+        }
+
+        // Alert: registration spike — players created in last 15 min
+        const cutoff15 = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 100);
+        const newRegistrations = allPlayers.filter(p => p.created_date > cutoff15);
+        if (newRegistrations.length > 15) {
+            await sendTelegram(
+`⚠️ <b>REGISTRATION SPIKE</b>
+
+${newRegistrations.length} new accounts registered in last 15 minutes
+This may indicate a bot registration wave.
+
+Time: ${new Date().toISOString()}`
+            );
+        }
+
         // Send Telegram for serious escalations
         if (escalations.length > 0) {
             const lines = escalations.map(e => `  · <b>${e.username}</b>: ${e.rule} — "${(e.message || '').slice(0, 60)}"`).join('\n');
