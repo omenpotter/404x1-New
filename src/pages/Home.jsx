@@ -174,7 +174,7 @@ const CHART_IFRAME_SRC = `
   chart.subscribeCrosshairMove(p => {
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
-      if (d) window.parent.postMessage({ type: 'ohlcv', o: d.open, h: d.high, l: d.low, cl: d.close, v: 0 }, '*');
+      if (d) window.parent.postMessage({ type: 'ohlcv', o: d.open, h: d.high, l: d.low, cl: d.close, v: d.volume || 0 }, '*');
     }
   });
   window.addEventListener('message', e => {
