@@ -95,7 +95,7 @@ function parseTrade(tx, signature = '') {
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
     if (Math.abs(tokChange) < 0.01) return null;
     const price = Math.abs(xntChange / tokChange);
-    if (price < 0.0001 || price > 0.1) return null;
+    if (price <= 0 || price > 1) return null;
     return {
       time: tx.blockTime,
       xnt: Math.abs(xntChange),
@@ -144,6 +144,15 @@ const CHART_IFRAME_SRC = `
     wickUpColor: '#7dff7d', wickDownColor: '#ff4444',
     lastValueVisible: false,
     priceLineVisible: false,
+    priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 },
+  });
+  chart.applyOptions({
+    rightPriceScale: {
+      borderColor: '#2a3a2a',
+      autoScale: true,
+      scaleMargins: { top: 0.1, bottom: 0.1 },
+    },
+    priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 },
   });
   let volSeries = null;
   let currentTF = 60;
