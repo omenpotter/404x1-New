@@ -95,7 +95,7 @@ function parseTrade(tx, signature = '') {
     if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
     if (Math.abs(tokChange) < 0.01) return null;
     const price = Math.abs(xntChange / tokChange);
-    if (price <= 0 || price > 1) return null;
+    if (price <= 0 || !isFinite(price)) return null;
     return {
       time: tx.blockTime,
       xnt: Math.abs(xntChange),
@@ -144,15 +144,23 @@ const CHART_IFRAME_SRC = `
     wickUpColor: '#7dff7d', wickDownColor: '#ff4444',
     lastValueVisible: false,
     priceLineVisible: false,
-    priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 },
+    priceFormat: { type: 'custom', formatter: p => {
+      if (!p || p <= 0) return '0';
+      if (p >= 1) return p.toFixed(4);
+      const s = p.toFixed(10);
+      const match = s.match(/^0\\.0*/);
+      const zeros = match ? match[0].length - 2 : 0;
+      const sig = Math.max(4, zeros + 3);
+      return p.toFixed(Math.min(sig, 10));
+    }, minMove: 0.0000000001 },
   });
   chart.applyOptions({
     rightPriceScale: {
       borderColor: '#2a3a2a',
       autoScale: true,
       scaleMargins: { top: 0.1, bottom: 0.1 },
+      mode: 0,
     },
-    priceFormat: { type: 'price', precision: 8, minMove: 0.00000001 },
   });
   let volSeries = null;
   let currentTF = 60;
@@ -183,7 +191,18 @@ const CHART_IFRAME_SRC = `
   chart.subscribeCrosshairMove(p => {
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
-      if (d) window.parent.postMessage({ type: 'ohlcv', o: d.open, h: d.high, l: d.low, cl: d.close, v: d.volume || 0 }, '*');
+      if (d) {
+        const fmtP = v => {
+          if (!v || v <= 0) return 0;
+          if (v >= 1) return parseFloat(v.toFixed(4));
+          const s = v.toFixed(10);
+          const match = s.match(/^0\\.0*/);
+          const zeros = match ? match[0].length - 2 : 0;
+          const sig = Math.max(4, zeros + 3);
+          return parseFloat(v.toFixed(Math.min(sig, 10)));
+        };
+        window.parent.postMessage({ type: 'ohlcv', o: fmtP(d.open), h: fmtP(d.high), l: fmtP(d.low), cl: fmtP(d.close), v: d.volume || 0 }, '*');
+      }
     }
   });
   window.addEventListener('message', e => {
@@ -637,7 +656,16 @@ export default function Home() {
     }
   };
 
-  const fmt = (n, d = 6) => (n || 0).toFixed(d);
+  const fmt = (n, d = 6) => {
+    if (!n || n <= 0) return (0).toFixed(d);
+    if (d === 0) return Math.round(n).toLocaleString();
+    if (n >= 1) return n.toFixed(4);
+    const s = n.toFixed(12);
+    const match = s.match(/^0\.0*/);
+    const zeros = match ? match[0].length - 2 : 0;
+    const sig = Math.max(4, zeros + 3);
+    return n.toFixed(Math.min(sig, 10));
+  };
   const truncWallet = (w) => w ? w.slice(0, 4) + '...' + w.slice(-4) : '';
 
   return (
