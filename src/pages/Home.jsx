@@ -157,8 +157,7 @@ const CHART_IFRAME_SRC = `
       borderColor: '#2a3a2a',
       autoScale: true,
       scaleMargins: { top: 0.15, bottom: 0.15 },
-      mode: 0,
-      entireTextOnly: false,
+      mode: 1,
     },
   });
   let volSeries = null;
@@ -166,9 +165,18 @@ const CHART_IFRAME_SRC = `
   let allTrades = [];
   let showVol = false;
   chart.applyOptions({ handleScroll: true, handleScale: true });
+    function filterOutliers(trades) {
+    if (trades.length < 5) return trades;
+    const prices = trades.map(t => t.price).sort((a, b) => a - b);
+    const mid = Math.floor(prices.length / 2);
+    const median = prices[mid];
+    // Reject any trade more than 10x or less than 0.1x the median
+    return trades.filter(t => t.price >= median * 0.05 && t.price <= median * 20);
+  }
   function tradesToCandles(trades, tf) {
+    const clean = filterOutliers(trades);
     const buckets = {};
-    for (const t of trades) {
+    for (const t of clean) {
       const k = Math.floor(t.time / (tf * 60)) * (tf * 60);
       if (!buckets[k]) buckets[k] = { time: k, open: t.price, high: t.price, low: t.price, close: t.price, volume: t.tok };
       else {
@@ -400,7 +408,7 @@ export default function Home() {
   };
 
   const fetchTradesFromRpc = async () => {
-    const cacheKey = 'chart_trades_cache';
+    const cacheKey = 'chart_trades_cache_v2';
     const now = Date.now();
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
@@ -440,7 +448,7 @@ export default function Home() {
         }
       }
       trades.sort((a, b) => a.time - b.time);
-      localStorage.setItem(cacheKey, JSON.stringify({ trades, timestamp: now }));
+      localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
       sendTradesToChart(trades);
       buildTransactions(trades);
       syncPriceFromTrades(trades);
