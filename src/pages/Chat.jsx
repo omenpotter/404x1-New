@@ -523,7 +523,7 @@ export default function Chat() {
             const username   = msg.player?.chat_username || msg.username || 'Unknown';
             const content    = msg.content || msg.message;
             const isDeleted  = msg.is_deleted;
-            const msgPlayerId = msg.player?.id || msg.player_id;
+            const msgPlayerId = msg.player_id || msg.player?.id;
             const reactions  = msg.reactions || {};
 
             return (
