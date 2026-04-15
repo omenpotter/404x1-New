@@ -157,7 +157,7 @@ const CHART_IFRAME_SRC = `
       borderColor: '#2a3a2a',
       autoScale: true,
       scaleMargins: { top: 0.15, bottom: 0.15 },
-      mode: 1,
+      mode: 0,
     },
   });
   let volSeries = null;
@@ -170,8 +170,8 @@ const CHART_IFRAME_SRC = `
     const prices = trades.map(t => t.price).sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);
     const median = prices[mid];
-    // Reject any trade more than 10x or less than 0.1x the median
-    return trades.filter(t => t.price >= median * 0.05 && t.price <= median * 20);
+    // Reject any trade more than 3x or less than 1/3 of the median
+    return trades.filter(t => t.price >= median * 0.33 && t.price <= median * 3);
   }
   function tradesToCandles(trades, tf) {
     const clean = filterOutliers(trades);
@@ -198,7 +198,7 @@ const CHART_IFRAME_SRC = `
   chart.subscribeCrosshairMove(p => {
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
-      if (d) {
+      if (d && d.open !== undefined && d.close !== undefined) {
         const fmtP = function(v) {
           if (!v || v <= 0) return 0;
           if (v >= 1) return parseFloat(v.toFixed(4));
@@ -207,7 +207,11 @@ const CHART_IFRAME_SRC = `
           return parseFloat(v.toFixed(10));
         };
         window.parent.postMessage({ type: 'ohlcv', o: fmtP(d.open), h: fmtP(d.high), l: fmtP(d.low), cl: fmtP(d.close), v: d.volume || 0 }, '*');
+      } else {
+        window.parent.postMessage({ type: 'ohlcv_clear' }, '*');
       }
+    } else {
+      window.parent.postMessage({ type: 'ohlcv_clear' }, '*');
     }
   });
   window.addEventListener('message', e => {
@@ -310,7 +314,9 @@ export default function Home() {
           pendingTradesRef.current = null;
         }
       } else if (msg.type === 'ohlcv') {
-        setOhlcv({ o: msg.o, h: msg.h, l: msg.l, c: msg.cl, v: msg.v });
+        setOhlcv({ o: msg.o, h: msg.h, l: msg.l, c: msg.cl, v: msg.v, active: true });
+      } else if (msg.type === 'ohlcv_clear') {
+        setOhlcv(prev => ({ ...prev, active: false }));
       }
     };
     window.addEventListener('message', handler);
@@ -926,11 +932,17 @@ export default function Home() {
               </div>
 
               <div className="ohlcv404">
-                <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
-                <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
-                <span>L<span className="ohlcv-val404 ohlcv-l404">{fmt(ohlcv.l)}</span></span>
-                <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
-                <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
+                {ohlcv.active ? (
+                  <>
+                    <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
+                    <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
+                    <span>L<span className="ohlcv-val404 ohlcv-l404">{fmt(ohlcv.l)}</span></span>
+                    <span>C<span className="ohlcv-val404">{fmt(ohlcv.c)}</span></span>
+                    <span>Volume <span className="ohlcv-val404">{fmt(ohlcv.v, 0)}</span></span>
+                  </>
+                ) : (
+                  <span style={{ color: '#444' }}>Hover over a candle to see OHLCV</span>
+                )}
               </div>
 
               <div className="chart-canvas404">
