@@ -144,22 +144,21 @@ const CHART_IFRAME_SRC = `
     wickUpColor: '#7dff7d', wickDownColor: '#ff4444',
     lastValueVisible: false,
     priceLineVisible: false,
-    priceFormat: { type: 'custom', formatter: p => {
-      if (!p || p <= 0) return '0';
+    priceFormat: { type: 'custom', formatter: function(p) {
+      if (!p || p <= 0) return '0.00000000';
       if (p >= 1) return p.toFixed(4);
-      const s = p.toFixed(10);
-      const match = s.match(/^0\\.0*/);
-      const zeros = match ? match[0].length - 2 : 0;
-      const sig = Math.max(4, zeros + 3);
-      return p.toFixed(Math.min(sig, 10));
-    }, minMove: 0.0000000001 },
+      if (p >= 0.01) return p.toFixed(6);
+      if (p >= 0.0001) return p.toFixed(8);
+      return p.toFixed(10);
+    }, minMove: 0.0000000100 },
   });
   chart.applyOptions({
     rightPriceScale: {
       borderColor: '#2a3a2a',
       autoScale: true,
-      scaleMargins: { top: 0.1, bottom: 0.1 },
+      scaleMargins: { top: 0.15, bottom: 0.15 },
       mode: 0,
+      entireTextOnly: false,
     },
   });
   let volSeries = null;
@@ -192,14 +191,12 @@ const CHART_IFRAME_SRC = `
     if (p.seriesData && p.seriesData.size > 0) {
       const d = p.seriesData.values().next().value;
       if (d) {
-        const fmtP = v => {
+        const fmtP = function(v) {
           if (!v || v <= 0) return 0;
           if (v >= 1) return parseFloat(v.toFixed(4));
-          const s = v.toFixed(10);
-          const match = s.match(/^0\\.0*/);
-          const zeros = match ? match[0].length - 2 : 0;
-          const sig = Math.max(4, zeros + 3);
-          return parseFloat(v.toFixed(Math.min(sig, 10)));
+          if (v >= 0.01) return parseFloat(v.toFixed(6));
+          if (v >= 0.0001) return parseFloat(v.toFixed(8));
+          return parseFloat(v.toFixed(10));
         };
         window.parent.postMessage({ type: 'ohlcv', o: fmtP(d.open), h: fmtP(d.high), l: fmtP(d.low), cl: fmtP(d.close), v: d.volume || 0 }, '*');
       }
