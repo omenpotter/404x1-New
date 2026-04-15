@@ -720,7 +720,7 @@ export default function Home() {
         .cta-secondary404 { border:2px solid #5fffff;color:#5fffff;background:transparent; }
         .cta-secondary404:hover { background:#5fffff;color:#0a0e14;box-shadow:0 0 20px rgba(95,255,255,0.4); }
         /* RP cards */
-        .rp-cards404 { display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0; }
+        .rp-cards404 { display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:24px auto;max-width:600px; }
         .rp-card404 { background:#0d1219;border:1px solid #1a2a1a;padding:24px;text-align:center;border-radius:2px;transition:all 0.2s; }
         .rp-card404:hover { border-color:#7dff7d;box-shadow:0 0 15px rgba(125,255,125,0.1); }
         .rp-icon404 { font-size:32px;margin-bottom:12px; }
@@ -760,7 +760,7 @@ export default function Home() {
         @media(max-width:768px){
           .stats-grid404{grid-template-columns:1fr 1fr;}
           .action-btns404{grid-template-columns:1fr 1fr;}
-          .rp-cards404{grid-template-columns:1fr;}
+          .rp-cards404{grid-template-columns:1fr 1fr;}
           .txn-row404{grid-template-columns:70px 50px 1fr 1fr;font-size:10px;}
           .txn-header404{grid-template-columns:70px 50px 1fr 1fr;}
         }
