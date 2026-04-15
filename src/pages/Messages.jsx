@@ -32,6 +32,8 @@ export default function Messages() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [newDMTarget, setNewDMTarget] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [showNewDM, setShowNewDM] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -61,6 +63,17 @@ export default function Messages() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  const searchPlayers = async (query) => {
+    if (!query.trim() || query.length < 2) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await fetch(BASE + 'playerSearch?q=' + encodeURIComponent(query) + '&limit=8');
+      const data = await res.json();
+      if (data.success) setSearchResults(data.players || []);
+    } catch {}
+    setSearching(false);
+  };
 
   const startNewDM = async (playerId, u = user) => {
     if (!u) return;
@@ -272,18 +285,34 @@ export default function Messages() {
 
         {showNewDM && (
           <div className="new-dm-form">
-            <div style={{ fontSize: '10px', color: '#888', marginBottom: '6px' }}>ENTER PLAYER ID TO MESSAGE:</div>
+            <div style={{ fontSize: '10px', color: '#888', marginBottom: '6px' }}>SEARCH PLAYER BY USERNAME:</div>
             <input
               className="new-dm-input"
-              placeholder="Player ID..."
+              placeholder="Type username..."
               value={newDMTarget}
-              onChange={e => setNewDMTarget(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && newDMTarget.trim() && startNewDM(newDMTarget.trim())}
+              onChange={e => { setNewDMTarget(e.target.value); searchPlayers(e.target.value); }}
+              autoFocus
             />
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button className="new-dm-btn" onClick={() => newDMTarget.trim() && startNewDM(newDMTarget.trim())} style={{ flex: 1 }}>START</button>
-              <button onClick={() => setShowNewDM(false)} style={{ background: 'none', border: '1px solid #2a2a2a', color: '#888', cursor: 'pointer', padding: '4px 10px', fontSize: '11px', fontFamily: "'Share Tech Mono', monospace" }}>CANCEL</button>
-            </div>
+            {searching && <div style={{ fontSize:'10px', color:'#888', marginBottom:'6px' }}>Searching...</div>}
+            {searchResults.length > 0 && (
+              <div style={{ background:'#0d0d0d', border:'1px solid #2a2a2a', marginBottom:'8px', maxHeight:'160px', overflowY:'auto' }}>
+                {searchResults.map(p => (
+                  <div key={p.id}
+                    style={{ padding:'8px 10px', cursor:'pointer', fontSize:'12px', color:'#e0e0e0', borderBottom:'1px solid #111', display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                    onMouseOver={e => e.currentTarget.style.background='#1a1a1a'}
+                    onMouseOut={e => e.currentTarget.style.background='transparent'}
+                    onClick={() => { startNewDM(p.id); setSearchResults([]); setNewDMTarget(''); }}
+                  >
+                    <span style={{ color:'#7dff7d' }}>{p.username}</span>
+                    <span style={{ fontSize:'10px', color:'#444' }}>{p.user_role}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => { setShowNewDM(false); setSearchResults([]); setNewDMTarget(''); }}
+              style={{ background:'none', border:'1px solid #2a2a2a', color:'#888', cursor:'pointer', padding:'4px 10px', fontSize:'11px', fontFamily:"'Share Tech Mono',monospace", width:'100%' }}>
+              CANCEL
+            </button>
           </div>
         )}
 

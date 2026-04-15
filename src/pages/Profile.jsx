@@ -131,6 +131,14 @@ export default function Profile() {
     setSpendLoading(p => ({ ...p, [action]: false }));
   };
 
+  if (loading && viewId) {
+    return (
+      <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
+        <div style={{ textAlign: 'center', fontFamily: "'Share Tech Mono', monospace", color: '#888', fontSize: '13px' }}>Loading profile...</div>
+      </div>
+    );
+  }
+
   if (!user && isOwnProfile) {
     return (
       <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>

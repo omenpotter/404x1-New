@@ -94,6 +94,8 @@ export default function Chat() {
   const fetchMeta = async () => {
     try {
       const u = getUser();
+      // Ping last_seen so this user counts in the online count
+      if (u?.id) base44.functions.invoke('chatTyping', { user_id: u.id }).catch(() => {});
       const res = await base44.functions.invoke('chatHistory', { limit: 1, offset: 0, user_id: u?.id });
       const data = res.data;
       if (data.success) {
@@ -188,6 +190,24 @@ export default function Chat() {
     const u = getUser();
     if (!u) return;
     setReactionPicker(null);
+    // Optimistic update — show reaction instantly
+    setMessages(prev => prev.map(msg => {
+      if (msg.id !== msgId) return msg;
+      const reactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+      const existing = reactions.find(r => r.emoji === emoji);
+      const alreadyMine = existing?.user_reacted;
+      if (alreadyMine) {
+        // toggle off
+        return { ...msg, reactions: reactions.map(r => r.emoji === emoji
+          ? { ...r, count: Math.max(0, r.count - 1), user_reacted: false }
+          : r).filter(r => r.count > 0) };
+      } else if (existing) {
+        return { ...msg, reactions: reactions.map(r => r.emoji === emoji
+          ? { ...r, count: r.count + 1, user_reacted: true } : r) };
+      } else {
+        return { ...msg, reactions: [...reactions, { emoji, count: 1, user_reacted: true }] };
+      }
+    }));
     try {
       await base44.functions.invoke('chatReact', { user_id: u.id, message_id: msgId, emoji });
     } catch {}
@@ -584,13 +604,13 @@ export default function Chat() {
                   )}
 
                   {/* Reactions */}
-                  {Object.keys(reactions).length > 0 && (
+                  {Array.isArray(reactions) && reactions.length > 0 && (
                     <div className="reactions-row">
-                      {Object.entries(reactions).map(([emoji, data]) => (
-                        <div key={emoji} className={`reaction-chip${data.includes?.(user?.id) ? ' mine' : ''}`}
-                          onClick={() => sendReaction(msg.id, emoji)}>
-                          <span>{emoji}</span>
-                          <span style={{ fontSize:'10px', color:'#888' }}>{data.count || data.length || 0}</span>
+                      {reactions.map((r) => (
+                        <div key={r.emoji} className={`reaction-chip${r.user_reacted ? ' mine' : ''}`}
+                          onClick={() => sendReaction(msg.id, r.emoji)}>
+                          <span>{r.emoji}</span>
+                          <span style={{ fontSize:'10px', color:'#888' }}>{r.count}</span>
                         </div>
                       ))}
                     </div>

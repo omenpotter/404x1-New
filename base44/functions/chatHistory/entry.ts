@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
                 ...msg,
                 content: msg.message, // alias for frontend
                 player: {
-                    id: pl.id,
+                    id: pl.id || msg.player_id,
                     chat_username: pl.username,
                     user_role: pl.user_role || 'member',
                     username_color: pl.username_color || null,

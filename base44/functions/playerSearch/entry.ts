@@ -1,8 +1,20 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const { query } = await req.json();
+
+  let query = '';
+  let limit = 12;
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    query = url.searchParams.get('q') || '';
+    limit = parseInt(url.searchParams.get('limit') || '12');
+  } else {
+    const body = await req.json();
+    query = body.query || body.q || '';
+    limit = body.limit || 12;
+  }
 
   if (!query || query.length < 2) {
     return Response.json({ success: true, players: [] });
@@ -13,7 +25,7 @@ Deno.serve(async (req) => {
     const q = query.toLowerCase();
     const filtered = all
       .filter(p => p.username?.toLowerCase().includes(q))
-      .slice(0, 12)
+      .slice(0, limit)
       .map(p => ({
         id: p.id,
         username: p.username,
