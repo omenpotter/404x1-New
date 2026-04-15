@@ -125,6 +125,10 @@
       "default": 0,
       "description": "Number of failed verification attempts"
     },
+    "verification_challenge_id": {
+      "type": "string",
+      "description": "ID of the currently issued verification challenge"
+    },
     "locked_rp": {
       "type": "number",
       "default": 0,

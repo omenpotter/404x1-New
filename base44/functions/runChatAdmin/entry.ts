@@ -4,117 +4,91 @@ const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
 
 async function sendTelegram(text) {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' })
-    });
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' })
+        });
+    } catch(e) {}
 }
 
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        // Snapshot before agent runs
-        const before = await base44.asServiceRole.entities.ModerationLog.list('-created_date', 100);
-        const beforeIds = new Set(before.map(e => e.id));
+        const now = new Date();
+        const cutoff24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const cutoff5min = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
+        const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
-        // Create a fresh conversation with the admin agent
-        const conversation = await base44.asServiceRole.agents.createConversation({
-            agent_name: 'chat_admin',
-            metadata: { name: 'Auto Admin Review Run', type: 'scheduled' }
-        });
+        // 1. Unreviewed escalations in last 24 hours
+        const allLogs = await base44.asServiceRole.entities.ModerationLog.list('-created_date', 200);
+        const unreviewedEscalations = allLogs.filter(e =>
+            e.escalated === true &&
+            e.already_reviewed !== true &&
+            e.created_date >= cutoff24h
+        );
 
-        // Tell the agent to check for unreviewed escalations
-        await base44.asServiceRole.agents.addMessage(conversation, {
-            role: 'user',
-            content: 'Check the ModerationLog entity for any entries where escalated is true AND escalated_to is "admin" AND already_reviewed is NOT true. Review each one, take appropriate action (extend mutes, apply permanent bans where required, escalate to superuser if needed), then mark each handled entry as already_reviewed: true. Act now.'
-        });
+        for (const entry of unreviewedEscalations) {
+            await sendTelegram(
+`🚨 <b>UNREVIEWED ESCALATION</b>
 
-        // Wait briefly for agent to complete actions
-        await new Promise(r => setTimeout(r, 15000));
-
-        const after = await base44.asServiceRole.entities.ModerationLog.list('-created_date', 100);
-        const newEntries = after.filter(e => !beforeIds.has(e.id));
-
-        // Send Telegram alerts for serious new entries
-        for (const entry of newEntries) {
-            const isSerious = (entry.escalated_to === 'superuser') ||
-                entry.action_type === 'permanent_ban' ||
-                (entry.reason || '').toLowerCase().includes('doxx');
-
-            if (!isSerious) continue;
-
-            const time = new Date().toISOString();
-
-            if ((entry.reason || '').toLowerCase().includes('doxx')) {
-                await sendTelegram(
-`🚨🚨 <b>URGENT — DOXXING INCIDENT</b>
-
-User: ${entry.target_username}
-Message deleted: yes
-Permanent ban applied: yes
-Superuser review required immediately
-
-Time: ${time}`
-                );
-            } else if (entry.action_type === 'permanent_ban') {
-                await sendTelegram(
-`🔴🔴 <b>PERMANENT BAN APPLIED</b>
-
-User: ${entry.target_username}
-Reason: ${entry.reason || 'N/A'}
-Banned by: Chat Admin Agent
-Superuser action required: Review and confirm or reverse this ban
-
-Time: ${time}`
-                );
-            } else if (entry.escalated_to === 'superuser') {
-                await sendTelegram(
-`🔴 <b>ADMIN ESCALATION</b>
-
-Agent: Chat Admin
+Moderator: ${entry.moderator_username || 'N/A'}
+Target: ${entry.target_username || 'N/A'}
 Action: ${entry.action_type || 'N/A'}
-User: ${entry.target_username}
-Reason: ${entry.escalation_reason || entry.reason || 'N/A'}
-Requires superuser review: ${entry.requires_unban_review ? 'yes' : 'no'}
+Reason: ${entry.reason || entry.escalation_reason || 'N/A'}
+Escalated to: ${entry.escalated_to || 'admin'}
 
-Time: ${time}`
-                );
-            }
+Time: ${now.toISOString()}`
+            );
         }
 
-        // Alert: suspicious RP accumulation — players with very high RP earned recently
-        const allPlayers = await base44.asServiceRole.entities.Player.list('-reputation_points', 50);
-        const suspiciousRp = allPlayers.filter(p => (p.daily_rp_messages || 0) + (p.daily_rp_reactions || 0) > 500);
-        if (suspiciousRp.length > 0) {
-            const lines = suspiciousRp.map(p => `  · ${p.username}: ${(p.daily_rp_messages||0)+(p.daily_rp_reactions||0)} daily RP`).join('\n');
+        // 2. Suspicious RP: reputation_points > 500 AND daily_rp_date == today AND messages_sent < 20
+        const allPlayers = await base44.asServiceRole.entities.Player.list('-reputation_points', 200);
+        const suspiciousRpPlayers = allPlayers.filter(p =>
+            (p.reputation_points || 0) > 500 &&
+            p.daily_rp_date === todayStr &&
+            (p.messages_sent || 0) < 20
+        );
+
+        for (const p of suspiciousRpPlayers) {
             await sendTelegram(
 `🚨 <b>SUSPICIOUS RP ACCUMULATION</b>
 
-${suspiciousRp.length} player(s) earning abnormally high RP today:
-${lines}
+Player: ${p.username}
+Reputation Points: ${p.reputation_points}
+Messages Sent: ${p.messages_sent || 0}
+Daily RP Date: ${p.daily_rp_date}
 
 Possible RP farming — manual review recommended.
-Time: ${new Date().toISOString()}`
+Time: ${now.toISOString()}`
             );
         }
 
-        // Alert: high concurrent users (active in last 5 min)
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const activePlayers = allPlayers.filter(p => p.last_seen && p.last_seen > fiveMinAgo);
-        if (activePlayers.length > 50) {
+        // 3. Concurrent users: count players with last_seen within last 5 minutes
+        const activePlayers = allPlayers.filter(p => p.last_seen && p.last_seen >= cutoff5min);
+        const concurrentUsers = activePlayers.length;
+
+        if (concurrentUsers > 50) {
             await sendTelegram(
 `📊 <b>HIGH CONCURRENT USERS</b>
 
-${activePlayers.length} players active in the last 5 minutes
+${concurrentUsers} players active in the last 5 minutes.
 Monitor for performance degradation.
 
-Time: ${new Date().toISOString()}`
+Time: ${now.toISOString()}`
             );
         }
 
-        return Response.json({ success: true, conversation_id: conversation.id, new_logs: newEntries.length });
+        return Response.json({
+            success: true,
+            unreviewed_escalations: unreviewedEscalations.length,
+            suspicious_rp_players: suspiciousRpPlayers.length,
+            concurrent_users: concurrentUsers
+        });
+
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
