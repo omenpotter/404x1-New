@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // Lightweight typing indicator endpoint.
 // Frontend polls this or uses it as a fire-and-forget ping.
