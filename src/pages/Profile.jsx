@@ -34,7 +34,8 @@ export default function Profile() {
   const [frameWeeks, setFrameWeeks]     = useState(1);
 
   const params = new URLSearchParams(window.location.search);
-  const viewId = params.get('id');
+  const rawId = params.get('id');
+  const viewId = (!rawId || rawId === 'undefined' || rawId === 'null') ? null : rawId;
   const currentUser = getUser();
   const isOwnProfile = !viewId || viewId === currentUser?.id;
 

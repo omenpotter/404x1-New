@@ -45,12 +45,24 @@ export default function Messages() {
     const u = getUser();
     setUser(u);
     if (!u) return;
-    setConvs(getConvs());
+    const storedConvs = getConvs();
+    setConvs(storedConvs);
 
-    // Check URL param ?with=playerId
     const params = new URLSearchParams(window.location.search);
+    const convId = params.get('conv');
     const withId = params.get('with');
-    if (withId) startNewDM(withId, u);
+
+    if (convId) {
+      const existing = storedConvs.find(c => c.id === convId);
+      if (existing) {
+        setActiveConv(existing);
+        loadHistory(convId);
+      } else {
+        loadHistory(convId);
+      }
+    } else if (withId) {
+      startNewDM(withId, u);
+    }
   }, []);
 
   useEffect(() => {
@@ -108,9 +120,13 @@ export default function Messages() {
         }
         setShowNewDM(false);
         setNewDMTarget('');
+        window.history.replaceState({}, '', '?conv=' + conv.id);
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       }
     } catch (e) {
-      console.error(e);
+      console.error('DM error:', e);
     }
   };
 
@@ -140,7 +156,9 @@ export default function Messages() {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('DM error:', err);
+    }
     setLoadingHistory(false);
   };
 
@@ -181,7 +199,9 @@ export default function Messages() {
           setConvs([...existing]);
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('DM error:', err);
+    }
     setSending(false);
   };
 
@@ -326,7 +346,7 @@ export default function Messages() {
             <div
               key={conv.id}
               className={`conv-item${activeConv?.id === conv.id ? ' active' : ''}`}
-              onClick={() => setActiveConv(conv)}
+              onClick={() => { setActiveConv(conv); window.history.replaceState({}, '', '?conv=' + conv.id); }}
             >
               <div className="conv-avatar">{(conv.other_username || '?')[0].toUpperCase()}</div>
               <div className="conv-info">
