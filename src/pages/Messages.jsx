@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 
 const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
@@ -80,9 +81,8 @@ export default function Messages() {
     if (!query.trim() || query.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const res = await fetch(BASE + 'playerSearch?q=' + encodeURIComponent(query) + '&limit=8');
-      const data = await res.json();
-      if (data.success) setSearchResults(data.players || []);
+      const res = await base44.functions.invoke('playerSearch', { query, limit: 8 });
+      if (res.data.success) setSearchResults(res.data.players || []);
     } catch {}
     setSearching(false);
   };
@@ -90,12 +90,8 @@ export default function Messages() {
   const startNewDM = async (playerId, u = user) => {
     if (!u) return;
     try {
-      const res = await fetch(BASE + 'createConversation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from_player_id: u.id, to_player_id: playerId })
-      });
-      const data = await res.json();
+      const res = await base44.functions.invoke('createConversation', { from_player_id: u.id, to_player_id: playerId });
+      const data = res.data;
       if (data.success) {
         const conv = data.conversation;
         const existing = getConvs();
