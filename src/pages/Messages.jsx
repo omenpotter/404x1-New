@@ -2,16 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 
-const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
-
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
-}
-function getConvs() {
-  try { return JSON.parse(localStorage.getItem('404x1_conversations') || '[]'); } catch { return []; }
-}
-function saveConvs(convs) {
-  localStorage.setItem('404x1_conversations', JSON.stringify(convs));
 }
 
 function formatTime(ts) {
@@ -26,49 +18,50 @@ function formatTime(ts) {
 }
 
 export default function Messages() {
-  const [user, setUser] = useState(null);
+  const [user] = useState(getUser());
   const [convs, setConvs] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showNewDM, setShowNewDM] = useState(false);
   const [newDMTarget, setNewDMTarget] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [showNewDM, setShowNewDM] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+
   const bottomRef = useRef(null);
-  const pollRef = useRef(null);
-  const typingTimerRef = useRef(null);
 
+  // URL-driven routing
   useEffect(() => {
-    const u = getUser();
-    setUser(u);
-    if (!u) return;
-    const storedConvs = getConvs();
-    setConvs(storedConvs);
-
     const params = new URLSearchParams(window.location.search);
     const convId = params.get('conv');
     const withId = params.get('with');
-
+    if (!user) return;
     if (convId) {
-      const existing = storedConvs.find(c => c.id === convId);
-      if (existing) {
-        setActiveConv(existing);
-        loadHistory(convId);
-      } else {
-        loadHistory(convId);
-      }
+      loadConversation(convId);
     } else if (withId) {
-      startNewDM(withId, u);
+      startNewDM(withId);
     }
-  }, []);
+  }, [user]);
+
+  // Load all conversations
+  const loadConversations = async () => {
+    try {
+      const res = await base44.functions.invoke('getConversations');
+      if (res.data.success) setConvs(res.data.conversations || []);
+    } catch (err) {
+      console.error('DM error: loadConversations', err);
+    }
+  };
 
   useEffect(() => {
+    if (user) loadConversations();
+  }, [user]);
+
+  // Poll messages every 2s when a conversation is active
+  useEffect(() => {
     if (!activeConv?.id) return;
-    loadHistory(activeConv.id);
     const intervalId = setInterval(() => loadHistory(activeConv.id), 2000);
     return () => clearInterval(intervalId);
   }, [activeConv?.id]);
@@ -77,161 +70,107 @@ export default function Messages() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  const searchPlayers = async (query) => {
-    if (!query.trim() || query.length < 2) { setSearchResults([]); return; }
-    setSearching(true);
+  const startNewDM = async (playerId) => {
+    if (!user || !playerId || playerId === user.id) return;
     try {
-      const res = await base44.functions.invoke('playerSearch', { query, limit: 8 });
-      if (res.data.success) setSearchResults(res.data.players || []);
-    } catch {}
-    setSearching(false);
-  };
-
-  const startNewDM = async (playerId, u = user) => {
-    if (!u) return;
-    try {
-      const res = await base44.functions.invoke('createConversation', { from_player_id: u.id, to_player_id: playerId });
+      const res = await base44.functions.invoke('createConversation', {
+        from_player_id: user.id,
+        to_player_id: playerId,
+      });
       const data = res.data;
-      if (data.success) {
-        const conv = data.conversation;
-        const existing = getConvs();
-        const already = existing.find(c => c.id === conv.id);
-        if (!already) {
-          const otherIdx = conv.participant_ids?.indexOf(u.id) === 0 ? 1 : 0;
-          const newConv = {
-            id: conv.id,
-            other_player_id: conv.participant_ids?.[otherIdx],
-            other_username: conv.participant_usernames?.[otherIdx] || 'Unknown',
-            last_message: conv.last_message || '',
-            last_message_at: conv.last_message_at || conv.created_date,
-            unread_count: 0
-          };
-          const updated = [newConv, ...existing];
-          saveConvs(updated);
-          setConvs(updated);
-          setActiveConv({ ...conv, other_username: newConv.other_username });
-        } else {
-          setActiveConv({ ...conv, other_username: already.other_username });
-          setConvs(existing);
-        }
-        setShowNewDM(false);
-        setNewDMTarget('');
-        window.history.replaceState({}, '', '?conv=' + conv.id);
-        setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
-    } catch (e) {
-      console.error('DM error:', e);
+      if (!data.success) throw new Error(data.error || 'Failed');
+      const conv = data.conversation || data;
+      const otherUsername = conv.participant_usernames?.find(u => u !== user.username) || 'Unknown';
+      const newConv = { ...conv, other_username: otherUsername };
+      setActiveConv(newConv);
+      setConvs(prev => {
+        const already = prev.find(c => c.id === newConv.id);
+        if (already) return prev;
+        return [newConv, ...prev];
+      });
+      setShowNewDM(false);
+      setNewDMTarget('');
+      setSearchResults([]);
+      window.history.replaceState({}, '', `${createPageUrl('Messages')}?conv=${newConv.id}`);
+      await loadHistory(newConv.id);
+    } catch (err) {
+      console.error('DM error: startNewDM', err);
     }
   };
 
-  const loadHistory = async (convId) => {
-    if (!convId) return;
+  const loadHistory = async (conversationId) => {
+    if (!conversationId) return;
     setLoadingHistory(true);
     try {
-      const u = getUser();
-      const res = await fetch(BASE + `getPrivateHistory?conversation_id=${convId}&player_id=${u?.id}&limit=50&offset=0`);
-      const data = await res.json();
-      if (data.success) {
-        setMessages(data.messages || []);
-        // Mark as read
-        const unread = (data.messages || []).filter(m => m.sender_id !== u?.id && !m.read_by?.includes(u?.id));
-        if (unread.length > 0) {
-          markRead(convId, unread.map(m => m.id));
-        }
-        // Update conv last message
-        if (data.conversation) {
-          const c = data.conversation;
-          const existing = getConvs();
-          const idx = existing.findIndex(x => x.id === convId);
-          if (idx >= 0) {
-            existing[idx] = { ...existing[idx], last_message: c.last_message || existing[idx].last_message, last_message_at: c.last_message_at || existing[idx].last_message_at, unread_count: 0 };
-            saveConvs(existing);
-            setConvs([...existing]);
-          }
-        }
+      const res = await base44.functions.invoke('getPrivateHistory', {
+        conversation_id: conversationId,
+      });
+      if (res.data.success) {
+        setMessages(res.data.messages || []);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
     } catch (err) {
-      console.error('DM error:', err);
+      console.error('DM error: loadHistory', err);
     }
     setLoadingHistory(false);
   };
 
-  const markRead = async (convId, messageIds) => {
-    const u = getUser();
-    if (!u) return;
-    try {
-      await fetch(BASE + 'privateReadReceipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_id: u.id, conversation_id: convId, message_ids: messageIds })
-      });
-    } catch {}
+  const loadConversation = async (convId) => {
+    const existing = convs.find(c => c.id === convId);
+    if (existing) setActiveConv(existing);
+    await loadHistory(convId);
   };
 
   const sendMessage = async () => {
-    const u = getUser();
-    if (!u || !activeConv || !input.trim() || sending) return;
+    if (!input.trim() || !activeConv || sending) return;
     setSending(true);
     const content = input.trim();
     setInput('');
     try {
-      const res = await fetch(BASE + 'sendPrivateMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: activeConv.id, sender_id: u.id, content })
+      const res = await base44.functions.invoke('sendPrivateMessage', {
+        conversation_id: activeConv.id,
+        content,
       });
-      const data = await res.json();
-      if (data.success) {
-        setMessages(prev => [...prev, data.message]);
-        // update conv list
-        const existing = getConvs();
-        const idx = existing.findIndex(c => c.id === activeConv.id);
-        if (idx >= 0) {
-          existing[idx].last_message = content;
-          existing[idx].last_message_at = new Date().toISOString();
-          saveConvs(existing);
-          setConvs([...existing]);
-        }
+      if (res.data.success) {
+        setMessages(prev => [...prev, res.data.message]);
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     } catch (err) {
-      console.error('DM error:', err);
+      console.error('DM error: sendMessage', err);
     }
     setSending(false);
   };
 
-  const handleTyping = () => {
-    const u = getUser();
-    if (!u || !activeConv) return;
-    if (!isTyping) {
-      setIsTyping(true);
-      fetch(BASE + 'privateTyping', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_id: u.id, conversation_id: activeConv.id, is_typing: true })
-      }).catch(() => {});
-    }
-    clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => setIsTyping(false), 3000);
-  };
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    handleTyping();
   };
 
   const deliveryTick = (msg) => {
-    const u = getUser();
-    if (!u || msg.sender_id !== u.id) return null;
+    if (!user || msg.sender_id !== user.id) return null;
     const readBy = msg.read_by || [];
     const deliveredTo = msg.delivered_to || [];
-    const othersRead = readBy.filter(id => id !== u.id).length > 0;
-    const othersDelivered = deliveredTo.filter(id => id !== u.id).length > 0;
+    const othersRead = readBy.filter(id => id !== user.id).length > 0;
+    const othersDelivered = deliveredTo.filter(id => id !== user.id).length > 0;
     if (othersRead) return <span style={{ color: '#7dff7d', fontSize: '11px' }}>✓✓</span>;
     if (othersDelivered) return <span style={{ color: '#888', fontSize: '11px' }}>✓✓</span>;
     return <span style={{ color: '#444', fontSize: '11px' }}>✓</span>;
   };
+
+  // Debounced player search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (newDMTarget.length < 2) { setSearchResults([]); return; }
+      setSearching(true);
+      try {
+        const res = await base44.functions.invoke('playerSearch', { query: newDMTarget, limit: 8 });
+        if (res.data.success) setSearchResults(res.data.players || []);
+      } catch (err) {
+        console.error('DM error: playerSearch', err);
+      }
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [newDMTarget]);
 
   if (!user) {
     return (
@@ -306,7 +245,7 @@ export default function Messages() {
               className="new-dm-input"
               placeholder="Type username..."
               value={newDMTarget}
-              onChange={e => { setNewDMTarget(e.target.value); searchPlayers(e.target.value); }}
+              onChange={e => setNewDMTarget(e.target.value)}
               autoFocus
             />
             {searching && <div style={{ fontSize:'10px', color:'#888', marginBottom:'6px' }}>Searching...</div>}
@@ -317,7 +256,7 @@ export default function Messages() {
                     style={{ padding:'8px 10px', cursor:'pointer', fontSize:'12px', color:'#e0e0e0', borderBottom:'1px solid #111', display:'flex', justifyContent:'space-between', alignItems:'center' }}
                     onMouseOver={e => e.currentTarget.style.background='#1a1a1a'}
                     onMouseOut={e => e.currentTarget.style.background='transparent'}
-                    onClick={() => { startNewDM(p.id); setSearchResults([]); setNewDMTarget(''); }}
+                    onClick={() => startNewDM(p.id)}
                   >
                     <span style={{ color:'#7dff7d' }}>{p.username}</span>
                     <span style={{ fontSize:'10px', color:'#444' }}>{p.user_role}</span>
@@ -338,11 +277,11 @@ export default function Messages() {
               No conversations yet.<br />Click + NEW to start one.
             </div>
           )}
-          {convs.sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)).map(conv => (
+          {[...convs].sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)).map(conv => (
             <div
               key={conv.id}
               className={`conv-item${activeConv?.id === conv.id ? ' active' : ''}`}
-              onClick={() => { setActiveConv(conv); window.history.replaceState({}, '', '?conv=' + conv.id); }}
+              onClick={() => { setActiveConv(conv); window.history.replaceState({}, '', `${createPageUrl('Messages')}?conv=${conv.id}`); }}
             >
               <div className="conv-avatar">{(conv.other_username || '?')[0].toUpperCase()}</div>
               <div className="conv-info">
@@ -371,7 +310,6 @@ export default function Messages() {
         ) : (
           <>
             <div className="dm-header">
-              <button onClick={() => setActiveConv(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '18px', display: 'none' }} className="back-btn">←</button>
               <div className="dm-header-avatar">{(activeConv.other_username || '?')[0].toUpperCase()}</div>
               <div>
                 <div style={{ color: '#e0e0e0', fontSize: '13px' }}>{activeConv.other_username || 'Unknown'}</div>
