@@ -101,16 +101,16 @@ export default function Profile() {
   };
 
   const handleConvert = async () => {
+    const u = getUser();
     const amount = parseInt(convertAmount);
     if (!amount || amount < 500 || amount % 500 !== 0) { setConvertMsg('Amount must be a multiple of 500, min 500'); return; }
     setConvertLoading(true); setConvertMsg('');
     try {
-      const res = await base44.functions.invoke('convertRp', { amount, player_id: u.id });
+      const res = await base44.functions.invoke('convertRp', { amount, player_id: u?.id });
       const data = res.data;
       if (data.success) {
         setConvertMsg(`✅ Converted! You received ${data.rpx_earned} RPx`);
         setConvertAmount('');
-        const u = getUser();
         if (u) { fetchStats(u.id); fetchActivity(u.id); }
       } else { setConvertMsg(data.error || 'Conversion failed'); }
     } catch (e) { setConvertMsg(e.message || 'Conversion failed'); }
@@ -118,14 +118,14 @@ export default function Profile() {
   };
 
   const handleSpend = async (action, extraParams = {}) => {
+    const u = getUser();
     setSpendLoading(p => ({ ...p, [action]: true }));
     setSpendMsg(p => ({ ...p, [action]: '' }));
     try {
-      const res = await base44.functions.invoke('spendRp', { action, player_id: u.id, ...extraParams });
+      const res = await base44.functions.invoke('spendRp', { action, player_id: u?.id, ...extraParams });
       const data = res.data;
       if (data.success) {
         setSpendMsg(p => ({ ...p, [action]: `✅ Done! Cost: ${data.cost} RP burned: ${data.burned_rp}` }));
-        const u = getUser();
         if (u) { fetchStats(u.id); fetchActivity(u.id); }
       } else { setSpendMsg(p => ({ ...p, [action]: data.error || 'Failed' })); }
     } catch (e) { setSpendMsg(p => ({ ...p, [action]: e.message || 'Failed' })); }
