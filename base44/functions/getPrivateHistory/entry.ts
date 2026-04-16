@@ -11,11 +11,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'conversation_id is required' }, { status: 400 });
         }
 
-        const base44 = createClientFromRequest(req);
-        const authUser = await base44.auth.me();
-        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        const player_id = url.searchParams.get('player_id');
+        if (!player_id) return Response.json({ error: 'player_id is required' }, { status: 400 });
 
-        const player_id = authUser.id;
+        const base44 = createClientFromRequest(req);
 
         // Verify conversation exists and player is a participant
         const conversation = await base44.asServiceRole.entities.Conversation.get(conversation_id);
