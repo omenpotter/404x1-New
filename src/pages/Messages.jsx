@@ -133,6 +133,7 @@ export default function Messages() {
         conversation_id: activeConv.id,
         content,
         sender_id: user.id,
+        sender_username: user.username,
       });
       if (res.data.success) {
         setMessages(prev => [...prev, res.data.message]);

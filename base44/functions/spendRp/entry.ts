@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const ACTION_COSTS = {
   highlight_message: { base: 25, per_week: false },
@@ -13,12 +13,11 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
 
     const body = await req.json();
-    const { action, duration_weeks = 1, color, frame } = body;
+    const { action, duration_weeks = 1, color, frame, player_id } = body;
 
+    if (!player_id) return Response.json({ error: 'player_id required' }, { status: 400, headers });
     if (!action || !ACTION_COSTS[action]) {
       return Response.json({ error: `Invalid action. Must be one of: ${Object.keys(ACTION_COSTS).join(', ')}` }, { status: 400, headers });
     }
@@ -36,7 +35,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'frame field is required' }, { status: 400, headers });
     }
 
-    const player = await base44.asServiceRole.entities.Player.get(user.id);
+    const player = await base44.asServiceRole.entities.Player.get(player_id);
     if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
 
     const spendableRp = (player.reputation_points || 0) - (player.locked_rp || 0);

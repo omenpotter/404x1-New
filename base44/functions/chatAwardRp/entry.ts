@@ -1,14 +1,10 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
-        const { to_user_id, amount, reason } = await req.json();
+        const { to_user_id, from_user_id, amount, reason } = await req.json();
 
         const base44 = createClientFromRequest(req);
-        const authUser = await base44.auth.me();
-        if (!authUser) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const from_user_id = authUser.id;
 
         if (!to_user_id || !amount) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });

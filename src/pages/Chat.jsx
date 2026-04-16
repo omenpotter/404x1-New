@@ -219,7 +219,7 @@ export default function Chat() {
     const amount = parseInt(tipAmount);
     if (isNaN(amount) || amount <= 0) { toast.error('Invalid amount'); return; }
     try {
-      await base44.functions.invoke('chatAwardRp', { from_user_id: u.id, to_player_id: tipModal.playerId, amount, reason: 'Tip from chat' });
+      await base44.functions.invoke('chatAwardRp', { from_user_id: u.id, to_user_id: tipModal.playerId, amount, reason: 'Tip from chat' });
       toast.success(`Tipped ${amount} RP to ${tipModal.username}!`);
       setTipModal(null);
       setTipAmount('');

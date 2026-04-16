@@ -29,11 +29,12 @@ Deno.serve(async (req) => {
         }
 
         // Check if conversation already exists between these two players
-        const existing = await base44.asServiceRole.entities.Conversation.filter({
-            participant_ids: { $all: [from_player_id, to_player_id] }
-        });
+        const allConvs = await base44.asServiceRole.entities.Conversation.list(null, 500);
+        const existing = allConvs.filter(c =>
+            c.participant_ids && c.participant_ids.includes(from_player_id) && c.participant_ids.includes(to_player_id)
+        );
 
-        if (existing && existing.length > 0) {
+        if (existing.length > 0) {
             return Response.json({ success: true, conversation: existing[0], is_existing: true });
         }
 

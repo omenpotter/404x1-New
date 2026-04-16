@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const CHALLENGES = [
   { id: 0,  q: "What is 8 + 5?",                                    a: "13" },

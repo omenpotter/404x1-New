@@ -105,7 +105,7 @@ export default function Profile() {
     if (!amount || amount < 500 || amount % 500 !== 0) { setConvertMsg('Amount must be a multiple of 500, min 500'); return; }
     setConvertLoading(true); setConvertMsg('');
     try {
-      const res = await base44.functions.invoke('convertRp', { amount });
+      const res = await base44.functions.invoke('convertRp', { amount, player_id: u.id });
       const data = res.data;
       if (data.success) {
         setConvertMsg(`✅ Converted! You received ${data.rpx_earned} RPx`);
@@ -121,7 +121,7 @@ export default function Profile() {
     setSpendLoading(p => ({ ...p, [action]: true }));
     setSpendMsg(p => ({ ...p, [action]: '' }));
     try {
-      const res = await base44.functions.invoke('spendRp', { action, ...extraParams });
+      const res = await base44.functions.invoke('spendRp', { action, player_id: u.id, ...extraParams });
       const data = res.data;
       if (data.success) {
         setSpendMsg(p => ({ ...p, [action]: `✅ Done! Cost: ${data.cost} RP burned: ${data.burned_rp}` }));

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -6,17 +6,17 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
 
     const body = await req.json();
     const amount = parseInt(body.amount);
+    const player_id = body.player_id;
 
+    if (!player_id) return Response.json({ error: 'player_id required' }, { status: 400, headers });
     if (!amount || amount < 500 || amount % 500 !== 0) {
       return Response.json({ error: 'Amount must be a multiple of 500, minimum 500' }, { status: 400, headers });
     }
 
-    const player = await base44.asServiceRole.entities.Player.get(user.id);
+    const player = await base44.asServiceRole.entities.Player.get(player_id);
     if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
 
     // Eligibility check
