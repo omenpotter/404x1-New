@@ -2,17 +2,15 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     try {
-        const url = new URL(req.url);
-        const conversation_id = url.searchParams.get('conversation_id');
-        const limit = parseInt(url.searchParams.get('limit') || '50');
-        const offset = parseInt(url.searchParams.get('offset') || '0');
+        const { conversation_id, player_id, limit = 50, offset = 0 } = await req.json();
 
         if (!conversation_id) {
             return Response.json({ error: 'conversation_id is required' }, { status: 400 });
         }
 
-        const player_id = url.searchParams.get('player_id');
-        if (!player_id) return Response.json({ error: 'player_id is required' }, { status: 400 });
+        if (!player_id) {
+            return Response.json({ error: 'player_id is required' }, { status: 400 });
+        }
 
         const base44 = createClientFromRequest(req);
 
@@ -37,12 +35,12 @@ Deno.serve(async (req) => {
 
         // Mark unread messages as delivered for this player
         const undelivered = paginated.filter(m =>
-            m.sender_id !== player_id && !m.delivered_to.includes(player_id)
+            m.sender_id !== player_id && !(m.delivered_to || []).includes(player_id)
         );
 
         for (const msg of undelivered) {
             await base44.asServiceRole.entities.PrivateMessage.update(msg.id, {
-                delivered_to: [...msg.delivered_to, player_id]
+                delivered_to: [...(msg.delivered_to || []), player_id]
             });
         }
 

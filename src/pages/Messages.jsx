@@ -47,8 +47,9 @@ export default function Messages() {
 
   // Load all conversations
   const loadConversations = async () => {
+    if (!user) return;
     try {
-      const res = await base44.functions.invoke('getConversations');
+      const res = await base44.functions.invoke('getConversations', { player_id: user.id });
       if (res.data.success) setConvs(res.data.conversations || []);
     } catch (err) {
       console.error('DM error: loadConversations', err);
@@ -99,11 +100,12 @@ export default function Messages() {
   };
 
   const loadHistory = async (conversationId) => {
-    if (!conversationId) return;
+    if (!conversationId || !user) return;
     setLoadingHistory(true);
     try {
       const res = await base44.functions.invoke('getPrivateHistory', {
         conversation_id: conversationId,
+        player_id: user.id,
       });
       if (res.data.success) {
         setMessages(res.data.messages || []);
@@ -122,7 +124,7 @@ export default function Messages() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !activeConv || sending) return;
+    if (!input.trim() || !activeConv || sending || !user) return;
     setSending(true);
     const content = input.trim();
     setInput('');
@@ -130,6 +132,7 @@ export default function Messages() {
       const res = await base44.functions.invoke('sendPrivateMessage', {
         conversation_id: activeConv.id,
         content,
+        sender_id: user.id,
       });
       if (res.data.success) {
         setMessages(prev => [...prev, res.data.message]);
@@ -281,7 +284,7 @@ export default function Messages() {
             <div
               key={conv.id}
               className={`conv-item${activeConv?.id === conv.id ? ' active' : ''}`}
-              onClick={() => { setActiveConv(conv); window.history.replaceState({}, '', `${createPageUrl('Messages')}?conv=${conv.id}`); }}
+              onClick={() => { setActiveConv(conv); window.history.replaceState({}, '', `${createPageUrl('Messages')}?conv=${conv.id}`); loadHistory(conv.id); }}
             >
               <div className="conv-avatar">{(conv.other_username || '?')[0].toUpperCase()}</div>
               <div className="conv-info">
