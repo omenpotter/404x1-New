@@ -17,21 +17,14 @@ Deno.serve(async (req) => {
             50
         );
 
-        // Enrich with other_username
+        // Enrich with other_username and other_player_id
         const enriched = conversations.map(conv => {
-            const otherUsername = (conv.participant_usernames || []).find(u => {
-                // find the other participant's username by matching with participant_ids
-                const idx = (conv.participant_ids || []).indexOf(player_id);
-                const otherIdx = idx === 0 ? 1 : 0;
-                return u === (conv.participant_usernames || [])[otherIdx];
-            }) || (conv.participant_usernames || []).find(u => u !== null) || 'Unknown';
-
-            // Simpler: find username at the index of the other player
             const myIdx = (conv.participant_ids || []).indexOf(player_id);
             const otherIdx = myIdx === 0 ? 1 : 0;
             const other_username = (conv.participant_usernames || [])[otherIdx] || 'Unknown';
+            const other_player_id = (conv.participant_ids || [])[otherIdx] || null;
 
-            return { ...conv, other_username };
+            return { ...conv, other_username, other_player_id };
         });
 
         return Response.json({ success: true, conversations: enriched });

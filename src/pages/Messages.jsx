@@ -356,10 +356,18 @@ export default function Messages() {
           <>
             <div className="dm-header">
               <div className="dm-header-avatar">{(activeConv.other_username || '?')[0].toUpperCase()}</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ color: '#e0e0e0', fontSize: '13px' }}>{activeConv.other_username || 'Unknown'}</div>
                 <div style={{ color: '#444', fontSize: '10px' }}>Direct Message</div>
               </div>
+              {activeConv.other_player_id && (
+                <a
+                  href={`${createPageUrl('Profile')}?id=${activeConv.other_player_id}`}
+                  style={{ fontSize: '11px', color: '#7dff7d', border: '1px solid #2a4a2a', padding: '4px 10px', textDecoration: 'none', fontFamily: "'Share Tech Mono', monospace" }}
+                >
+                  VIEW PROFILE
+                </a>
+              )}
             </div>
 
             <div className="dm-messages">
