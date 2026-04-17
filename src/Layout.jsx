@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import WalletModal from '@/components/WalletModal';
 
 const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
@@ -246,6 +247,9 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Page content */}
       <main>{children}</main>
+
+      {/* Global wallet modal — works on all pages */}
+      <WalletModal />
     </div>
   );
 }

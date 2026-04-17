@@ -1,0 +1,79 @@
+{
+  "name": "PrivateMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "ID of the conversation"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "Player ID of the sender"
+    },
+    "sender_username": {
+      "type": "string",
+      "description": "Username of the sender"
+    },
+    "content": {
+      "type": "string",
+      "description": "Message content"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "image",
+        "system"
+      ],
+      "default": "text",
+      "description": "Type of message"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL of attached image if message_type is image"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft delete flag"
+    },
+    "is_edited": {
+      "type": "boolean",
+      "default": false,
+      "description": "Was message edited"
+    },
+    "edited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When message was edited"
+    },
+    "delivered_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Player IDs who received delivery receipt"
+    },
+    "read_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Player IDs who have read the message"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_id",
+    "sender_username",
+    "content"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {}
+  }
+}

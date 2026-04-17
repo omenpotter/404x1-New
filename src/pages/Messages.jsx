@@ -29,6 +29,7 @@ export default function Messages() {
   const [newDMTarget, setNewDMTarget] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [deletingConv, setDeletingConv] = useState(null);
 
   const bottomRef = useRef(null);
 
@@ -158,6 +159,23 @@ export default function Messages() {
       console.error('DM error: sendMessage', err);
     }
     setSending(false);
+  };
+
+  const deleteConversation = async (convId) => {
+    if (!user || !convId) return;
+    setDeletingConv(convId);
+    try {
+      await base44.functions.invoke('deleteConversation', { conversation_id: convId, player_id: user.id });
+      setConvs(prev => prev.filter(c => c.id !== convId));
+      if (activeConv?.id === convId) {
+        setActiveConv(null);
+        setMessages([]);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (err) {
+      console.error('DM error: deleteConversation', err);
+    }
+    setDeletingConv(null);
   };
 
   const handleKeyDown = (e) => {
@@ -312,6 +330,14 @@ export default function Messages() {
                 {conv.unread_count > 0 && (
                   <span className="unread-badge">{conv.unread_count > 9 ? '9+' : conv.unread_count}</span>
                 )}
+                <button
+                  onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }}
+                  disabled={deletingConv === conv.id}
+                  style={{ background:'none', border:'none', color:'#444', cursor:'pointer', fontSize:'12px', padding:'2px 4px', lineHeight:1 }}
+                  title="Delete conversation"
+                >
+                  {deletingConv === conv.id ? '...' : '🗑'}
+                </button>
               </div>
             </div>
           ))}
