@@ -118,9 +118,13 @@ export default function Messages() {
   };
 
   const loadConversation = async (convId) => {
-    const existing = convs.find(c => c.id === convId);
-    if (existing) setActiveConv(existing);
     await loadHistory(convId);
+    await loadConversations();
+    setConvs(prev => {
+      const existing = prev.find(c => c.id === convId);
+      if (existing) setActiveConv(existing);
+      return prev;
+    });
   };
 
   const sendMessage = async () => {
@@ -138,6 +142,17 @@ export default function Messages() {
       if (res.data.success) {
         setMessages(prev => [...prev, res.data.message]);
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setConvs(prev => {
+          const updated = prev.map(c =>
+            c.id === activeConv.id
+              ? { ...c, last_message: content, last_message_at: new Date().toISOString() }
+              : c
+          );
+          if (!updated.find(c => c.id === activeConv.id)) {
+            return [{ ...activeConv, last_message: content, last_message_at: new Date().toISOString() }, ...updated];
+          }
+          return updated;
+        });
       }
     } catch (err) {
       console.error('DM error: sendMessage', err);
