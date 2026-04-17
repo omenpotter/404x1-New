@@ -2,8 +2,15 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
-        const url = new URL(req.url);
-        const user_id = url.searchParams.get('user_id');
+        let user_id: string | null = null;
+
+        if (req.method === 'POST') {
+            const body = await req.json();
+            user_id = body.user_id || null;
+        } else {
+            const url = new URL(req.url);
+            user_id = url.searchParams.get('user_id');
+        }
 
         if (!user_id) {
             return Response.json({ error: 'user_id required' }, { status: 400 });
