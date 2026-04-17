@@ -61,7 +61,11 @@ export default function Chat() {
     fetchMessages();
     const unsub = base44.entities.Message.subscribe((event) => {
       if (event.type === 'create') {
-        setMessages(prev => prev.find(m => m.id === event.id) ? prev : [...prev, event.data]);
+        setMessages(prev => {
+          if (prev.find(m => m.id === event.id)) return prev;
+          const msg = { ...event.data, player_id: event.data.player_id || event.data.playerId || event.player_id };
+          return [...prev, msg];
+        });
       } else if (event.type === 'update') {
         setMessages(prev => prev.map(m => m.id === event.id ? { ...m, ...event.data } : m));
       } else if (event.type === 'delete') {
@@ -534,7 +538,7 @@ export default function Chat() {
                 <div className="msg-body">
                   <div className="msg-header">
                     <span className="msg-username" style={{ color: usernameColor }}
-                      onClick={e => { e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, playerId: msgPlayerId, username }); }}>
+                      onClick={e => { e.stopPropagation(); console.log('msgPlayerId:', msgPlayerId, 'msg:', msg); setContextMenu({ x: e.clientX, y: e.clientY, playerId: msgPlayerId, username }); }}>
                       {username}
                     </span>
                     <span className="msg-role-badge" style={{ color: roleColor, borderColor: roleColor + '55' }}>
