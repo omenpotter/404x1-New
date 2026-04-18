@@ -51,18 +51,6 @@ export default function WalletModal() {
       }
       if (!address) { setWalletConnectError('Wallet connection failed'); return; }
 
-      const message = `Sign in to 404x1\nTimestamp: ${Date.now()}`;
-      const encodedMessage = new TextEncoder().encode(message);
-      try {
-        if (walletType === 'x1') await window.x1Wallet.signMessage(encodedMessage);
-        else if (walletType === 'phantom') await window.phantom.solana.signMessage(encodedMessage, 'utf8');
-        else if (walletType === 'backpack') await window.backpack.signMessage(encodedMessage, 'utf8');
-        else if (walletType === 'metamask') await window.ethereum.request({ method: 'personal_sign', params: [message, address] });
-      } catch {
-        setWalletConnectError('Signature rejected. Please approve the sign request.');
-        return;
-      }
-
       setTempWalletAddress(address);
       const response = await base44.functions.invoke('authWallet', { wallet_address: address });
       const data = response.data;
