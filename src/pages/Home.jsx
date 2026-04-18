@@ -454,10 +454,30 @@ export default function Home() {
         }
       }
       trades.sort((a, b) => a.time - b.time);
-      localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
-      sendTradesToChart(trades);
-      buildTransactions(trades);
-      syncPriceFromTrades(trades);
+
+      // Merge with existing cached trades to preserve older history
+      try {
+        const existing = JSON.parse(localStorage.getItem('chart_trades_cache_v2') || 'null');
+        if (existing?.trades?.length) {
+          const existingSigs = new Set(trades.map(t => t.sig));
+          const olderTrades = existing.trades.filter(t => !existingSigs.has(t.sig));
+          const merged = [...olderTrades, ...trades].sort((a, b) => a.time - b.time);
+          localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades: merged, timestamp: now }));
+          sendTradesToChart(merged);
+          buildTransactions(merged);
+          syncPriceFromTrades(merged);
+        } else {
+          localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
+          sendTradesToChart(trades);
+          buildTransactions(trades);
+          syncPriceFromTrades(trades);
+        }
+      } catch {
+        localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
+        sendTradesToChart(trades);
+        buildTransactions(trades);
+        syncPriceFromTrades(trades);
+      }
     } catch (e) {
       console.warn('RPC trades fetch failed:', e.message);
     }
@@ -586,25 +606,6 @@ export default function Home() {
       }
 
       if (!address) { setWalletConnectError('Wallet connection failed'); setWalletConnecting(false); return; }
-
-      // Request wallet signature to prove ownership
-      const message = `Sign in to 404x1\nTimestamp: ${Date.now()}`;
-      const encodedMessage = new TextEncoder().encode(message);
-      try {
-        if (walletType === 'x1') {
-          await window.x1Wallet.signMessage(encodedMessage);
-        } else if (walletType === 'phantom') {
-          await window.phantom.solana.signMessage(encodedMessage, 'utf8');
-        } else if (walletType === 'backpack') {
-          await window.backpack.signMessage(encodedMessage, 'utf8');
-        } else if (walletType === 'metamask') {
-          await window.ethereum.request({ method: 'personal_sign', params: [message, address] });
-        }
-      } catch (signErr) {
-        setWalletConnectError('Signature rejected. Please approve the sign request.');
-        setWalletConnecting(false);
-        return;
-      }
 
       setTempWalletAddress(address);
 
