@@ -85,7 +85,9 @@ Deno.serve(async (req) => {
                 total_score: 0,
                 games_played: 0,
                 user_role: 'member',
-                last_seen: new Date().toISOString()
+                last_seen: new Date().toISOString(),
+                is_verified: false,
+                verification_attempts: 0
             });
         } catch (createErr) {
             // Catches race condition where two requests pass the uniqueness check simultaneously

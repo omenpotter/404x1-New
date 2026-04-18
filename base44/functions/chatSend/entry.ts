@@ -21,8 +21,8 @@ Deno.serve(async (req) => {
         const player = await base44.asServiceRole.entities.Player.get(user_id);
         if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
 
-        // Check human verification — only block players who have explicitly been set to unverified
-        if (player.is_verified === false && player.verification_attempts > 0) {
+        // Check human verification — block any player who is not yet verified
+        if (player.is_verified === false) {
             return Response.json({ success: false, error: 'Complete human verification first', needs_verification: true }, { status: 403 });
         }
 
