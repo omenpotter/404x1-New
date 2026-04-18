@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
 
         // Check human verification — block any player who is not yet verified
         if (player.is_verified === false) {
-            return Response.json({ success: false, error: 'Complete human verification first', needs_verification: true }, { status: 403 });
+            return Response.json({ success: false, error: 'Complete human verification first', needs_verification: true });
         }
 
         // Check if muted
