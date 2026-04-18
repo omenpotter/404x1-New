@@ -459,8 +459,8 @@ export default function Home() {
       try {
         const existing = JSON.parse(localStorage.getItem('chart_trades_cache_v2') || 'null');
         if (existing?.trades?.length) {
-          const existingSigs = new Set(trades.map(t => t.sig));
-          const olderTrades = existing.trades.filter(t => !existingSigs.has(t.sig));
+          const newSigs = new Set(trades.map(t => t.sig));
+          const olderTrades = existing.trades.filter(t => !newSigs.has(t.sig));
           const merged = [...olderTrades, ...trades].sort((a, b) => a.time - b.time);
           localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades: merged, timestamp: now }));
           sendTradesToChart(merged);
