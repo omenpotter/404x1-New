@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
 
         // O(1) indexed lookup — works at any user count, no list+find collapse
-        const existingPlayers = await base44.entities.Player.filter({ wallet_address }, null, 1);
+        const existingPlayers = await base44.asServiceRole.entities.Player.filter({ wallet_address }, null, 1);
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
 
         if (existing) {
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         }
 
         // Check username taken
-        const takenPlayers = await base44.entities.Player.filter({ username }, null, 1);
+        const takenPlayers = await base44.asServiceRole.entities.Player.filter({ username }, null, 1);
         const taken = takenPlayers.find(p => p.wallet_address !== wallet_address);
         if (taken) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
