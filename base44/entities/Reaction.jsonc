@@ -1,0 +1,43 @@
+{
+  "name": "Reaction",
+  "type": "object",
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "description": "ID of message being reacted to"
+    },
+    "from_player_id": {
+      "type": "string",
+      "description": "Player ID who reacted"
+    },
+    "from_username": {
+      "type": "string",
+      "description": "Username of player who reacted"
+    },
+    "to_player_id": {
+      "type": "string",
+      "description": "Message author player ID"
+    },
+    "emoji": {
+      "type": "string",
+      "description": "Emoji used for reaction"
+    }
+  },
+  "required": [
+    "message_id",
+    "from_player_id",
+    "from_username",
+    "to_player_id",
+    "emoji"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {
+      "data.from_player_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.from_player_id": "{{user.id}}"
+    }
+  }
+}

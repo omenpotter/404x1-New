@@ -1,0 +1,48 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "wallet_address": {
+      "type": "string",
+      "description": "Unique wallet address for Web3 authentication"
+    },
+    "username": {
+      "type": "string",
+      "description": "Unique username (4-12 characters)"
+    },
+    "reputation_points": {
+      "type": "number",
+      "default": 0,
+      "description": "User's reputation points earned through activities"
+    },
+    "total_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Cumulative game score"
+    },
+    "games_played": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of games played"
+    },
+    "user_role": {
+      "type": "string",
+      "enum": [
+        "member",
+        "trusted",
+        "admin"
+      ],
+      "default": "member",
+      "description": "User role in the platform"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last activity timestamp"
+    }
+  },
+  "required": [
+    "wallet_address",
+    "username"
+  ]
+}

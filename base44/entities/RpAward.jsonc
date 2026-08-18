@@ -1,0 +1,64 @@
+{
+  "name": "RpAward",
+  "type": "object",
+  "properties": {
+    "from_player_id": {
+      "type": "string",
+      "description": "Player ID who gave the RP"
+    },
+    "to_player_id": {
+      "type": "string",
+      "description": "Player ID who received the RP"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount of RP awarded"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for RP award"
+    }
+  },
+  "required": [
+    "from_player_id",
+    "to_player_id",
+    "amount"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "isAuthenticated": true
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.from_player_id": "{{user.id}}"
+        },
+        {
+          "data.to_player_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "admin",
+                "superuser"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}

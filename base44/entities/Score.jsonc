@@ -1,0 +1,60 @@
+{
+  "name": "Score",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "type": "string",
+      "description": "Reference to Player entity ID"
+    },
+    "username": {
+      "type": "string",
+      "description": "Username of player"
+    },
+    "score": {
+      "type": "number",
+      "description": "Score achieved in game"
+    },
+    "level_reached": {
+      "type": "number",
+      "description": "Highest level reached in the game"
+    },
+    "deaths": {
+      "type": "number",
+      "description": "Number of deaths in the game"
+    },
+    "time_seconds": {
+      "type": "number",
+      "description": "Total time survived in seconds"
+    }
+  },
+  "required": [
+    "player_id",
+    "username",
+    "score"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "isAuthenticated": true
+      }
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "data.player_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}

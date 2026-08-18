@@ -1,0 +1,42 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "participant_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of player IDs in the conversation"
+    },
+    "participant_usernames": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of usernames for quick display"
+    },
+    "last_message": {
+      "type": "string",
+      "description": "Preview of last message content"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last message"
+    },
+    "last_message_sender_id": {
+      "type": "string",
+      "description": "Player ID of last message sender"
+    }
+  },
+  "required": [
+    "participant_ids"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {}
+  }
+}

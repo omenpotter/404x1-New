@@ -1,0 +1,70 @@
+{
+  "name": "RpGrant",
+  "type": "object",
+  "properties": {
+    "from_player_id": {
+      "type": "string",
+      "description": "Player ID who granted (superuser/admin)"
+    },
+    "from_username": {
+      "type": "string",
+      "description": "Username of granter"
+    },
+    "to_player_id": {
+      "type": "string",
+      "description": "Player ID receiving grant"
+    },
+    "to_username": {
+      "type": "string",
+      "description": "Username of recipient"
+    },
+    "amount": {
+      "type": "number",
+      "description": "RP amount granted"
+    },
+    "grant_type": {
+      "type": "string",
+      "description": "Type of grant (manual_award, bonus_grant, initial_grant)"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for grant"
+    }
+  },
+  "required": [
+    "from_player_id",
+    "from_username",
+    "to_player_id",
+    "to_username",
+    "amount",
+    "grant_type"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.from_player_id": "{{user.id}}"
+        },
+        {
+          "data.to_player_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}

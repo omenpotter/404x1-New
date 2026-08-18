@@ -1,0 +1,118 @@
+{
+  "name": "ModerationLog",
+  "type": "object",
+  "properties": {
+    "moderator_id": {
+      "type": "string",
+      "description": "Player ID of moderator or agent"
+    },
+    "moderator_username": {
+      "type": "string",
+      "description": "Username of moderator or agent name"
+    },
+    "moderator_role": {
+      "type": "string",
+      "description": "Role of moderator at time of action"
+    },
+    "target_player_id": {
+      "type": "string",
+      "description": "Player ID being moderated"
+    },
+    "target_username": {
+      "type": "string",
+      "description": "Username of player being moderated"
+    },
+    "action_type": {
+      "type": "string",
+      "description": "Type of moderation action (mute, spam_penalty, delete_message, award_rp, change_role, permanent_ban)"
+    },
+    "rp_change": {
+      "type": "number",
+      "description": "RP change amount (negative for penalties, positive for awards)"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for action"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "ID of message if action relates to a message"
+    },
+    "duration_hours": {
+      "type": "number",
+      "description": "Duration in hours for mutes"
+    },
+    "old_role": {
+      "type": "string",
+      "description": "Previous role for role changes"
+    },
+    "new_role": {
+      "type": "string",
+      "description": "New role for role changes"
+    },
+    "escalated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this log entry requires escalation"
+    },
+    "escalated_to": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "superuser"
+      ],
+      "description": "Who the escalation is directed to"
+    },
+    "escalation_reason": {
+      "type": "string",
+      "description": "Clear description of why escalation is needed"
+    },
+    "already_reviewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the admin agent has already reviewed and acted on this escalation"
+    },
+    "requires_unban_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the superuser needs to review and decide on an unban"
+    }
+  },
+  "required": [
+    "moderator_id",
+    "moderator_username",
+    "moderator_role",
+    "target_player_id",
+    "target_username",
+    "action_type"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "superuser",
+            "moderator"
+          ]
+        }
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": {
+          "$in": [
+            "admin",
+            "superuser"
+          ]
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}
