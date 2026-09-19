@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     const start = Date.now();
@@ -6,7 +7,7 @@ Deno.serve(async (req) => {
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
     if (req.method === 'OPTIONS') {
@@ -15,6 +16,15 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
+
+        // Require staff authentication — operational metrics are not public
+        const session_token = req.headers.get('Authorization')?.replace('Bearer ', '') ||
+            new URL(req.url).searchParams.get('session_token');
+        const caller = await getSessionPlayer(base44, session_token);
+        if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        if (!['moderator', 'admin', 'superuser'].includes(caller.user_role)) {
+            return Response.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });
+        }
 
         const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

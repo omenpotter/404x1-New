@@ -10,6 +10,12 @@ Deno.serve(async (req) => {
 
   if (!player_id) return Response.json({ success: false, error: 'player_id required' });
 
+  // Only the player themselves or staff (moderator/admin/superuser) may view full activity
+  const isStaff = ['moderator', 'admin', 'superuser'].includes(caller.user_role);
+  if (player_id !== caller.id && !isStaff) {
+    return Response.json({ success: false, error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const [players, messages, rpReceived, rpSent] = await Promise.all([
       base44.asServiceRole.entities.Player.filter({ id: player_id }, '-created_date', 1),
@@ -23,6 +29,7 @@ Deno.serve(async (req) => {
     if (player) {
       delete player.session_token;
       delete player.session_expires_at;
+      delete player.wallet_address;
     }
 
     return Response.json({
