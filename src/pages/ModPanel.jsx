@@ -107,7 +107,7 @@ export default function ModPanel() {
   const handleMute       = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'mute', target_player_id: tid, duration_hours: Math.max(1, Math.round(duration / 60)), reason });
   const handleUnmute     = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'unmute', target_player_id: tid, reason });
   const handleSpam       = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'spam_penalty', target_player_id: tid, rp_penalty: 10, reason });
-  const handleWarn       = () => callAPI('issueWarning', { moderator_id: user.id, target_player_id: tid, reason });
+  const handleWarn       = () => callAPI('issueWarning', { session_token: getSessionToken(), target_player_id: tid, reason });
   const handleDeleteMsg  = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'delete_message', target_player_id: tid, message_id: messageId, reason });
   const handleChangeRole = () => callAPI('changeRole', { session_token: getSessionToken(), target_player_id: tid, new_role: newRole });
   const handleGrantRp    = () => callAPI('awardRp', { session_token: getSessionToken(), to_player_id: tid, amount: rpAmount, reason: rpReason });

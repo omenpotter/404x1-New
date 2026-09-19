@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { authorizeCronOrAdmin } from '../../shared/session.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -17,6 +18,11 @@ async function sendTelegram(text) {
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+        const body = await req.json().catch(() => ({}));
+        const auth = await authorizeCronOrAdmin(base44, body);
+        if (!auth.ok) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         const now = new Date();
         const cutoff24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();

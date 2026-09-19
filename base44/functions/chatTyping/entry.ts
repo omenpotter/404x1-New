@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     const headers = {
@@ -10,12 +11,14 @@ Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
 
     try {
-        const { user_id } = await req.json();
-        if (!user_id) return Response.json({ success: false }, { headers });
+        const { session_token } = await req.json();
 
         const base44 = createClientFromRequest(req);
 
-        await base44.asServiceRole.entities.Player.update(user_id, {
+        const player = await getSessionPlayer(base44, session_token);
+        if (!player) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401, headers });
+
+        await base44.asServiceRole.entities.Player.update(player.id, {
             is_typing: true,
             typing_since: new Date().toISOString(),
             last_seen: new Date().toISOString()

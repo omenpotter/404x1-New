@@ -52,7 +52,7 @@ export default function Profile() {
 
   const fetchStats = async (userId) => {
     try {
-      const res = await base44.functions.invoke('gameStats', { user_id: userId });
+      const res = await base44.functions.invoke('gameStats', { user_id: userId, session_token: getSessionToken() });
       const data = res.data;
       if (data.success) {
         setStats(data.stats);
@@ -73,7 +73,7 @@ export default function Profile() {
   const fetchActivity = async (userId) => {
     setActivityLoading(true);
     try {
-      const res = await base44.functions.invoke('getPlayerActivity', { player_id: userId });
+      const res = await base44.functions.invoke('getPlayerActivity', { player_id: userId, session_token: getSessionToken() });
       if (res.data.success) {
         setActivity(res.data);
         if (res.data.player?.bio) setBio(res.data.player.bio);

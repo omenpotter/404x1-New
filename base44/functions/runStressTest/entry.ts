@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { authorizeCronOrAdmin } from '../../shared/session.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID   = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -80,12 +81,18 @@ async function sendTelegram(text) {
 }
 
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+  const body = await req.json().catch(() => ({}));
+  const auth = await authorizeCronOrAdmin(base44, body);
+  if (!auth.ok) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   if (!ENABLED) {
     return Response.json({ skipped: true, reason: 'STRESS_TEST_ENABLED is not true' });
   }
 
   try {
-    const base44 = createClientFromRequest(req);
     const now = new Date().toISOString();
     const testStart = Date.now();
     const stats = { wave: 0, created: 0, sent: 0, banned: 0, active: 0, respawned: false, errors: 0, duration_ms: 0, avg_latency_ms: 0, max_latency_ms: 0 };

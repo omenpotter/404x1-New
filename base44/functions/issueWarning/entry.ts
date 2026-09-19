@@ -1,26 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  const { moderator_id, target_player_id, reason } = await req.json();
+  const { target_player_id, reason, session_token } = await req.json();
 
-  if (!moderator_id || !target_player_id || !reason) {
-    return Response.json({ success: false, error: 'moderator_id, target_player_id, and reason are required' });
+  if (!target_player_id || !reason) {
+    return Response.json({ success: false, error: 'target_player_id and reason are required' });
   }
 
   try {
-    const [mods, targets] = await Promise.all([
-      base44.asServiceRole.entities.Player.filter({ id: moderator_id }, '-created_date', 1),
-      base44.asServiceRole.entities.Player.filter({ id: target_player_id }, '-created_date', 1),
-    ]);
-
-    const mod = mods[0];
-    const target = targets[0];
-
-    if (!mod) return Response.json({ success: false, error: 'Moderator not found' });
+    const mod = await getSessionPlayer(base44, session_token);
+    if (!mod) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     if (!['moderator','admin','superuser'].includes(mod.user_role)) {
-      return Response.json({ success: false, error: 'Insufficient permissions' });
+      return Response.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
     }
+
+    const targets = await base44.asServiceRole.entities.Player.filter({ id: target_player_id }, '-created_date', 1);
+    const target = targets[0];
     if (!target) return Response.json({ success: false, error: 'Target player not found' });
 
     await base44.asServiceRole.entities.ModerationLog.create({

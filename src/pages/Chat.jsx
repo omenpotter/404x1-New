@@ -100,7 +100,7 @@ export default function Chat() {
     try {
       const u = getUser();
       // Ping last_seen so this user counts in the online count
-      if (u?.id) base44.functions.invoke('chatTyping', { user_id: u.id }).catch(() => {});
+      if (u?.id) base44.functions.invoke('chatTyping', { session_token: getSessionToken() }).catch(() => {});
       const res = await base44.functions.invoke('chatHistory', { limit: 1, offset: 0, user_id: u?.id });
       const data = res.data;
       if (data.success) {
@@ -167,7 +167,7 @@ export default function Chat() {
     const u = getUser();
     if (!u) return;
     clearTimeout(typingTimerRef.current);
-    base44.functions.invoke('chatTyping', { user_id: u.id }).catch(() => {});
+    base44.functions.invoke('chatTyping', { session_token: getSessionToken() }).catch(() => {});
   };
 
   const deleteMessage = async (msgId) => {

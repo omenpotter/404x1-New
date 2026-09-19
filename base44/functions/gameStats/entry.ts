@@ -1,22 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     try {
         let user_id: string | null = null;
+        let session_token: string | null = null;
 
         if (req.method === 'POST') {
             const body = await req.json();
             user_id = body.user_id || null;
+            session_token = body.session_token || null;
         } else {
             const url = new URL(req.url);
             user_id = url.searchParams.get('user_id');
-        }
-
-        if (!user_id) {
-            return Response.json({ error: 'user_id required' }, { status: 400 });
+            session_token = url.searchParams.get('session_token');
         }
 
         const base44 = createClientFromRequest(req);
+
+        const caller = await getSessionPlayer(base44, session_token);
+        if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Default to the caller's own ID if not specified
+        if (!user_id) user_id = caller.id;
 
         // Get player
         const player = await base44.asServiceRole.entities.Player.get(user_id);

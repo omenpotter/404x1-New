@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
+import { getSessionToken } from '@/lib/auth';
 
 const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
@@ -36,7 +37,7 @@ export default function Game() {
 
   const fetchStats = async (userId) => {
     try {
-      const res = await fetch(BASE + `gameStats?user_id=${userId}`);
+      const res = await fetch(BASE + `gameStats?user_id=${userId}&session_token=${getSessionToken() || ''}`);
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import WalletModal from '@/components/WalletModal';
+import { getSessionToken } from '@/lib/auth';
 
 const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
@@ -23,7 +24,7 @@ export default function Layout({ children, currentPageName }) {
   const refreshRp = async (u) => {
     if (!u?.id) return;
     try {
-      const res = await fetch(BASE + 'gameStats?user_id=' + u.id);
+      const res = await fetch(BASE + 'gameStats?user_id=' + u.id + '&session_token=' + (getSessionToken() || ''));
       const data = await res.json();
       if (data.success && data.stats) {
         setRp(data.stats.reputation_points || 0);
