@@ -26,9 +26,18 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "isAuthenticated": true
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "read": {
       "$or": [
@@ -40,12 +49,12 @@
         },
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "superuser"
-              ]
-            }
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
           }
         }
       ]

@@ -87,27 +87,57 @@
     "action_type"
   ],
   "rls": {
-    "create": {},
-    "read": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "superuser",
-            "moderator"
-          ]
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "moderator"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
+          }
         }
-      }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "moderator"
+          }
+        }
+      ]
     },
     "update": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "superuser"
-          ]
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
+          }
         }
-      }
+      ]
     },
     "delete": {
       "user_condition": {

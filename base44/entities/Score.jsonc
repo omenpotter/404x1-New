@@ -34,11 +34,20 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "isAuthenticated": true
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
-    "read": {},
+    "read": null,
     "update": {
       "$or": [
         {

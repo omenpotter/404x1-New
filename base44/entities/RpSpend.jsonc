@@ -40,7 +40,11 @@
     "burned_rp"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": {
       "$or": [
         {
@@ -48,12 +52,12 @@
         },
         {
           "user_condition": {
-            "role": {
-              "$in": [
-                "admin",
-                "superuser"
-              ]
-            }
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "superuser"
           }
         }
       ]

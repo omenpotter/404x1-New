@@ -31,8 +31,21 @@
     "emoji"
   ],
   "rls": {
-    "create": {},
-    "read": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": null,
     "update": {
       "data.from_player_id": "{{user.id}}"
     },

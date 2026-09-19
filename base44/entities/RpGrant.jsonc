@@ -40,7 +40,11 @@
     "grant_type"
   ],
   "rls": {
-    "create": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": {
       "$or": [
         {
