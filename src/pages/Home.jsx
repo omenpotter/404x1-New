@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { getSessionToken } from '@/lib/auth';
 
 async function xdex(endpoint) {
-  const res = await base44.functions.invoke('xdexProxy', { endpoint });
+  const res = await base44.functions.invoke('xdexProxy', { endpoint, session_token: getSessionToken() });
   return res.data;
 }
 

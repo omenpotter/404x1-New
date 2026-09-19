@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
   try {
-    const { endpoint } = await req.json();
+    const body = await req.json();
+    const { endpoint, session_token } = body;
+
+    const base44 = createClientFromRequest(req);
+    const caller = await getSessionPlayer(base44, session_token);
+    if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
 
     if (!isValidEndpoint(endpoint)) {
       return Response.json({ error: 'Invalid or disallowed endpoint' }, { status: 400, headers: CORS });
