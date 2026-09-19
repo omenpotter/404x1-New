@@ -18,8 +18,7 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
 
         // Require staff authentication — operational metrics are not public
-        const session_token = req.headers.get('Authorization')?.replace('Bearer ', '') ||
-            new URL(req.url).searchParams.get('session_token');
+        const session_token = req.headers.get('Authorization')?.replace('Bearer ', '');
         const caller = await getSessionPlayer(base44, session_token);
         if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         if (!['moderator', 'admin', 'superuser'].includes(caller.user_role)) {

@@ -50,7 +50,7 @@ export default function ModPanel() {
       if (!searchQuery || searchQuery.length < 2) { setSearchResults([]); return; }
       setSearching(true);
       try {
-        const res = await base44.functions.invoke('playerSearch', { query: searchQuery });
+        const res = await base44.functions.invoke('playerSearch', { query: searchQuery, session_token: getSessionToken() });
         if (res.data.success) setSearchResults(res.data.players || []);
       } catch {}
       setSearching(false);

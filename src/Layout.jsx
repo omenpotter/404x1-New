@@ -24,7 +24,11 @@ export default function Layout({ children, currentPageName }) {
   const refreshRp = async (u) => {
     if (!u?.id) return;
     try {
-      const res = await fetch(BASE + 'gameStats?user_id=' + u.id + '&session_token=' + (getSessionToken() || ''));
+      const res = await fetch(BASE + 'gameStats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: u.id, session_token: getSessionToken() })
+      });
       const data = await res.json();
       if (data.success && data.stats) {
         setRp(data.stats.reputation_points || 0);

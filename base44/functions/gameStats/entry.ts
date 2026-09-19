@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         } else {
             const url = new URL(req.url);
             user_id = url.searchParams.get('user_id');
-            session_token = url.searchParams.get('session_token');
+            session_token = req.headers.get('Authorization')?.replace('Bearer ', '');
         }
 
         const base44 = createClientFromRequest(req);

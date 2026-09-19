@@ -199,7 +199,7 @@ export default function Messages() {
       if (newDMTarget.length < 2) { setSearchResults([]); return; }
       setSearching(true);
       try {
-        const res = await base44.functions.invoke('playerSearch', { query: newDMTarget, limit: 8 });
+        const res = await base44.functions.invoke('playerSearch', { query: newDMTarget, limit: 8, session_token: getSessionToken() });
         if (res.data.success) setSearchResults(res.data.players || []);
       } catch (err) {
         console.error('DM error: playerSearch', err);

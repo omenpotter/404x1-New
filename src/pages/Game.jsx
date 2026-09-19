@@ -37,7 +37,11 @@ export default function Game() {
 
   const fetchStats = async (userId) => {
     try {
-      const res = await fetch(BASE + `gameStats?user_id=${userId}&session_token=${getSessionToken() || ''}`);
+      const res = await fetch(BASE + `gameStats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, session_token: getSessionToken() })
+      });
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);
