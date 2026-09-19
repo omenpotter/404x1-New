@@ -1,19 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 const DAILY_REACTION_RP_CAP = 20;
 
 Deno.serve(async (req) => {
     try {
-        const { user_id, message_id, emoji, action } = await req.json();
+        const body = await req.json();
+        const { message_id, emoji, action } = body;
 
-        if (!user_id || !message_id || !emoji) {
+        if (!message_id || !emoji) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
 
-        const reactor = await base44.asServiceRole.entities.Player.get(user_id);
-        if (!reactor) return Response.json({ error: 'Player not found' }, { status: 404 });
+        const reactor = await getSessionPlayer(base44, body.session_token);
+        if (!reactor) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        const user_id = reactor.id;
 
         const message = await base44.asServiceRole.entities.Message.get(message_id);
         if (!message) return Response.json({ error: 'Message not found' }, { status: 404 });

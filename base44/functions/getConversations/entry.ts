@@ -1,14 +1,15 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     try {
-        const { player_id } = await req.json();
-
-        if (!player_id) {
-            return Response.json({ error: 'player_id is required' }, { status: 400 });
-        }
+        const body = await req.json();
 
         const base44 = createClientFromRequest(req);
+
+        const player = await getSessionPlayer(base44, body.session_token);
+        if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        const player_id = player.id;
 
         // Fetch all conversations where player is a participant
         const conversations = await base44.asServiceRole.entities.Conversation.filter(

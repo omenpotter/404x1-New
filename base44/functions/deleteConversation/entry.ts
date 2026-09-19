@@ -1,14 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     try {
-        const { conversation_id, player_id } = await req.json();
+        const { conversation_id, session_token } = await req.json();
 
-        if (!conversation_id || !player_id) {
+        if (!conversation_id) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
+
+        const player = await getSessionPlayer(base44, session_token);
+        if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        const player_id = player.id;
 
         // Verify conversation exists and player is a participant
         const conversation = await base44.asServiceRole.entities.Conversation.get(conversation_id);

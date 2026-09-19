@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -6,18 +7,17 @@ Deno.serve(async (req) => {
 
     try {
         const body = await req.json();
-        const user_id = body.user_id;
         const message_id = body.message_id;
         const action = body.action || 'pin';
 
-        if (!user_id || !message_id) {
+        if (!message_id) {
             return Response.json({ error: 'Missing fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
 
-        const player = await base44.asServiceRole.entities.Player.get(user_id);
-        if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
+        const player = await getSessionPlayer(base44, body.session_token);
+        if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const modRoles = ['moderator', 'admin', 'superuser'];
         if (!modRoles.includes(player.user_role)) {

@@ -51,7 +51,7 @@ export default function Messages() {
   const loadConversations = async () => {
     if (!user) return;
     try {
-      const res = await base44.functions.invoke('getConversations', { player_id: user.id });
+      const res = await base44.functions.invoke('getConversations', { session_token: getSessionToken() });
       if (res.data.success) setConvs(res.data.conversations || []);
     } catch (err) {
       console.error('DM error: loadConversations', err);
@@ -77,7 +77,7 @@ export default function Messages() {
     if (!user || !playerId || playerId === user.id) return;
     try {
       const res = await base44.functions.invoke('createConversation', {
-        from_player_id: user.id,
+        session_token: getSessionToken(),
         to_player_id: playerId,
       });
       const data = res.data;
@@ -165,7 +165,7 @@ export default function Messages() {
     if (!user || !convId) return;
     setDeletingConv(convId);
     try {
-      await base44.functions.invoke('deleteConversation', { conversation_id: convId, player_id: user.id });
+      await base44.functions.invoke('deleteConversation', { conversation_id: convId, session_token: getSessionToken() });
       setConvs(prev => prev.filter(c => c.id !== convId));
       if (activeConv?.id === convId) {
         setActiveConv(null);

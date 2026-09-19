@@ -179,7 +179,7 @@ export default function Chat() {
   const pinMessage = async (msgId) => {
     const u = getUser();
     if (!u) return;
-    try { await base44.functions.invoke('chatPin', { user_id: u.id, message_id: msgId }); toast.success('Message pinned'); } catch {}
+    try { await base44.functions.invoke('chatPin', { session_token: getSessionToken(), message_id: msgId }); toast.success('Message pinned'); } catch {}
   };
 
   const reportMessage = async (msgId) => {
@@ -214,7 +214,7 @@ export default function Chat() {
       }
     }));
     try {
-      await base44.functions.invoke('chatReact', { user_id: u.id, message_id: msgId, emoji });
+      await base44.functions.invoke('chatReact', { session_token: getSessionToken(), message_id: msgId, emoji });
     } catch {}
   };
 
@@ -238,7 +238,7 @@ export default function Chat() {
     setVerifyAnswer('');
     setVerifyError('');
     try {
-      const res = await base44.functions.invoke('verifyHuman', { player_id: u.id, action: 'get_challenge' });
+      const res = await base44.functions.invoke('verifyHuman', { session_token: getSessionToken(), action: 'get_challenge' });
       if (res.data.locked) {
         setVerifyError(res.data.error);
       } else {
@@ -256,7 +256,7 @@ export default function Chat() {
     setVerifyError('');
     try {
       const res = await base44.functions.invoke('verifyHuman', {
-        player_id: u.id,
+        session_token: getSessionToken(),
         action: 'submit_answer',
         challenge_id: verifyChallenge.challenge_id,
         answer: verifyAnswer.trim()

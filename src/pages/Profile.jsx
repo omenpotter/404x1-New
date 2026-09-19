@@ -87,7 +87,7 @@ export default function Profile() {
     if (!u) return;
     setSavingBio(true);
     try {
-      const res = await base44.functions.invoke('updateProfile', { user_id: u.id, bio: bioInput });
+      const res = await base44.functions.invoke('updateProfile', { session_token: getSessionToken(), bio: bioInput });
       if (res.data.success) {
         setBio(bioInput);
         setEditingBio(false);

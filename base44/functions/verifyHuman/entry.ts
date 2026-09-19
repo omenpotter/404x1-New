@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 const CHALLENGES = [
   { id: 0,  q: "What is 8 + 5?",                                    a: "13" },
@@ -27,12 +28,11 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.json();
-        const { player_id, action, challenge_id, answer } = body;
+        const { action, challenge_id, answer } = body;
 
-        if (!player_id) return Response.json({ error: 'Missing player_id' }, { status: 400 });
-
-        const player = await base44.asServiceRole.entities.Player.get(player_id);
-        if (!player) return Response.json({ error: 'Player not found' }, { status: 404 });
+        const player = await getSessionPlayer(base44, body.session_token);
+        if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        const player_id = player.id;
 
         // Already verified
         if (player.is_verified) return Response.json({ success: true, already_verified: true });
