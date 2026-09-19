@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -9,17 +10,16 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const amount = parseInt(body.amount);
-    const player_id = body.player_id;
+    const { session_token } = body;
 
-    if (!player_id) return Response.json({ error: 'player_id required' }, { status: 400, headers });
     if (!amount || amount < 500 || amount % 500 !== 0) {
       return Response.json({ error: 'Amount must be a multiple of 500, minimum 500' }, { status: 400, headers });
     }
 
-    const player = await base44.asServiceRole.entities.Player.get(player_id);
-    if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
+    // Player is the authenticated caller — never trust client-supplied player_id.
+    const player = await getSessionPlayer(base44, session_token);
+    if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
 
-    // Eligibility check
     const lockedRp = player.locked_rp || 0;
     let eligibleRp;
     if (player.is_404_holder) {
@@ -35,9 +35,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Insufficient eligible RP' }, { status: 400, headers });
     }
 
-    // Weekly cap check
     const now = new Date();
-    const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon
+    const dayOfWeek = now.getUTCDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const thisMonday = new Date(now);
     thisMonday.setUTCDate(now.getUTCDate() - daysFromMonday);
@@ -57,14 +56,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Weekly conversion cap of 3,000 RP reached' }, { status: 400, headers });
     }
 
-    // Halving rate calculation
     const launchDateStr = Deno.env.get('LAUNCH_DATE') || '2025-01-01';
     const launchDate = new Date(launchDateStr);
     const yearsSinceLaunch = (now - launchDate) / (365.25 * 24 * 3600 * 1000);
     const halvingRate = 1 / Math.pow(2, Math.floor(Math.max(0, yearsSinceLaunch) / 2));
     const rpxEarned = amount * halvingRate;
 
-    // Execute conversion
     const newRpBalance = (player.reputation_points || 0) - amount;
     const newRpxBalance = (player.rpx_balance || 0) + rpxEarned;
     const newWeeklyRp = weeklyRp + amount;

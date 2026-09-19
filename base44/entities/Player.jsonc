@@ -181,6 +181,15 @@
       "type": "string",
       "format": "date-time",
       "description": "When the paid frame expires"
+    },
+    "session_token": {
+      "type": "string",
+      "description": "Authentication session token issued after wallet signature verification"
+    },
+    "session_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the session token expires"
     }
   },
   "required": [
@@ -188,24 +197,9 @@
     "username"
   ],
   "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": null,
-    "update": {
-      "$or": [
-        {
-          "created_by_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
+    "create": {},
+    "read": {},
+    "update": {},
     "delete": {
       "user_condition": {
         "role": "superuser"

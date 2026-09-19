@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 const ACTION_COSTS = {
   highlight_message: { base: 25, per_week: false },
@@ -15,17 +16,19 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     const body = await req.json();
-    const { action, duration_weeks = 1, color, frame, player_id } = body;
+    const { action, duration_weeks = 1, color, frame, session_token } = body;
 
-    if (!player_id) return Response.json({ error: 'player_id required' }, { status: 400, headers });
     if (!action || !ACTION_COSTS[action]) {
       return Response.json({ error: `Invalid action. Must be one of: ${Object.keys(ACTION_COSTS).join(', ')}` }, { status: 400, headers });
     }
 
+    // Player is the authenticated caller — never trust client-supplied player_id.
+    const player = await getSessionPlayer(base44, session_token);
+    if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
+
     const actionConfig = ACTION_COSTS[action];
     const cost = actionConfig.per_week ? actionConfig.base * duration_weeks : actionConfig.base;
 
-    // Validate extra fields
     if (action === 'username_color') {
       if (!color || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
         return Response.json({ error: 'Valid hex color required (e.g. #FF00AA)' }, { status: 400, headers });
@@ -34,9 +37,6 @@ Deno.serve(async (req) => {
     if (action === 'profile_frame' && !frame) {
       return Response.json({ error: 'frame field is required' }, { status: 400, headers });
     }
-
-    const player = await base44.asServiceRole.entities.Player.get(player_id);
-    if (!player) return Response.json({ error: 'Player not found' }, { status: 404, headers });
 
     const spendableRp = (player.reputation_points || 0) - (player.locked_rp || 0);
     if (spendableRp < cost) {
@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
     const newRpBalance = (player.reputation_points || 0) - cost;
     const now = new Date();
 
-    // Build player update
     const playerUpdate = { reputation_points: newRpBalance };
     let expiresAt = null;
 
@@ -63,7 +62,6 @@ Deno.serve(async (req) => {
       playerUpdate.profile_frame = frame;
       playerUpdate.profile_frame_expires_at = expiresAt;
     }
-    // pin_message: just deduct RP, no expiry field on player
 
     await base44.asServiceRole.entities.Player.update(player.id, playerUpdate);
 

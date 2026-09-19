@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { authorizeCronOrAdmin } from '../../shared/session.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -18,7 +19,7 @@ async function sendTelegram(text) {
 const RULES = {
     phishing: {
         patterns: [
-            /https?:\/\/[^\s]+/i,                          // any URL
+            /https?:\/\/[^\s]+/i,
             /verify.*wallet/i,
             /connect.*wallet.*presale/i,
             /claim.*bonus/i,
@@ -63,8 +64,8 @@ const RULES = {
     },
     spam: {
         patterns: [
-            /(\b\w+\b)(\s+\1){4,}/i,   // same word repeated 5+ times
-            /(.)\1{15,}/,                // same char repeated 15+ times
+            /(\b\w+\b)(\s+\1){4,}/i,
+            /(.)\1{15,}/,
             /🚀{8,}/,
             /(pump it\s*){3,}/i,
             /(gm\s*){6,}/i,
@@ -78,10 +79,9 @@ const RULES = {
     },
     ca_drop: {
         patterns: [
-            /\b[A-Za-z0-9]{32,44}\b/,   // solana-style address
+            /\b[A-Za-z0-9]{32,44}\b/,
         ],
-        // Only flag if message has no other context (short messages with just a CA)
-        min_length_ratio: 0.7,           // CA chars / total chars > 0.7
+        min_length_ratio: 0.7,
         action_type: 'delete_message',
         mute_hours: 0,
         escalate: false,
@@ -92,19 +92,15 @@ const RULES = {
 function detectViolation(message) {
     const content = message.message || '';
 
-    // Phishing: check URLs and keywords
     for (const p of RULES.phishing.patterns) {
         if (p.test(content)) {
-            // Check if URL is suspicious (not just any URL)
             const urlMatch = content.match(/https?:\/\/[^\s]+/i);
             if (urlMatch) {
                 const url = urlMatch[0].toLowerCase();
-                // Legitimate urls (e.g. common sites) - skip
                 const safe = ['twitter.com','x.com','dexscreener','birdeye','solscan','phantom','coingecko','coinmarketcap'];
                 if (safe.some(s => url.includes(s))) continue;
                 return { rule: 'phishing', ...RULES.phishing };
             }
-            // Non-URL phishing pattern
             return { rule: 'phishing', ...RULES.phishing };
         }
     }
@@ -114,22 +110,18 @@ function detectViolation(message) {
         }
     }
 
-    // Scam
     for (const p of RULES.scam.patterns) {
         if (p.test(content)) return { rule: 'scam', ...RULES.scam };
     }
 
-    // Hate speech
     for (const p of RULES.hate_speech.patterns) {
         if (p.test(content)) return { rule: 'hate_speech', ...RULES.hate_speech };
     }
 
-    // Spam
     for (const p of RULES.spam.patterns) {
         if (p.test(content)) return { rule: 'spam', ...RULES.spam };
     }
 
-    // CA drop - only if message is mostly a CA
     const caMatch = content.match(/\b[A-Za-z0-9]{32,44}\b/);
     if (caMatch) {
         const ratio = caMatch[0].length / content.replace(/\s/g, '').length;
@@ -142,6 +134,13 @@ function detectViolation(message) {
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+        const body = await req.json().catch(() => ({}));
+
+        // Auth: cron secret or admin session only — prevents anonymous triggering.
+        const auth = await authorizeCronOrAdmin(base44, body || {});
+        if (!auth.ok) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         // Fetch recent undeleted messages (last 10 min window + some buffer)
         const allMessages = await base44.asServiceRole.entities.Message.list('-created_date', 100);
@@ -160,7 +159,6 @@ Deno.serve(async (req) => {
             if (!violation) continue;
 
             try {
-                // Delete message
                 await base44.asServiceRole.entities.Message.update(msg.id, {
                     is_deleted: true,
                     deleted_by: '404x1 Chat Moderator AI'
@@ -168,10 +166,8 @@ Deno.serve(async (req) => {
                 stats.deleted++;
             } catch(e) { continue; }
 
-            // Small delay to avoid rate limits
             await new Promise(r => setTimeout(r, 200));
 
-            // Mute player if needed
             if (violation.mute_hours > 0) {
                 try {
                     const muteUntil = new Date(Date.now() + violation.mute_hours * 60 * 60 * 1000).toISOString();
@@ -184,7 +180,6 @@ Deno.serve(async (req) => {
                 } catch(e) {}
             }
 
-            // Write ModerationLog
             try {
                 const logEntry = {
                     moderator_id: 'chat_moderator_agent',
@@ -216,7 +211,6 @@ Deno.serve(async (req) => {
             await new Promise(r => setTimeout(r, 200));
         }
 
-        // Alert: high message volume in last 15 min
         if (recentMessages.length > 80) {
             await sendTelegram(
 `⚠️ <b>HIGH MESSAGE VOLUME</b>
@@ -229,7 +223,6 @@ Time: ${new Date().toISOString()}`
             );
         }
 
-        // Alert: registration spike — players created in last 15 min
         const cutoff15 = new Date(Date.now() - 15 * 60 * 1000).toISOString();
         const allPlayers = await base44.asServiceRole.entities.Player.list('-created_date', 100);
         const newRegistrations = allPlayers.filter(p => p.created_date > cutoff15);
@@ -244,7 +237,6 @@ Time: ${new Date().toISOString()}`
             );
         }
 
-        // Send Telegram for serious escalations
         if (escalations.length > 0) {
             const lines = escalations.map(e => `  · <b>${e.username}</b>: ${e.rule} — "${(e.message || '').slice(0, 60)}"`).join('\n');
             await sendTelegram(

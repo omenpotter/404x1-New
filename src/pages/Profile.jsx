@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { getSessionToken } from '@/lib/auth';
 
 const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
 const ROLE_ORDER = ['member', 'trusted', 'moderator', 'admin', 'superuser'];
@@ -106,7 +107,7 @@ export default function Profile() {
     if (!amount || amount < 500 || amount % 500 !== 0) { setConvertMsg('Amount must be a multiple of 500, min 500'); return; }
     setConvertLoading(true); setConvertMsg('');
     try {
-      const res = await base44.functions.invoke('convertRp', { amount, player_id: u?.id });
+      const res = await base44.functions.invoke('convertRp', { amount, session_token: getSessionToken() });
       const data = res.data;
       if (data.success) {
         setConvertMsg(`✅ Converted! You received ${data.rpx_earned} RPx`);
@@ -122,7 +123,7 @@ export default function Profile() {
     setSpendLoading(p => ({ ...p, [action]: true }));
     setSpendMsg(p => ({ ...p, [action]: '' }));
     try {
-      const res = await base44.functions.invoke('spendRp', { action, player_id: u?.id, ...extraParams });
+      const res = await base44.functions.invoke('spendRp', { action, session_token: getSessionToken(), ...extraParams });
       const data = res.data;
       if (data.success) {
         setSpendMsg(p => ({ ...p, [action]: `✅ Done! Cost: ${data.cost} RP burned: ${data.burned_rp}` }));

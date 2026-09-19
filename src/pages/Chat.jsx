@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { getSessionToken } from '@/lib/auth';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -124,7 +125,7 @@ export default function Chat() {
         setUploading(false);
       }
       const res = await base44.functions.invoke('chatSend', {
-        user_id: u.id,
+        session_token: getSessionToken(),
         message: input.trim(),
         reply_to_message_id: replyTo?.id || null,
         reply_to_username:   replyTo?.username || null,
@@ -172,7 +173,7 @@ export default function Chat() {
   const deleteMessage = async (msgId) => {
     const u = getUser();
     if (!u) return;
-    try { await base44.functions.invoke('chatDelete', { user_id: u.id, message_id: msgId }); } catch {}
+    try { await base44.functions.invoke('chatDelete', { session_token: getSessionToken(), message_id: msgId }); } catch {}
   };
 
   const pinMessage = async (msgId) => {
@@ -185,7 +186,7 @@ export default function Chat() {
     const u = getUser();
     if (!u) return;
     try {
-      await base44.functions.invoke('chatDelete', { user_id: u.id, message_id: msgId, flag_only: true });
+      await base44.functions.invoke('chatDelete', { session_token: getSessionToken(), message_id: msgId, flag_only: true });
       toast.success('Message reported');
     } catch {}
   };
@@ -223,7 +224,7 @@ export default function Chat() {
     const amount = parseInt(tipAmount);
     if (isNaN(amount) || amount <= 0) { toast.error('Invalid amount'); return; }
     try {
-      await base44.functions.invoke('chatAwardRp', { from_user_id: u.id, to_user_id: tipModal.playerId, amount, reason: 'Tip from chat' });
+      await base44.functions.invoke('chatAwardRp', { session_token: getSessionToken(), to_user_id: tipModal.playerId, amount, reason: 'Tip from chat' });
       toast.success(`Tipped ${amount} RP to ${tipModal.username}!`);
       setTipModal(null);
       setTipAmount('');

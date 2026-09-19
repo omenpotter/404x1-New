@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { getSessionToken } from '@/lib/auth';
 
 const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
 const ROLES = ['member', 'trusted', 'moderator', 'admin', 'superuser'];
@@ -67,6 +68,7 @@ export default function ModPanel() {
       const res = await base44.functions.invoke('getModLogs', {
         limit: 50,
         target_player_id: selectedPlayer?.id || null,
+        session_token: getSessionToken(),
       });
       if (res.data.success) setLogs(res.data.logs || []);
     } catch {}
@@ -102,13 +104,13 @@ export default function ModPanel() {
 
   const tid = selectedPlayer?.id || '';
 
-  const handleMute       = () => callAPI('moderateUser', { moderator_id: user.id, action_type: 'mute', target_player_id: tid, duration_hours: Math.max(1, Math.round(duration / 60)), reason });
-  const handleUnmute     = () => callAPI('moderateUser', { moderator_id: user.id, action_type: 'unmute', target_player_id: tid, reason });
-  const handleSpam       = () => callAPI('moderateUser', { moderator_id: user.id, action_type: 'spam_penalty', target_player_id: tid, rp_penalty: 10, reason });
+  const handleMute       = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'mute', target_player_id: tid, duration_hours: Math.max(1, Math.round(duration / 60)), reason });
+  const handleUnmute     = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'unmute', target_player_id: tid, reason });
+  const handleSpam       = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'spam_penalty', target_player_id: tid, rp_penalty: 10, reason });
   const handleWarn       = () => callAPI('issueWarning', { moderator_id: user.id, target_player_id: tid, reason });
-  const handleDeleteMsg  = () => callAPI('moderateUser', { moderator_id: user.id, action_type: 'delete_message', target_player_id: tid, message_id: messageId, reason });
-  const handleChangeRole = () => callAPI('changeRole', { admin_id: user.id, target_player_id: tid, new_role: newRole });
-  const handleGrantRp    = () => callAPI('awardRp', { from_player_id: user.id, to_player_id: tid, amount: rpAmount, reason: rpReason });
+  const handleDeleteMsg  = () => callAPI('moderateUser', { session_token: getSessionToken(), action_type: 'delete_message', target_player_id: tid, message_id: messageId, reason });
+  const handleChangeRole = () => callAPI('changeRole', { session_token: getSessionToken(), target_player_id: tid, new_role: newRole });
+  const handleGrantRp    = () => callAPI('awardRp', { session_token: getSessionToken(), to_player_id: tid, amount: rpAmount, reason: rpReason });
 
   if (!user) return (
     <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>

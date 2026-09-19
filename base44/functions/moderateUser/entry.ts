@@ -1,9 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
     try {
         const {
-            moderator_id,
+            session_token,
             target_player_id,
             action_type,
             reason,
@@ -12,13 +13,14 @@ Deno.serve(async (req) => {
             duration_hours
         } = await req.json();
 
-        if (!moderator_id || !target_player_id || !action_type) {
+        if (!target_player_id || !action_type) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const base44 = createClientFromRequest(req);
 
-        const moderator = await base44.asServiceRole.entities.Player.get(moderator_id);
+        // Moderator is the authenticated caller — never trust client-supplied moderator_id.
+        const moderator = await getSessionPlayer(base44, session_token);
         if (!moderator || !['moderator', 'admin', 'superuser'].includes(moderator.user_role)) {
             return Response.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
         }
@@ -63,7 +65,7 @@ Deno.serve(async (req) => {
                 await base44.asServiceRole.entities.Player.update(target_player_id, {
                     is_muted: true,
                     muted_until: muteUntil.toISOString(),
-                    muted_by: moderator_id,
+                    muted_by: moderator.id,
                     reputation_points: targetPlayer.reputation_points + rpChange
                 });
                 actionResult = { muted_until: muteUntil.toISOString(), penalty_applied: 10 };
@@ -90,7 +92,7 @@ Deno.serve(async (req) => {
                 }
                 await base44.asServiceRole.entities.Message.update(message_id, {
                     is_deleted: true,
-                    deleted_by: moderator_id
+                    deleted_by: moderator.id
                 });
                 rpChange = -5;
                 await base44.asServiceRole.entities.Player.update(target_player_id, {
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
         }
 
         await base44.asServiceRole.entities.ModerationLog.create({
-            moderator_id,
+            moderator_id: moderator.id,
             moderator_username: moderator.username,
             moderator_role: moderator.user_role,
             target_player_id,

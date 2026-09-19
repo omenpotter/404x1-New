@@ -3,6 +3,31 @@ import { base44 } from '@/api/base44Client';
 
 function saveUser(u) { localStorage.setItem('404x1_user', JSON.stringify(u)); }
 
+// Ask the connected wallet to sign a timestamped auth message.
+// Solana signatures are returned as hex; EVM signatures are 0x-prefixed hex.
+async function signAuthMessage(walletType, address) {
+  const message = `404x1 Authentication\nTimestamp: ${new Date().toISOString()}`;
+  if (walletType === 'metamask') {
+    const signature = await window.ethereum.request({
+      method: 'personal_sign',
+      params: [message, address]
+    });
+    return { message, signature };
+  }
+  const msgBytes = new TextEncoder().encode(message);
+  let signResult;
+  if (walletType === 'x1') {
+    signResult = await window.x1Wallet.signMessage(msgBytes);
+  } else if (walletType === 'phantom') {
+    signResult = await window.phantom.solana.signMessage(msgBytes, 'utf8');
+  } else if (walletType === 'backpack') {
+    signResult = await window.backpack.signMessage(msgBytes);
+  }
+  if (!signResult?.signature) throw new Error('Wallet signature failed');
+  const sigHex = Array.from(signResult.signature).map(b => b.toString(16).padStart(2, '0')).join('');
+  return { message, signature: sigHex };
+}
+
 function detectWallets() {
   return {
     x1: typeof window.x1Wallet !== 'undefined' && window.x1Wallet !== null,
@@ -20,6 +45,9 @@ export default function WalletModal() {
   const [usernameError, setUsernameError] = useState('');
   const [walletConnecting, setWalletConnecting] = useState(false);
   const [walletConnectError, setWalletConnectError] = useState('');
+  const [authWalletType, setAuthWalletType] = useState('');
+  const [authSignature, setAuthSignature] = useState('');
+  const [authMessage, setAuthMessage] = useState('');
 
   useEffect(() => {
     const handler = () => setShowWalletModal(true);
@@ -52,7 +80,12 @@ export default function WalletModal() {
       if (!address) { setWalletConnectError('Wallet connection failed'); return; }
 
       setTempWalletAddress(address);
-      const response = await base44.functions.invoke('authWallet', { wallet_address: address });
+      // Require a wallet signature to prove ownership before authing.
+      const { message, signature } = await signAuthMessage(walletType, address);
+      setAuthWalletType(walletType);
+      setAuthSignature(signature);
+      setAuthMessage(message);
+      const response = await base44.functions.invoke('authWallet', { wallet_address: address, signature, message });
       const data = response.data;
 
       if (data.success && data.user) {
@@ -78,7 +111,19 @@ export default function WalletModal() {
     if (reserved.includes(usernameInput.toLowerCase())) { setUsernameError('This username is reserved.'); return; }
     setUsernameError('');
     try {
-      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput });
+      // Reuse the signature from connect if still fresh; otherwise re-sign.
+      let sig = authSignature;
+      let msg = authMessage;
+      const tsMatch = msg.match(/Timestamp: (.+)/);
+      const msgTime = tsMatch ? new Date(tsMatch[1]).getTime() : 0;
+      if (!sig || !msg || Date.now() - msgTime > 25 * 60 * 1000) {
+        const fresh = await signAuthMessage(authWalletType, tempWalletAddress);
+        sig = fresh.signature;
+        msg = fresh.message;
+        setAuthSignature(sig);
+        setAuthMessage(msg);
+      }
+      const response = await base44.functions.invoke('authWallet', { wallet_address: tempWalletAddress, username: usernameInput, signature: sig, message: msg });
       const data = response.data;
       if (data.success) {
         const u = data.user || data.player;

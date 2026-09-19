@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getSessionToken } from '@/lib/auth';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -42,9 +43,13 @@ export default function ModerationLogs() {
 
   const fetchLogs = async () => {
     setLoading(true);
-    const data = await base44.entities.ModerationLog.list('-created_date', 500);
-    setLogs(data);
-    setFiltered(data);
+    try {
+      const res = await base44.functions.invoke('getModLogs', { limit: 500, session_token: getSessionToken() });
+      if (res.data?.success) {
+        setLogs(res.data.logs || []);
+        setFiltered(res.data.logs || []);
+      }
+    } catch {}
     setLoading(false);
   };
 

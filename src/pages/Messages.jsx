@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { getSessionToken } from '@/lib/auth';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -106,7 +107,7 @@ export default function Messages() {
     try {
       const res = await base44.functions.invoke('getPrivateHistory', {
         conversation_id: conversationId,
-        player_id: user.id,
+        session_token: getSessionToken(),
       });
       if (res.data.success) {
         setMessages(res.data.messages || []);
@@ -137,8 +138,7 @@ export default function Messages() {
       const res = await base44.functions.invoke('sendPrivateMessage', {
         conversation_id: activeConv.id,
         content,
-        sender_id: user.id,
-        sender_username: user.username,
+        session_token: getSessionToken(),
       });
       if (res.data.success) {
         setMessages(prev => [...prev, res.data.message]);
