@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { authorizeCronOrAdmin } from '../../shared/session.ts';
+import { escapeHtml } from '../../shared/telegram.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -41,11 +42,11 @@ Deno.serve(async (req) => {
             await sendTelegram(
 `🚨 <b>UNREVIEWED ESCALATION</b>
 
-Moderator: ${entry.moderator_username || 'N/A'}
-Target: ${entry.target_username || 'N/A'}
-Action: ${entry.action_type || 'N/A'}
-Reason: ${entry.reason || entry.escalation_reason || 'N/A'}
-Escalated to: ${entry.escalated_to || 'admin'}
+Moderator: ${escapeHtml(entry.moderator_username || 'N/A')}
+Target: ${escapeHtml(entry.target_username || 'N/A')}
+Action: ${escapeHtml(entry.action_type || 'N/A')}
+Reason: ${escapeHtml(entry.reason || entry.escalation_reason || 'N/A')}
+Escalated to: ${escapeHtml(entry.escalated_to || 'admin')}
 
 Time: ${now.toISOString()}`
             );
@@ -63,10 +64,10 @@ Time: ${now.toISOString()}`
             await sendTelegram(
 `🚨 <b>SUSPICIOUS RP ACCUMULATION</b>
 
-Player: ${p.username}
-Reputation Points: ${p.reputation_points}
-Messages Sent: ${p.messages_sent || 0}
-Daily RP Date: ${p.daily_rp_date}
+Player: ${escapeHtml(p.username)}
+Reputation Points: ${escapeHtml(p.reputation_points)}
+Messages Sent: ${escapeHtml(p.messages_sent || 0)}
+Daily RP Date: ${escapeHtml(p.daily_rp_date)}
 
 Possible RP farming — manual review recommended.
 Time: ${now.toISOString()}`

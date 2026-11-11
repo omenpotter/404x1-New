@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { authorizeCronOrAdmin } from '../../shared/session.ts';
+import { escapeHtml } from '../../shared/telegram.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -238,7 +239,9 @@ Time: ${new Date().toISOString()}`
         }
 
         if (escalations.length > 0) {
-            const lines = escalations.map(e => `  · <b>${e.username}</b>: ${e.rule} — "${(e.message || '').slice(0, 60)}"`).join('\n');
+            const lines = escalations
+                .map(e => `  · <b>${escapeHtml(e.username)}</b>: ${escapeHtml(e.rule)} — "${escapeHtml((e.message || '').slice(0, 60))}"`)
+                .join('\n');
             await sendTelegram(
 `🚨 <b>MODERATION ALERT</b>
 

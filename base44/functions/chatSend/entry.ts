@@ -7,7 +7,7 @@ const DAILY_MSG_RP_CAP = 200;
 Deno.serve(async (req) => {
     try {
         const body = await req.json();
-        const { session_token, message, reply_to_message_id, reply_to_username, reply_to_message, image_url } = body;
+        const { session_token, message, reply_to_message_id, image_url } = body;
 
         if (!message) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -45,7 +45,24 @@ Deno.serve(async (req) => {
         const sameDay = player.daily_rp_date === today;
         const dailyMsgRp = sameDay ? (player.daily_rp_messages || 0) : 0;
 
-        const is_reply = !!reply_to_message_id;
+        // Reply metadata is derived server-side from the referenced message — client-supplied
+        // reply_to_username / reply_to_message would let a user fabricate quotes by others.
+        let replyMeta = { reply_to_message_id: null, reply_to_username: null, reply_to_message: null };
+        if (reply_to_message_id) {
+            const target = await base44.asServiceRole.entities.Message
+                .get(reply_to_message_id)
+                .catch((e) => (e.status === 404 ? null : Promise.reject(e)));
+            if (!target || target.is_deleted) {
+                return Response.json({ error: 'Reply target message not found' }, { status: 400 });
+            }
+            replyMeta = {
+                reply_to_message_id: target.id,
+                reply_to_username: target.username,
+                reply_to_message: (target.message || '').slice(0, 500)
+            };
+        }
+
+        const is_reply = !!replyMeta.reply_to_message_id;
         const has_image = !!image_url;
         let rp_earned = 0;
         if (dailyMsgRp < DAILY_MSG_RP_CAP) {
@@ -57,9 +74,7 @@ Deno.serve(async (req) => {
             username: player.username,
             message,
             is_reply,
-            reply_to_message_id: reply_to_message_id || null,
-            reply_to_username: reply_to_username || null,
-            reply_to_message: reply_to_message || null,
+            ...replyMeta,
             has_image,
             image_url: image_url || null,
             is_deleted: false,

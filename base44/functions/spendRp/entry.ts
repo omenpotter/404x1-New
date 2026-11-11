@@ -27,7 +27,16 @@ Deno.serve(async (req) => {
     if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
 
     const actionConfig = ACTION_COSTS[action];
-    const cost = actionConfig.per_week ? actionConfig.base * duration_weeks : actionConfig.base;
+    // duration_weeks is client-supplied — coerce it and bound it before it prices anything.
+    const requestedWeeks = parseInt(duration_weeks ?? 1, 10);
+    if (actionConfig.per_week && (!Number.isInteger(requestedWeeks) || requestedWeeks < 1 || requestedWeeks > 52)) {
+      return Response.json({ error: 'duration_weeks must be a whole number between 1 and 52' }, { status: 400, headers });
+    }
+    const weeks = actionConfig.per_week ? requestedWeeks : 1;
+    const cost = actionConfig.base * weeks;
+    if (!Number.isInteger(cost) || cost <= 0) {
+      return Response.json({ error: 'Invalid purchase cost' }, { status: 400, headers });
+    }
 
     if (action === 'username_color') {
       if (!color || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
@@ -54,11 +63,11 @@ Deno.serve(async (req) => {
       expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
       playerUpdate.highlight_expires_at = expiresAt;
     } else if (action === 'username_color') {
-      expiresAt = new Date(now.getTime() + duration_weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
+      expiresAt = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
       playerUpdate.username_color = color;
       playerUpdate.username_color_expires_at = expiresAt;
     } else if (action === 'profile_frame') {
-      expiresAt = new Date(now.getTime() + duration_weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
+      expiresAt = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
       playerUpdate.profile_frame = frame;
       playerUpdate.profile_frame_expires_at = expiresAt;
     }
@@ -71,7 +80,7 @@ Deno.serve(async (req) => {
       action,
       cost,
       burned_rp: burnedRp,
-      duration_weeks,
+      duration_weeks: weeks,
       expires_at: expiresAt
     });
 

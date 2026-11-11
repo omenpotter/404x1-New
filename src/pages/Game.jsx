@@ -25,6 +25,7 @@ export default function Game() {
   const [stats, setStats] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
   const canvasRef = useRef(null);
   const gameRef = useRef({});
   const animRef = useRef(null);
@@ -50,10 +51,25 @@ export default function Game() {
     } catch {}
   };
 
-  const startGame = () => {
+  const startGame = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+
+    // Server issues the play session that a score submission must reference.
+    let playToken = null;
+    const u = getUser();
+    if (u) {
+      try {
+        const res = await fetch(BASE + 'gameStart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_token: getSessionToken() })
+        });
+        const d = await res.json();
+        if (d.success) playToken = d.play_token;
+      } catch {}
+    }
 
     const g = {
       player: { x: CANVAS_W / 2, y: CANVAS_H - 50, speed: 5 },
@@ -67,10 +83,12 @@ export default function Game() {
       running: true,
       deaths: 0,
       spawnRate: 80,
+      playToken,
     };
     gameRef.current = g;
 
     setGameState('playing');
+    setSubmitError(null);
     setScore(0);
     setLives(3);
     setLevel(1);
@@ -214,12 +232,14 @@ export default function Game() {
     const u = getUser();
     if (!u) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await fetch(BASE + 'gameSubmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: u.id,
+          session_token: getSessionToken(),
+          play_token: gameRef.current.playToken || null,
           score,
           level_reached: level,
           deaths: gameRef.current.deaths || 0,
@@ -235,8 +255,12 @@ export default function Game() {
         setUser(updated);
         setGameState('submitted');
         fetchStats(u.id);
+      } else {
+        setSubmitError(data.error || 'Could not save score');
       }
-    } catch {}
+    } catch {
+      setSubmitError('Could not save score');
+    }
     setSubmitting(false);
   };
 
@@ -313,6 +337,7 @@ export default function Game() {
                 ) : (
                   <div style={{ color: '#888', fontSize: '11px', marginBottom: '8px' }}>Login to save score</div>
                 )}
+                {submitError && <div style={{ color: '#ff4444', fontSize: '11px', marginTop: '8px' }}>{submitError}</div>}
                 <button className="play-btn" onClick={startGame} style={{ marginTop: '8px', fontSize: '13px', padding: '8px 20px' }}>🔄 PLAY AGAIN</button>
               </div>
             )}

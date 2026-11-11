@@ -1,0 +1,51 @@
+{
+  "name": "GameSession",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "type": "string",
+      "description": "Player ID the play session was issued to"
+    },
+    "token": {
+      "type": "string",
+      "description": "Server-issued play token, required to submit a score"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server time the play session started"
+    },
+    "consumed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a score has already been submitted for this session"
+    }
+  },
+  "required": [
+    "player_id",
+    "token",
+    "started_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "superuser"
+      }
+    }
+  }
+}
