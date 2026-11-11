@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 const COOLDOWN_MS = 3000;
@@ -44,6 +44,13 @@ Deno.serve(async (req) => {
         const today = new Date().toISOString().slice(0, 10);
         const sameDay = player.daily_rp_date === today;
         const dailyMsgRp = sameDay ? (player.daily_rp_messages || 0) : 0;
+        // Roll the daily counter over first — the guard only matches a date that is not today.
+        if (!sameDay) {
+            await base44.asServiceRole.entities.Player.updateMany(
+                { id: player.id, daily_rp_date: { $ne: today } },
+                { $set: { daily_rp_date: today, daily_rp_messages: 0 } }
+            );
+        }
 
         // Reply metadata is derived server-side from the referenced message — client-supplied
         // reply_to_username / reply_to_message would let a user fabricate quotes by others.
@@ -82,16 +89,31 @@ Deno.serve(async (req) => {
             reaction_count: 0
         });
 
-        await base44.asServiceRole.entities.Player.update(player.id, {
-            reputation_points: player.reputation_points + rp_earned,
-            messages_sent: (player.messages_sent || 0) + 1,
-            last_seen: new Date().toISOString(),
-            last_message_at: new Date().toISOString(),
-            daily_rp_date: today,
-            daily_rp_messages: dailyMsgRp + rp_earned
-        });
+        // The daily message RP is claimed only while the cap still has room — that condition is
+        // part of the write, so parallel sends cannot exceed the cap or mint RP twice.
+        let rpCredited = 0;
+        if (rp_earned > 0) {
+            const claim = await base44.asServiceRole.entities.Player.updateMany(
+                { id: player.id, daily_rp_date: today, daily_rp_messages: { $lte: DAILY_MSG_RP_CAP - rp_earned } },
+                { $inc: { reputation_points: rp_earned, daily_rp_messages: rp_earned } }
+            );
+            if (claim.updated) rpCredited = rp_earned;
+        }
 
-        return Response.json({ success: true, message: newMessage, rp_earned });
+        // Activity counters are incremented in place, never written back from a stale read.
+        await base44.asServiceRole.entities.Player.updateMany(
+            { id: player.id },
+            {
+                $inc: { messages_sent: 1 },
+                $set: {
+                    last_seen: new Date().toISOString(),
+                    last_message_at: new Date().toISOString(),
+                    daily_rp_date: today
+                }
+            }
+        );
+
+        return Response.json({ success: true, message: newMessage, rp_earned: rpCredited });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });

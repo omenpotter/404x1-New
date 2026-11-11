@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
@@ -33,9 +33,21 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Player not found' }, { status: 404 });
         }
 
-        if (fromPlayer.reputation_points < amt) {
+        // Atomic conditional debit: the balance only moves if it is still sufficient at write
+        // time, so two parallel awards cannot both pass a check made on the same stale balance.
+        const debit = await base44.asServiceRole.entities.Player.updateMany(
+            { id: fromPlayer.id, reputation_points: { $gte: amt } },
+            { $inc: { reputation_points: -amt } }
+        );
+        if (!debit.updated) {
             return Response.json({ error: 'Insufficient RP to award' }, { status: 400 });
         }
+
+        // $inc never overwrites a concurrent balance change on the recipient.
+        await base44.asServiceRole.entities.Player.updateMany(
+            { id: to_user_id },
+            { $inc: { reputation_points: amt } }
+        );
 
         await base44.asServiceRole.entities.RpAward.create({
             from_player_id: fromPlayer.id,
@@ -44,20 +56,11 @@ Deno.serve(async (req) => {
             reason: reason || 'No reason provided'
         });
 
-        await base44.asServiceRole.entities.Player.update(fromPlayer.id, {
-            reputation_points: (Number(fromPlayer.reputation_points) || 0) - amt
-        });
-
-        await base44.asServiceRole.entities.Player.update(to_user_id, {
-            reputation_points: (Number(toPlayer.reputation_points) || 0) + amt
-        });
-
-        const updatedToPlayer = await base44.asServiceRole.entities.Player.get(to_user_id);
-        if (updatedToPlayer.reputation_points >= 10000 && updatedToPlayer.user_role === 'member') {
-            await base44.asServiceRole.entities.Player.update(to_user_id, {
-                user_role: 'trusted'
-            });
-        }
+        // Promotion is decided on the stored balance inside the same conditional write.
+        await base44.asServiceRole.entities.Player.updateMany(
+            { id: to_user_id, user_role: 'member', reputation_points: { $gte: 10000 } },
+            { $set: { user_role: 'trusted' } }
+        );
 
         return Response.json({
             success: true,

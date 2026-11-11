@@ -1,8 +1,10 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
+const WEEKLY_CAP = 3000;
+
 Deno.serve(async (req) => {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   if (req.method === 'OPTIONS') return new Response(null, { headers });
 
   try {
@@ -42,18 +44,24 @@ Deno.serve(async (req) => {
     thisMonday.setUTCDate(now.getUTCDate() - daysFromMonday);
     thisMonday.setUTCHours(0, 0, 0, 0);
 
-    let weeklyRp = player.conversion_week_rp || 0;
-    let weeklyUpdates = {};
+    // Reset a stale weekly counter first. The guard only matches a window that is not yet this
+    // week, so a request that already rolled the window forward is never rewound.
     const weekStart = player.conversion_week_start ? new Date(player.conversion_week_start) : null;
-
-    if (!weekStart || weekStart < thisMonday) {
-      weeklyRp = 0;
-      weeklyUpdates.conversion_week_start = thisMonday.toISOString();
-      weeklyUpdates.conversion_week_rp = 0;
+    if (!weekStart || weekStart < thisMonday || player.conversion_week_rp == null) {
+      await base44.asServiceRole.entities.Player.updateMany(
+        { id: player.id, conversion_week_start: { $ne: thisMonday.toISOString() } },
+        { $set: { conversion_week_start: thisMonday.toISOString(), conversion_week_rp: 0 } }
+      );
     }
 
-    if (weeklyRp + amount > 3000) {
-      return Response.json({ error: 'Weekly conversion cap of 3,000 RP reached' }, { status: 400, headers });
+    // Claim weekly capacity with a conditional increment: it only lands while the stored counter
+    // still leaves room, so parallel conversions cannot share the same headroom.
+    const claim = await base44.asServiceRole.entities.Player.updateMany(
+      { id: player.id, conversion_week_rp: { $lte: WEEKLY_CAP - amount } },
+      { $inc: { conversion_week_rp: amount } }
+    );
+    if (!claim.updated) {
+      return Response.json({ error: `Weekly conversion cap of ${WEEKLY_CAP} RP reached` }, { status: 400, headers });
     }
 
     const launchDateStr = Deno.env.get('LAUNCH_DATE') || '2025-01-01';
@@ -62,18 +70,23 @@ Deno.serve(async (req) => {
     const halvingRate = 1 / Math.pow(2, Math.floor(Math.max(0, yearsSinceLaunch) / 2));
     const rpxEarned = amount * halvingRate;
 
-    const newRpBalance = (player.reputation_points || 0) - amount;
-    const newRpxBalance = (player.rpx_balance || 0) + rpxEarned;
-    const newWeeklyRp = weeklyRp + amount;
-    const newTotalConverted = (player.total_rp_converted || 0) + amount;
+    // Debit RP and credit RPx/total in one conditional write: it only lands while the unlocked
+    // balance (including the 404 holder floor) still covers the conversion.
+    const floor = lockedRp + (player.is_404_holder ? 10000 : 0);
+    const debit = await base44.asServiceRole.entities.Player.updateMany(
+      { id: player.id, reputation_points: { $gte: floor + amount } },
+      { $inc: { reputation_points: -amount, rpx_balance: rpxEarned, total_rp_converted: amount } }
+    );
+    if (!debit.updated) {
+      // Nothing was converted — hand the weekly headroom back before reporting failure.
+      await base44.asServiceRole.entities.Player.updateMany(
+        { id: player.id, conversion_week_rp: { $gte: amount } },
+        { $inc: { conversion_week_rp: -amount } }
+      );
+      return Response.json({ error: 'Insufficient eligible RP' }, { status: 400, headers });
+    }
 
-    await base44.asServiceRole.entities.Player.update(player.id, {
-      reputation_points: newRpBalance,
-      rpx_balance: newRpxBalance,
-      conversion_week_rp: newWeeklyRp,
-      total_rp_converted: newTotalConverted,
-      ...weeklyUpdates
-    });
+    const updatedPlayer = await base44.asServiceRole.entities.Player.get(player.id);
 
     await base44.asServiceRole.entities.RpConversion.create({
       player_id: player.id,
@@ -89,9 +102,9 @@ Deno.serve(async (req) => {
       rp_spent: amount,
       rpx_earned: rpxEarned,
       halving_rate: halvingRate,
-      new_rp_balance: newRpBalance,
-      new_rpx_balance: newRpxBalance,
-      weekly_remaining: 3000 - newWeeklyRp
+      new_rp_balance: updatedPlayer.reputation_points,
+      new_rpx_balance: updatedPlayer.rpx_balance,
+      weekly_remaining: Math.max(0, WEEKLY_CAP - (updatedPlayer.conversion_week_rp || 0))
     }, { headers });
 
   } catch (error) {

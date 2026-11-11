@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 const ACTION_COSTS = {
@@ -53,26 +53,38 @@ Deno.serve(async (req) => {
     }
 
     const burnedRp = Math.floor(cost * 0.25);
-    const newRpBalance = (player.reputation_points || 0) - cost;
     const now = new Date();
 
-    const playerUpdate = { reputation_points: newRpBalance };
+    const perkFields: Record<string, unknown> = {};
     let expiresAt = null;
 
     if (action === 'highlight_message') {
       expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
-      playerUpdate.highlight_expires_at = expiresAt;
+      perkFields.highlight_expires_at = expiresAt;
     } else if (action === 'username_color') {
       expiresAt = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
-      playerUpdate.username_color = color;
-      playerUpdate.username_color_expires_at = expiresAt;
+      perkFields.username_color = color;
+      perkFields.username_color_expires_at = expiresAt;
     } else if (action === 'profile_frame') {
       expiresAt = new Date(now.getTime() + weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
-      playerUpdate.profile_frame = frame;
-      playerUpdate.profile_frame_expires_at = expiresAt;
+      perkFields.profile_frame = frame;
+      perkFields.profile_frame_expires_at = expiresAt;
     }
 
-    await base44.asServiceRole.entities.Player.update(player.id, playerUpdate);
+    // Deduct and apply the perk in one conditional write: the balance only moves if the unlocked
+    // RP still covers the cost, so parallel purchases cannot spend the same RP twice.
+    const mutation: Record<string, unknown> = { $inc: { reputation_points: -cost } };
+    if (Object.keys(perkFields).length > 0) mutation.$set = perkFields;
+
+    const debit = await base44.asServiceRole.entities.Player.updateMany(
+      { id: player.id, reputation_points: { $gte: (player.locked_rp || 0) + cost } },
+      mutation
+    );
+    if (!debit.updated) {
+      return Response.json({ error: 'Insufficient spendable RP' }, { status: 400, headers });
+    }
+
+    const updatedPlayer = await base44.asServiceRole.entities.Player.get(player.id);
 
     await base44.asServiceRole.entities.RpSpend.create({
       player_id: player.id,
@@ -89,7 +101,7 @@ Deno.serve(async (req) => {
       action,
       cost,
       burned_rp: burnedRp,
-      new_rp_balance: newRpBalance,
+      new_rp_balance: updatedPlayer.reputation_points,
       expires_at: expiresAt
     }, { headers });
 

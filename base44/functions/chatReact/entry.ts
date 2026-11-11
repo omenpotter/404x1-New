@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 const DAILY_REACTION_RP_CAP = 20;
@@ -29,20 +29,27 @@ Deno.serve(async (req) => {
         const existingReaction = allReactions.find(r => r.message_id === message_id && r.from_player_id === user_id);
 
         const today = new Date().toISOString().slice(0, 10);
-        const sameDay = reactor.daily_rp_date === today;
-        const dailyReactionRp = sameDay ? (reactor.daily_rp_reactions || 0) : 0;
-        const reactorCanEarnRp = dailyReactionRp < DAILY_REACTION_RP_CAP;
+        // Roll the daily counter over first — the guard only matches a date that is not today,
+        // so a request that already rolled it is never rewound.
+        if (reactor.daily_rp_date !== today) {
+            await base44.asServiceRole.entities.Player.updateMany(
+                { id: user_id, daily_rp_date: { $ne: today } },
+                { $set: { daily_rp_date: today, daily_rp_reactions: 0 } }
+            );
+        }
 
         if (existingReaction) {
             if (action === 'remove' || existingReaction.emoji === emoji) {
                 await base44.asServiceRole.entities.Reaction.delete(existingReaction.id);
-                await base44.asServiceRole.entities.Message.update(message_id, {
-                    reaction_count: Math.max(0, message.reaction_count - 1)
-                });
-                // Only deduct from reactor, never grief the author
-                await base44.asServiceRole.entities.Player.update(user_id, {
-                    reputation_points: Math.max(0, reactor.reputation_points - 1)
-                });
+                await base44.asServiceRole.entities.Message.updateMany(
+                    { id: message_id, reaction_count: { $gte: 1 } },
+                    { $inc: { reaction_count: -1 } }
+                );
+                // Only deduct from reactor, never grief the author — guarded so it cannot go negative
+                await base44.asServiceRole.entities.Player.updateMany(
+                    { id: user_id, reputation_points: { $gte: 1 } },
+                    { $inc: { reputation_points: -1 } }
+                );
                 return Response.json({ success: true, action: 'removed', rp_change: -1 });
             } else {
                 await base44.asServiceRole.entities.Reaction.update(existingReaction.id, { emoji });
@@ -58,33 +65,36 @@ Deno.serve(async (req) => {
             emoji
         });
 
-        await base44.asServiceRole.entities.Message.update(message_id, {
-            reaction_count: message.reaction_count + 1
-        });
+        await base44.asServiceRole.entities.Message.updateMany(
+            { id: message_id },
+            { $inc: { reaction_count: 1 } }
+        );
 
-        const reactorRpGain = reactorCanEarnRp ? 1 : 0;
-        if (reactorRpGain > 0) {
-            await base44.asServiceRole.entities.Player.update(user_id, {
-                reputation_points: reactor.reputation_points + 1,
-                daily_rp_date: today,
-                daily_rp_reactions: dailyReactionRp + 1
-            });
-        }
+        // The daily cap is enforced by the write condition, so parallel reactions can neither
+        // exceed it nor grow a balance from a stale read.
+        const reactorClaim = await base44.asServiceRole.entities.Player.updateMany(
+            { id: user_id, daily_rp_date: today, daily_rp_reactions: { $lte: DAILY_REACTION_RP_CAP - 1 } },
+            { $inc: { reputation_points: 1, daily_rp_reactions: 1 } }
+        );
+        const reactorRpGain = reactorClaim.updated ? 1 : 0;
 
         const messageAuthor = await base44.asServiceRole.entities.Player.get(message.player_id);
+        let authorRpGain = 0;
         if (messageAuthor) {
-            const authorDay = messageAuthor.daily_rp_date === today;
-            const authorDailyRp = authorDay ? (messageAuthor.daily_rp_reactions || 0) : 0;
-            if (authorDailyRp < DAILY_REACTION_RP_CAP) {
-                await base44.asServiceRole.entities.Player.update(message.player_id, {
-                    reputation_points: messageAuthor.reputation_points + 1,
-                    daily_rp_date: today,
-                    daily_rp_reactions: authorDailyRp + 1
-                });
+            if (messageAuthor.daily_rp_date !== today) {
+                await base44.asServiceRole.entities.Player.updateMany(
+                    { id: message.player_id, daily_rp_date: { $ne: today } },
+                    { $set: { daily_rp_date: today, daily_rp_reactions: 0 } }
+                );
             }
+            const authorClaim = await base44.asServiceRole.entities.Player.updateMany(
+                { id: message.player_id, daily_rp_date: today, daily_rp_reactions: { $lte: DAILY_REACTION_RP_CAP - 1 } },
+                { $inc: { reputation_points: 1, daily_rp_reactions: 1 } }
+            );
+            authorRpGain = authorClaim.updated ? 1 : 0;
         }
 
-        return Response.json({ success: true, action: 'added', rp_earned: { reactor: reactorRpGain, author: 1 } });
+        return Response.json({ success: true, action: 'added', rp_earned: { reactor: reactorRpGain, author: authorRpGain } });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
