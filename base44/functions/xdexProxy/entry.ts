@@ -11,7 +11,7 @@ const CORS = {
 // Blocks @ (userinfo redirect), :// (other hosts), .. (path traversal),
 // and any non-path characters.
 function isValidEndpoint(endpoint: unknown): endpoint is string {
-  if (typeof endpoint !== 'string' || !endpoint.startsWith('/')) return false;
+  if (typeof endpoint !== 'string' || !endpoint.startsWith('/api/') || endpoint.length > 512) return false;
   if (endpoint.includes('@') || endpoint.includes('://') || endpoint.includes('..')) return false;
   // Only allow safe path/query characters
   if (!/^[a-zA-Z0-9\-_/.?=&%]+$/.test(endpoint)) return false;
@@ -34,11 +34,14 @@ Deno.serve(async (req) => {
     }
 
     const res = await fetch(`https://api.xdex.xyz${endpoint}`, {
-      headers: { 'Accept': 'application/json' }
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000),
     });
 
-    const data = await res.json();
-    return Response.json(data, { headers: CORS });
+    let data: unknown;
+    try { data = await res.json(); } catch { data = { error: 'Upstream returned non-JSON' }; }
+    // Pass the upstream status through so callers can tell failures from empty data.
+    return Response.json(data, { status: res.ok ? 200 : 502, headers: CORS });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500, headers: CORS });
   }

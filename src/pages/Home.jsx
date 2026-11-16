@@ -2,17 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { getSessionToken } from '@/lib/auth';
+import PriceChart from '@/components/chart/PriceChart';
+import { useTrades } from '@/lib/xchart/useTrades';
+import { TOKEN_MINT as TOKEN_CA, WXNT_MINT as WXNT_ADDRESS, POOL_ADDRESS as PAIR_ADDRESS, X1_RPC } from '@/lib/xchart/config';
 
 async function xdex(endpoint) {
   const res = await base44.functions.invoke('xdexProxy', { endpoint, session_token: getSessionToken() });
   return res.data;
 }
 
-const TOKEN_CA = '4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2';
-const WXNT_ADDRESS = 'So11111111111111111111111111111111111111112';
-const X1_RPC = 'https://rpc.mainnet.x1.xyz/';
 const TOTAL_SUPPLY = 404404;
-const PAIR_ADDRESS = 'DY9uWCwiue23mmq14G2YVYWyXHSYn8ZjSvYJ36CAvmq1';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -61,199 +60,14 @@ async function fetchPriceFromPool() {
   return 0;
 }
 
-function getUiAmount(entry) {
-  if (!entry?.uiTokenAmount) return 0;
-  if (entry.uiTokenAmount.uiAmount != null) return entry.uiTokenAmount.uiAmount;
-  const decimals = entry.uiTokenAmount.decimals ?? 9;
-  const raw = entry.uiTokenAmount.amount || '0';
-  return parseFloat(raw) / Math.pow(10, decimals);
-}
-
-function parseTrade(tx, signature = '') {
-  try {
-    const pre = tx.meta?.preTokenBalances || [];
-    const post = tx.meta?.postTokenBalances || [];
-    let xntChange = 0, tokChange = 0;
-    for (const p of post) {
-      const pr = pre.find(x => x.accountIndex === p.accountIndex);
-      if (!pr) continue;
-      const mint = p.mint;
-      const diff = getUiAmount(p) - getUiAmount(pr);
-      if (mint === WXNT_ADDRESS) xntChange = diff;
-      if (mint === TOKEN_CA) tokChange = diff;
-    }
-    // Fallback to native SOL balance diff if no WXNT change found
-    if (Math.abs(xntChange) < 0.000001) {
-      const preB = tx.meta?.preBalances || [];
-      const postB = tx.meta?.postBalances || [];
-      let maxSol = 0;
-      for (let i = 0; i < Math.min(preB.length, postB.length); i++) {
-        const diff = (postB[i] - preB[i]) / 1e9;
-        if (Math.abs(diff) > Math.abs(maxSol)) maxSol = diff;
-      }
-      xntChange = maxSol;
-    }
-    if (Math.abs(xntChange) < 0.000001 || Math.abs(tokChange) < 0.000001) return null;
-    if (Math.abs(tokChange) < 0.01) return null;
-    const price = Math.abs(xntChange / tokChange);
-    if (price <= 0 || !isFinite(price)) return null;
-    return {
-      time: tx.blockTime,
-      xnt: Math.abs(xntChange),
-      tok: Math.abs(tokChange),
-      price,
-      side: xntChange < 0 ? 'SELL' : 'BUY',
-      maker: tx.transaction?.message?.accountKeys?.[0]?.pubkey || tx.transaction?.message?.accountKeys?.[0] || '',
-      sig: signature
-    };
-  } catch { return null; }
-}
-
-const CHART_IFRAME_SRC = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-  body { margin:0; background:#0a0e14; overflow:hidden; }
-  #chart { width:100%; height:100%; }
-</style>
-</head>
-<body>
-<div id="chart"></div>
-<script>
-(async function() {
-  await new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Chart library failed to load'));
-    document.head.appendChild(s);
-  });
-  const chart = window.LightweightCharts.createChart(document.getElementById('chart'), {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    layout: { background: { color: '#0a0e14' }, textColor: '#7dff7d' },
-    grid: { vertLines: { color: '#1a2a1a' }, horzLines: { color: '#1a2a1a' } },
-    crosshair: { mode: 1 },
-    timeScale: { borderColor: '#2a3a2a', timeVisible: true, secondsVisible: false },
-    rightPriceScale: { borderColor: '#2a3a2a' },
-  });
-  const candles = chart.addCandlestickSeries({
-    upColor: '#7dff7d', downColor: '#ff4444',
-    borderUpColor: '#7dff7d', borderDownColor: '#ff4444',
-    wickUpColor: '#7dff7d', wickDownColor: '#ff4444',
-    lastValueVisible: false,
-    priceLineVisible: false,
-    priceFormat: { type: 'custom', formatter: function(p) {
-      if (!p || p <= 0) return '0.00000000';
-      if (p >= 1) return p.toFixed(4);
-      if (p >= 0.01) return p.toFixed(6);
-      if (p >= 0.0001) return p.toFixed(8);
-      return p.toFixed(10);
-    }, minMove: 0.0000000100 },
-  });
-  chart.applyOptions({
-    rightPriceScale: {
-      borderColor: '#2a3a2a',
-      autoScale: true,
-      scaleMargins: { top: 0.15, bottom: 0.15 },
-      mode: 0,
-    },
-  });
-  let volSeries = null;
-  let currentTF = 60;
-  let allTrades = [];
-  let showVol = false;
-  chart.applyOptions({ handleScroll: true, handleScale: true });
-    function filterOutliers(trades) {
-    if (trades.length < 5) return trades;
-    const prices = trades.map(t => t.price).sort((a, b) => a - b);
-    const mid = Math.floor(prices.length / 2);
-    const median = prices[mid];
-    // Reject any trade more than 3x or less than 1/3 of the median
-    return trades.filter(t => t.price >= median * 0.33 && t.price <= median * 3);
-  }
-  function tradesToCandles(trades, tf) {
-    const clean = filterOutliers(trades);
-    const buckets = {};
-    for (const t of clean) {
-      const k = Math.floor(t.time / (tf * 60)) * (tf * 60);
-      if (!buckets[k]) buckets[k] = { time: k, open: t.price, high: t.price, low: t.price, close: t.price, volume: t.tok };
-      else {
-        buckets[k].high = Math.max(buckets[k].high, t.price);
-        buckets[k].low = Math.min(buckets[k].low, t.price);
-        buckets[k].close = t.price;
-        buckets[k].volume += t.tok;
-      }
-    }
-    return Object.values(buckets).sort((a,b) => a.time - b.time);
-  }
-  function render() {
-    const c = tradesToCandles(allTrades, currentTF);
-    if (c.length) {
-      candles.setData(c);
-      if (volSeries && showVol) volSeries.setData(c.map(x => ({ time: x.time, value: x.volume, color: x.close >= x.open ? 'rgba(125,255,125,0.3)' : 'rgba(255,68,68,0.3)' })));
-    }
-  }
-  chart.subscribeCrosshairMove(p => {
-    if (p.seriesData && p.seriesData.size > 0) {
-      const d = p.seriesData.values().next().value;
-      if (d && d.open !== undefined && d.close !== undefined) {
-        const fmtP = function(v) {
-          if (!v || v <= 0) return 0;
-          if (v >= 1) return parseFloat(v.toFixed(4));
-          if (v >= 0.01) return parseFloat(v.toFixed(6));
-          if (v >= 0.0001) return parseFloat(v.toFixed(8));
-          return parseFloat(v.toFixed(10));
-        };
-        window.parent.postMessage({ type: 'ohlcv', o: fmtP(d.open), h: fmtP(d.high), l: fmtP(d.low), cl: fmtP(d.close), v: d.volume || 0 }, '*');
-      } else {
-        window.parent.postMessage({ type: 'ohlcv_clear' }, '*');
-      }
-    } else {
-      window.parent.postMessage({ type: 'ohlcv_clear' }, '*');
-    }
-  });
-  window.addEventListener('message', e => {
-    const msg = e.data;
-    if (msg.type === 'candles') {
-      const c = (msg.candles || []).filter(x => x.open > 0.000001 && x.close > 0.000001 && x.high > 0.000001);
-      if (c.length) {
-        candles.setData(c);
-        if (volSeries && showVol) volSeries.setData(c.map(x => ({ time: x.time, value: x.volume || 0, color: x.close >= x.open ? 'rgba(125,255,125,0.3)' : 'rgba(255,68,68,0.3)' })));
-      }
-    } else if (msg.type === 'trades') {
-      allTrades = msg.trades || [];
-      currentTF = msg.tf || 60;
-      render();
-    } else if (msg.type === 'setTF') {
-      currentTF = msg.tf;
-      render();
-    } else if (msg.type === 'setVol') {
-      showVol = msg.vol;
-      if (!volSeries && showVol) {
-        volSeries = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', scaleMargins: { top: 0.8, bottom: 0 } });
-      }
-      render();
-    }
-  });
-  window.addEventListener('resize', () => chart.applyOptions({ width: window.innerWidth, height: window.innerHeight }));
-  window.parent.postMessage({ type: 'chartReady' }, '*');
-})();
-</script>
-</body>
-</html>
-`;
-
 export default function Home() {
   const [user, setUser] = useState(getUser());
   const [price, setPrice] = useState('Loading...');
   const [holders, setHolders] = useState('Loading...');
   const [marketCap, setMarketCap] = useState('Loading...');
-  const [chartPrice, setChartPrice] = useState('Loading...');
+  const [chartPrice, setChartPrice] = useState('—');
   const [chartChange, setChartChange] = useState('');
-  const [ohlcv, setOhlcv] = useState({ o: 0, h: 0, l: 0, c: 0, v: 0 });
+  const [ohlcv, setOhlcv] = useState(null);
   const [currentTF, setCurrentTF] = useState(60);
   const [showVol, setShowVol] = useState(false);
   const [transactions, setTransactions] = useState([]);
@@ -263,9 +77,6 @@ export default function Home() {
 
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const iframeRef = useRef(null);
-  const chartReadyRef = useRef(false);
-  const pendingTradesRef = useRef(null);
   const currentPriceRef = useRef(0);
 
 
@@ -286,26 +97,6 @@ export default function Home() {
       col.textContent = Array.from({ length: 20 }, () => chars[Math.floor(Math.random() * chars.length)]).join('\n');
       el.appendChild(col);
     }
-  }, []);
-
-  // Chart message listener
-  useEffect(() => {
-    const handler = (e) => {
-      const msg = e.data;
-      if (msg.type === 'chartReady') {
-        chartReadyRef.current = true;
-        if (pendingTradesRef.current && iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(pendingTradesRef.current, '*');
-          pendingTradesRef.current = null;
-        }
-      } else if (msg.type === 'ohlcv') {
-        setOhlcv({ o: msg.o, h: msg.h, l: msg.l, c: msg.cl, v: msg.v, active: true });
-      } else if (msg.type === 'ohlcv_clear') {
-        setOhlcv(prev => ({ ...prev, active: false }));
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
   }, []);
 
   // Unread conversations count
@@ -394,107 +185,14 @@ export default function Home() {
     }
   };
 
-  const fetchTrades = async () => {
-    fetchTradesFromRpc();
-  };
+  const { trades, status: tradeStatus, error: tradeError, updatedAt, retry: retryTrades } = useTrades();
 
-  const fetchTradesFromRpc = async () => {
-    const cacheKey = 'chart_trades_cache_v2';
-    const now = Date.now();
-    try {
-      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-      if (cached && now - cached.timestamp < 5 * 60 * 1000) {
-        sendTradesToChart(cached.trades);
-        buildTransactions(cached.trades);
-        syncPriceFromTrades(cached.trades);
-        return;
-      }
-    } catch {}
-    try {
-      const sigs = await rpc('getSignaturesForAddress', [TOKEN_CA, { limit: 1000 }]);
-      if (!sigs?.length) return;
-      const trades = [];
-      for (let i = 0; i < sigs.length; i += 20) {
-        const batch = sigs.slice(i, i + 20);
-        const batchReqs = batch.map((s, j) => ({
-          jsonrpc: '2.0', id: j,
-          method: 'getTransaction',
-          params: [s.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
-        }));
-        let results;
-        try {
-          const resp = await fetch(X1_RPC, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(batchReqs)
-          });
-          results = await resp.json();
-        } catch { continue; }
-        if (!Array.isArray(results)) continue;
-        for (let k = 0; k < results.length; k++) {
-          const tx = results[k]?.result;
-          if (!tx) continue;
-          const t = parseTrade(tx, batch[k].signature);
-          if (t) trades.push(t);
-        }
-      }
-      trades.sort((a, b) => a.time - b.time);
-
-      // Merge with existing cached trades to preserve older history
-      try {
-        const existing = JSON.parse(localStorage.getItem('chart_trades_cache_v2') || 'null');
-        if (existing?.trades?.length) {
-          const newSigs = new Set(trades.map(t => t.sig));
-          const olderTrades = existing.trades.filter(t => !newSigs.has(t.sig));
-          const merged = [...olderTrades, ...trades].sort((a, b) => a.time - b.time);
-          localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades: merged, timestamp: now }));
-          sendTradesToChart(merged);
-          buildTransactions(merged);
-          syncPriceFromTrades(merged);
-        } else {
-          localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
-          sendTradesToChart(trades);
-          buildTransactions(trades);
-          syncPriceFromTrades(trades);
-        }
-      } catch {
-        localStorage.setItem('chart_trades_cache_v2', JSON.stringify({ trades, timestamp: now }));
-        sendTradesToChart(trades);
-        buildTransactions(trades);
-        syncPriceFromTrades(trades);
-      }
-    } catch (e) {
-      console.warn('RPC trades fetch failed:', e.message);
+  useEffect(() => {
+    if (trades.length) {
+      applyPrice(trades[trades.length - 1].price);
+      setTransactions([...trades].reverse().slice(0, 20));
     }
-  };
-
-  const sendCandlesToChart = (candles) => {
-    const msg = { type: 'candles', candles, tf: currentTF };
-    if (chartReadyRef.current && iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(msg, '*');
-    } else {
-      pendingTradesRef.current = msg;
-    }
-  };
-
-  const sendTradesToChart = (trades) => {
-    const msg = { type: 'trades', trades, tf: currentTF };
-    if (chartReadyRef.current && iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(msg, '*');
-    } else {
-      pendingTradesRef.current = msg;
-    }
-  };
-
-  const syncPriceFromTrades = (trades) => {
-    if (!trades?.length) return;
-    const latest = trades[trades.length - 1];
-    if (latest?.price > 0) applyPrice(latest.price);
-  };
-
-  const buildTransactions = (trades) => {
-    setTransactions([...trades].reverse().slice(0, 20));
-  };
+  }, [trades]);
 
   const fetchHolders = async () => {
     try {
@@ -530,11 +228,9 @@ export default function Home() {
 
   useEffect(() => {
     fetchPrice();
-    fetchTrades();
     fetchHolders();
     const priceInt = setInterval(fetchPrice, 30000);
-    const tradesInt = setInterval(fetchTrades, 60000);
-    return () => { clearInterval(priceInt); clearInterval(tradesInt); };
+    return () => { clearInterval(priceInt); };
   }, []);
 
   const handleCopy = () => {
@@ -553,10 +249,7 @@ export default function Home() {
     });
   };
 
-  const handleTF = (tf) => {
-    setCurrentTF(tf);
-    iframeRef.current?.contentWindow?.postMessage({ type: 'setTF', tf }, '*');
-  };
+  const handleTF = (tf) => setCurrentTF(tf);
 
 
 
@@ -624,7 +317,7 @@ export default function Home() {
         .ohlcv-h404 { color:#7dff7d; }
         .ohlcv-l404 { color:#ff4444; }
         .chart-canvas404 { height:380px;position:relative; }
-        .chart-loading404 { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
+        .chart-loading404 { z-index:5;color:#aaa !important;max-width:90%;line-height:1.6;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#444;font-size:12px; }
         /* Action buttons */
         .action-btns404 { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0; }
         .action-btn404 { background:#0d1219;border:1px solid #1a2a1a;padding:14px;text-align:center;cursor:pointer;text-decoration:none;display:block;transition:all 0.2s;border-radius:2px; }
@@ -802,9 +495,7 @@ export default function Home() {
                 <button
                   className={`tf-btn404${showVol ? ' active' : ''}`}
                   onClick={() => {
-                    const next = !showVol;
-                    setShowVol(next);
-                    iframeRef.current?.contentWindow?.postMessage({ type: 'setVol', vol: next }, '*');
+                    setShowVol(v => !v);
                   }}
                 >
                   Vol
@@ -812,7 +503,7 @@ export default function Home() {
               </div>
 
               <div className="ohlcv404">
-                {ohlcv.active ? (
+                {ohlcv ? (
                   <>
                     <span>O<span className="ohlcv-val404">{fmt(ohlcv.o)}</span></span>
                     <span>H<span className="ohlcv-val404 ohlcv-h404">{fmt(ohlcv.h)}</span></span>
@@ -825,13 +516,23 @@ export default function Home() {
                 )}
               </div>
 
+              {(tradeStatus === 'stale' || (tradeStatus === 'ready' && tradeError)) && (
+                <div role="status" style={{ padding: '4px 14px', fontSize: 11, color: '#d6a400' }}>
+                  {tradeStatus === 'stale' ? 'Showing cached data' : 'Partial data'}{tradeError ? ` (${tradeError})` : ''}
+                  {updatedAt ? ` — last updated ${new Date(updatedAt).toLocaleTimeString()}` : ''}{' '}
+                  <button className="tf-btn404" onClick={retryTrades}>Retry</button>
+                </div>
+              )}
               <div className="chart-canvas404">
-                <div className="chart-loading404">Loading chart data from X1 RPC...</div>
-                <iframe
-                  ref={iframeRef}
-                  src="/chart.html"
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                />
+                <PriceChart trades={trades} tf={currentTF} showVol={showVol} onHover={setOhlcv} />
+                {tradeStatus === 'loading' && <div className="chart-loading404">Loading verified swaps from X1 RPC...</div>}
+                {tradeStatus === 'empty' && <div className="chart-loading404">No 404/XNT swaps found yet. Nothing is shown rather than invented.</div>}
+                {tradeStatus === 'error' && (
+                  <div className="chart-loading404" role="alert" style={{ textAlign: 'center' }}>
+                    Could not load chart data: {tradeError}<br />
+                    <button className="tf-btn404" onClick={retryTrades}>Retry</button>
+                  </div>
+                )}
               </div>
             </div>
 
