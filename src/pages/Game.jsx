@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { getSessionToken } from '@/lib/auth';
+import { FUNCTIONS_BASE } from '@/lib/api';
 
-const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+const BASE = FUNCTIONS_BASE;
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -27,7 +28,7 @@ export default function Game() {
   const [lastResult, setLastResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const canvasRef = useRef(null);
-  const gameRef = useRef({});
+  const gameRef = useRef(/** @type {any} */ ({}));
   const animRef = useRef(null);
 
   useEffect(() => {
@@ -168,58 +169,58 @@ export default function Game() {
       if (g.tick % 60 === 0) { g.score += g.level; setScore(g.score); }
 
       // Draw
-      ctx.fillStyle = '#0a0a0a';
+      ctx.fillStyle = '#030504';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       // Grid lines
-      ctx.strokeStyle = '#111';
+      ctx.strokeStyle = '#080d0a';
       ctx.lineWidth = 1;
       for (let x = 0; x < CANVAS_W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_H); ctx.stroke(); }
       for (let y = 0; y < CANVAS_H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke(); }
 
       // Tokens
       g.tokens.forEach(t => {
-        ctx.fillStyle = '#ffaa00';
+        ctx.fillStyle = '#ffb020';
         ctx.shadowBlur = 8;
-        ctx.shadowColor = '#ffaa00';
+        ctx.shadowColor = '#ffb020';
         ctx.fillRect(t.x, t.y, TOKEN_SIZE, TOKEN_SIZE);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = '#0a0a0a';
+        ctx.fillStyle = '#030504';
         ctx.font = '9px monospace';
         ctx.fillText('◆', t.x + 2, t.y + 11);
       });
 
       // Enemies
       g.enemies.forEach(e => {
-        ctx.fillStyle = '#ff4444';
+        ctx.fillStyle = '#ff4560';
         ctx.shadowBlur = 6;
-        ctx.shadowColor = '#ff4444';
+        ctx.shadowColor = '#ff4560';
         ctx.fillRect(e.x, e.y, ENEMY_SIZE, ENEMY_SIZE);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = '#0a0a0a';
+        ctx.fillStyle = '#030504';
         ctx.font = '11px monospace';
         ctx.fillText('✕', e.x + 3, e.y + 13);
       });
 
       // Player
-      ctx.fillStyle = '#7dff7d';
+      ctx.fillStyle = '#00ff88';
       ctx.shadowBlur = 10;
-      ctx.shadowColor = '#7dff7d';
+      ctx.shadowColor = '#00ff88';
       ctx.fillRect(g.player.x - PLAYER_SIZE / 2, g.player.y - PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
       ctx.shadowBlur = 0;
-      ctx.fillStyle = '#0a0a0a';
+      ctx.fillStyle = '#030504';
       ctx.font = '14px monospace';
       ctx.fillText('▲', g.player.x - 7, g.player.y + 5);
 
       // HUD
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, CANVAS_W, 28);
-      ctx.fillStyle = '#7dff7d';
+      ctx.fillStyle = '#00ff88';
       ctx.font = '11px "Share Tech Mono", monospace';
       ctx.fillText(`SCORE: ${g.score}`, 10, 18);
-      ctx.fillStyle = '#ff4444';
+      ctx.fillStyle = '#ff4560';
       ctx.fillText(`LIVES: ${'♥'.repeat(g.lives)}`, 160, 18);
-      ctx.fillStyle = '#5fffff';
+      ctx.fillStyle = '#4fe3ff';
       ctx.fillText(`LVL: ${g.level}`, 340, 18);
 
       animRef.current = requestAnimationFrame(loop);
@@ -279,25 +280,25 @@ export default function Game() {
   };
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 54px)', background: '#0a0a0a', padding: '20px', fontFamily: "'Share Tech Mono', monospace" }}>
+    <div style={{ minHeight: 'calc(100vh - var(--nav-h))', background: 'transparent', padding: '20px', fontFamily: "var(--font-body)" }}>
       <style>{`
         .game-wrap { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 260px; gap: 20px; }
         .game-main {}
-        .game-title { font-family: 'Rubik Mono One', monospace; color: #7dff7d; font-size: 24px; margin-bottom: 4px; letter-spacing: 3px; text-shadow: 0 0 15px #7dff7d; }
-        .game-sub { color: #888; font-size: 11px; margin-bottom: 16px; }
-        .canvas-wrap { position: relative; background: #0a0a0a; border: 1px solid #2a2a2a; display: inline-block; width: 100%; }
+        .game-title { font-family: var(--font-display); color: #00ff88; font-size: 24px; margin-bottom: 4px; letter-spacing: 3px; text-shadow: 0 0 15px #00ff88; }
+        .game-sub { color: #82998b; font-size: 11px; margin-bottom: 16px; }
+        .canvas-wrap { position: relative; background: #030504; border: 1px solid #1d2b22; display: inline-block; width: 100%; }
         canvas { display: block; width: 100%; height: auto; }
         .game-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); }
-        .overlay-title { font-family: 'Rubik Mono One', monospace; font-size: 24px; margin-bottom: 12px; }
-        .play-btn { padding: 12px 32px; border: 2px solid #7dff7d; background: transparent; color: #7dff7d; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 16px; transition: all 0.2s; margin-top: 12px; }
-        .play-btn:hover { background: #7dff7d; color: #0a0a0a; }
+        .overlay-title { font-family: var(--font-display); font-size: 24px; margin-bottom: 12px; }
+        .play-btn { padding: 12px 32px; border: 2px solid #00ff88; background: transparent; color: #00ff88; cursor: pointer; font-family: var(--font-body); font-size: 16px; transition: all 0.2s; margin-top: 12px; }
+        .play-btn:hover { background: #00ff88; color: #030504; }
         .play-btn:disabled { opacity: 0.4; }
         .sidebar {}
-        .stat-card { background: #111; border: 1px solid #2a2a2a; padding: 16px; margin-bottom: 12px; }
-        .stat-label { font-size: 10px; color: #888; margin-bottom: 4px; }
-        .stat-value { font-size: 22px; font-family: 'Rubik Mono One', monospace; }
-        .controls-card { background: #111; border: 1px solid #2a2a2a; padding: 16px; }
-        .control-key { display: inline-block; padding: 2px 8px; border: 1px solid #2a2a2a; background: #1a1a1a; font-size: 11px; color: #5fffff; margin: 2px; }
+        .stat-card { background: #080d0a; border: 1px solid #1d2b22; padding: 16px; margin-bottom: 12px; }
+        .stat-label { font-size: 10px; color: #82998b; margin-bottom: 4px; }
+        .stat-value { font-size: 22px; font-family: var(--font-display); }
+        .controls-card { background: #080d0a; border: 1px solid #1d2b22; padding: 16px; }
+        .control-key { display: inline-block; padding: 2px 8px; border: 1px solid #1d2b22; background: #0d1510; font-size: 11px; color: #4fe3ff; margin: 2px; }
         @media(max-width:600px){ .game-wrap{grid-template-columns:1fr;} }
       `}</style>
 
@@ -317,43 +318,43 @@ export default function Game() {
 
             {gameState === 'idle' && (
               <div className="game-overlay">
-                <div className="overlay-title" style={{ color: '#7dff7d' }}>404x1 RUNNER</div>
-                <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>Move with Arrow Keys or WASD</div>
-                <div style={{ fontSize: '11px', color: '#444', marginBottom: '16px' }}>Dodge red enemies · Collect gold tokens</div>
-                {!user && <div style={{ color: '#ff4444', fontSize: '11px', marginBottom: '8px' }}>⚠ Login to save your score</div>}
+                <div className="overlay-title" style={{ color: '#00ff88' }}>404x1 RUNNER</div>
+                <div style={{ fontSize: '12px', color: '#82998b', marginBottom: '8px' }}>Move with Arrow Keys or WASD</div>
+                <div style={{ fontSize: '11px', color: '#74897c', marginBottom: '16px' }}>Dodge red enemies · Collect gold tokens</div>
+                {!user && <div style={{ color: '#ff4560', fontSize: '11px', marginBottom: '8px' }}>⚠ Login to save your score</div>}
                 <button className="play-btn" onClick={startGame}>▶ START GAME</button>
               </div>
             )}
 
             {gameState === 'dead' && (
               <div className="game-overlay">
-                <div className="overlay-title" style={{ color: '#ff4444' }}>GAME OVER</div>
-                <div style={{ color: '#7dff7d', fontSize: '20px', fontFamily: "'Rubik Mono One', monospace", margin: '8px 0' }}>{score.toLocaleString()}</div>
-                <div style={{ color: '#888', fontSize: '11px', marginBottom: '16px' }}>Level {level} reached</div>
+                <div className="overlay-title" style={{ color: '#ff4560' }}>GAME OVER</div>
+                <div style={{ color: '#00ff88', fontSize: '20px', fontFamily: "var(--font-display)", margin: '8px 0' }}>{score.toLocaleString()}</div>
+                <div style={{ color: '#82998b', fontSize: '11px', marginBottom: '16px' }}>Level {level} reached</div>
                 {user ? (
                   <button className="play-btn" onClick={submitScore} disabled={submitting}>
                     {submitting ? 'SAVING...' : '💾 SAVE SCORE & CLAIM RP'}
                   </button>
                 ) : (
-                  <div style={{ color: '#888', fontSize: '11px', marginBottom: '8px' }}>Login to save score</div>
+                  <div style={{ color: '#82998b', fontSize: '11px', marginBottom: '8px' }}>Login to save score</div>
                 )}
-                {submitError && <div style={{ color: '#ff4444', fontSize: '11px', marginTop: '8px' }}>{submitError}</div>}
+                {submitError && <div style={{ color: '#ff4560', fontSize: '11px', marginTop: '8px' }}>{submitError}</div>}
                 <button className="play-btn" onClick={startGame} style={{ marginTop: '8px', fontSize: '13px', padding: '8px 20px' }}>🔄 PLAY AGAIN</button>
               </div>
             )}
 
             {gameState === 'submitted' && lastResult && (
               <div className="game-overlay">
-                <div className="overlay-title" style={{ color: '#7dff7d' }}>SCORE SAVED!</div>
-                <div style={{ color: '#5fffff', fontSize: '18px', fontFamily: "'Rubik Mono One', monospace" }}>+{lastResult.rp_earned} RP</div>
-                {lastResult.rank && <div style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>Rank #{lastResult.rank}</div>}
-                <div style={{ color: '#ffaa00', fontSize: '14px', margin: '12px 0' }}>Total: {(lastResult.total_rp || 0).toLocaleString()} RP</div>
+                <div className="overlay-title" style={{ color: '#00ff88' }}>SCORE SAVED!</div>
+                <div style={{ color: '#4fe3ff', fontSize: '18px', fontFamily: "var(--font-display)" }}>+{lastResult.rp_earned} RP</div>
+                {lastResult.rank && <div style={{ color: '#82998b', fontSize: '12px', marginTop: '4px' }}>Rank #{lastResult.rank}</div>}
+                <div style={{ color: '#ffb020', fontSize: '14px', margin: '12px 0' }}>Total: {(lastResult.total_rp || 0).toLocaleString()} RP</div>
                 <button className="play-btn" onClick={startGame}>▶ PLAY AGAIN</button>
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '12px', fontSize: '11px', color: '#444', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '12px', fontSize: '11px', color: '#74897c', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <span>📱 Touch: drag finger to move</span>
             <span>⌨ Keys: WASD or Arrow Keys</span>
           </div>
@@ -362,19 +363,19 @@ export default function Game() {
         <div className="sidebar">
           <div className="stat-card">
             <div className="stat-label">CURRENT SCORE</div>
-            <div className="stat-value" style={{ color: '#7dff7d' }}>{score.toLocaleString()}</div>
+            <div className="stat-value" style={{ color: '#00ff88' }}>{score.toLocaleString()}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">LIVES</div>
-            <div className="stat-value" style={{ color: '#ff4444' }}>{'♥'.repeat(lives)}{'♡'.repeat(Math.max(0, 3 - lives))}</div>
+            <div className="stat-value" style={{ color: '#ff4560' }}>{'♥'.repeat(lives)}{'♡'.repeat(Math.max(0, 3 - lives))}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">LEVEL</div>
-            <div className="stat-value" style={{ color: '#5fffff' }}>{level}</div>
+            <div className="stat-value" style={{ color: '#4fe3ff' }}>{level}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">HIGH SCORE</div>
-            <div className="stat-value" style={{ color: '#ffaa00' }}>{highScore.toLocaleString()}</div>
+            <div className="stat-value" style={{ color: '#ffb020' }}>{highScore.toLocaleString()}</div>
           </div>
 
           {stats && (
@@ -382,16 +383,16 @@ export default function Game() {
               <div className="stat-label" style={{ marginBottom: '10px' }}>CAREER STATS</div>
               <div style={{ display: 'grid', gap: '6px', fontSize: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#888' }}>Games</span>
+                  <span style={{ color: '#82998b' }}>Games</span>
                   <span>{stats.games_played || 0}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#888' }}>Avg Score</span>
-                  <span style={{ color: '#5fffff' }}>{(stats.average_score || 0).toLocaleString()}</span>
+                  <span style={{ color: '#82998b' }}>Avg Score</span>
+                  <span style={{ color: '#4fe3ff' }}>{(stats.average_score || 0).toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#888' }}>Total</span>
-                  <span style={{ color: '#7dff7d' }}>{(stats.total_score || 0).toLocaleString()}</span>
+                  <span style={{ color: '#82998b' }}>Total</span>
+                  <span style={{ color: '#00ff88' }}>{(stats.total_score || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -404,13 +405,13 @@ export default function Game() {
               <div><span className="control-key">S</span><span className="control-key">↓</span> Move Down</div>
               <div><span className="control-key">A</span><span className="control-key">←</span> Move Left</div>
               <div><span className="control-key">D</span><span className="control-key">→</span> Move Right</div>
-              <div style={{ marginTop: '4px', color: '#888' }}>◆ = +10×level points</div>
-              <div style={{ color: '#ff4444' }}>✕ = lose a life</div>
+              <div style={{ marginTop: '4px', color: '#82998b' }}>◆ = +10×level points</div>
+              <div style={{ color: '#ff4560' }}>✕ = lose a life</div>
             </div>
           </div>
 
           <div style={{ marginTop: '12px', textAlign: 'center' }}>
-            <a href={createPageUrl('Leaderboard')} style={{ color: '#5fffff', fontSize: '11px', textDecoration: 'none' }}>
+            <a href={createPageUrl('Leaderboard')} style={{ color: '#4fe3ff', fontSize: '11px', textDecoration: 'none' }}>
               🏆 View Full Leaderboard →
             </a>
           </div>

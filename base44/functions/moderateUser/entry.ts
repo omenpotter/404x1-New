@@ -24,6 +24,9 @@ Deno.serve(async (req) => {
         if (!moderator || !['moderator', 'admin', 'superuser'].includes(moderator.user_role)) {
             return Response.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
         }
+        if (moderator.is_banned === true) {
+            return Response.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
+        }
 
         const targetPlayer = await base44.asServiceRole.entities.Player.get(target_player_id);
         if (!targetPlayer) {

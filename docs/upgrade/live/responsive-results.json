@@ -1,0 +1,188 @@
+{
+ "overflow": [],
+ "offscreen": [],
+ "consoleErrors": [],
+ "smallTargets": {
+  "anon@320 Home": [
+   "A. 35x20"
+  ],
+  "anon@375 Home": [
+   "A. 35x20"
+  ],
+  "anon@390 Home": [
+   "A. 35x20"
+  ],
+  "anon@430 Home": [
+   "A. 35x20"
+  ],
+  "anon@768 Home": [
+   "A. 35x20"
+  ],
+  "anon@1024 Home": [
+   "A. 35x19"
+  ],
+  "anon@1024 Chat": [
+   "A. 80x14"
+  ],
+  "anon@1024 Game": [
+   "A. 146x14"
+  ],
+  "anon@1440 Home": [
+   "A. 35x19"
+  ],
+  "anon@1440 Chat": [
+   "A. 80x14"
+  ],
+  "anon@1440 Game": [
+   "A. 146x14"
+  ],
+  "anon@1920 Home": [
+   "A. 35x19"
+  ],
+  "anon@1920 Chat": [
+   "A. 80x14"
+  ],
+  "anon@1920 Game": [
+   "A. 146x14"
+  ],
+  "anon@2560 Home": [
+   "A. 35x19"
+  ],
+  "anon@2560 Chat": [
+   "A. 80x14"
+  ],
+  "anon@2560 Game": [
+   "A. 146x14"
+  ],
+  "auth@320 Home": [
+   "A. 35x20"
+  ],
+  "auth@320 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@375 Home": [
+   "A. 35x20"
+  ],
+  "auth@375 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@390 Home": [
+   "A. 35x20"
+  ],
+  "auth@390 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@430 Home": [
+   "A. 35x20"
+  ],
+  "auth@430 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@768 Home": [
+   "A. 35x20"
+  ],
+  "auth@768 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@1024 Home": [
+   "A. 35x19"
+  ],
+  "auth@1024 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@1024 Game": [
+   "A. 146x14"
+  ],
+  "auth@1440 Home": [
+   "A. 35x19"
+  ],
+  "auth@1440 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@1440 Game": [
+   "A. 146x14"
+  ],
+  "auth@1920 Home": [
+   "A. 35x19"
+  ],
+  "auth@1920 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@1920 Game": [
+   "A. 146x14"
+  ],
+  "auth@2560 Home": [
+   "A. 35x19"
+  ],
+  "auth@2560 Messages": [
+   "BUTTON. 20x16",
+   "BUTTON. 20x16"
+  ],
+  "auth@2560 Game": [
+   "A. 146x14"
+  ]
+ },
+ "axe": [],
+ "reducedMotion": {
+  "canvasHidden": true,
+  "infinite": 0
+ },
+ "nav": {
+  "anon@320": {
+   "burger": true,
+   "ok": true
+  },
+  "anon@375": {
+   "burger": true,
+   "ok": true
+  },
+  "anon@390": {
+   "burger": true,
+   "ok": true
+  },
+  "anon@430": {
+   "burger": true,
+   "ok": true
+  },
+  "anon@768": {
+   "burger": true,
+   "ok": true
+  },
+  "anon@1440": {
+   "burger": false,
+   "ok": true
+  },
+  "auth@320": {
+   "burger": true,
+   "ok": true
+  },
+  "auth@375": {
+   "burger": true,
+   "ok": true
+  },
+  "auth@390": {
+   "burger": true,
+   "ok": true
+  },
+  "auth@430": {
+   "burger": true,
+   "ok": true
+  },
+  "auth@768": {
+   "burger": true,
+   "ok": true
+  },
+  "auth@1440": {
+   "burger": false,
+   "ok": true
+  }
+ }
+}

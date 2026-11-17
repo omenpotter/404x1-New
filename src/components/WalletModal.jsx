@@ -139,13 +139,18 @@ export default function WalletModal() {
   };
 
   const w = detectWallets();
+  /**
+   * @param {boolean} installed
+   * @param {boolean} highlight
+   * @returns {any}
+   */
   const btnStyle = (installed, highlight) => ({
     background: highlight && installed ? 'linear-gradient(135deg,#7dff7d22,#7dff7d11)' : 'transparent',
-    border: `${highlight && installed ? '2px' : '1px'} solid ${installed ? (highlight ? '#7dff7d' : '#444') : '#2a2a2a'}`,
-    color: installed ? (highlight ? '#7dff7d' : '#e0e0e0') : '#444',
+    border: `${highlight && installed ? '2px' : '1px'} solid ${installed ? (highlight ? '#00ff88' : '#74897c') : '#1d2b22'}`,
+    color: installed ? (highlight ? '#00ff88' : '#e8fff1') : '#74897c',
     padding: '14px 20px',
     cursor: installed ? 'pointer' : 'default',
-    fontFamily: "'Share Tech Mono', monospace",
+    fontFamily: "var(--font-body)",
     fontSize: '14px',
     textAlign: 'left',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -157,9 +162,9 @@ export default function WalletModal() {
       {showWalletModal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.92)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
           onClick={() => setShowWalletModal(false)}>
-          <div style={{ background:'#111', border:'2px solid #7dff7d', padding:'32px', width:'100%', maxWidth:'420px', fontFamily:"'Share Tech Mono',monospace" }}
+          <div style={{ background:'#080d0a', border:'2px solid #00ff88', padding:'32px', width:'100%', maxWidth:'420px', fontFamily:"var(--font-body)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily:"'Rubik Mono One',monospace", color:'#7dff7d', fontSize:'20px', letterSpacing:'3px', marginBottom:'24px', textAlign:'center' }}>CONNECT WALLET</div>
+            <div style={{ fontFamily:"var(--font-display)", color:'#00ff88', fontSize:'20px', letterSpacing:'3px', marginBottom:'24px', textAlign:'center' }}>CONNECT WALLET</div>
 
             <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
               {[
@@ -171,38 +176,38 @@ export default function WalletModal() {
                 installed ? (
                   <button key={type} style={btnStyle(true, highlight)} onClick={() => connectWallet(type)}>
                     <span>{label}</span>
-                    {highlight && <span style={{ background:'#7dff7d', color:'#0a0a0a', padding:'2px 8px', fontSize:'10px', fontWeight:'bold' }}>RECOMMENDED</span>}
+                    {highlight && <span style={{ background:'#00ff88', color:'#030504', padding:'2px 8px', fontSize:'10px', fontWeight:'bold' }}>RECOMMENDED</span>}
                   </button>
                 ) : (
                   <div key={type} style={btnStyle(false, false)}>
                     <span>{label} (Not Installed)</span>
-                    <a href={installUrl} target="_blank" rel="noopener noreferrer" style={{ color:'#7dff7d', fontSize:'11px' }}>Install →</a>
+                    <a href={installUrl} target="_blank" rel="noopener noreferrer" style={{ color:'#00ff88', fontSize:'11px' }}>Install →</a>
                   </div>
                 )
               ))}
             </div>
 
-            {walletConnecting && <div style={{ textAlign:'center', color:'#7dff7d', fontSize:'12px', marginTop:'12px' }}>Connecting...</div>}
-            {walletConnectError && <div style={{ marginTop:'12px', padding:'10px', background:'rgba(255,68,68,0.08)', border:'1px solid #ff4444', color:'#ff4444', fontSize:'12px', textAlign:'center' }}>⚠ {walletConnectError}</div>}
+            {walletConnecting && <div style={{ textAlign:'center', color:'#00ff88', fontSize:'12px', marginTop:'12px' }}>Connecting...</div>}
+            {walletConnectError && <div style={{ marginTop:'12px', padding:'10px', background:'rgba(255,69,96,0.08)', border:'1px solid #ff4560', color:'#ff4560', fontSize:'12px', textAlign:'center' }}>⚠ {walletConnectError}</div>}
 
-            <button onClick={() => setShowWalletModal(false)} style={{ background:'transparent', border:'none', color:'#444', padding:'16px', width:'100%', marginTop:'16px', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px' }}>CANCEL</button>
+            <button onClick={() => setShowWalletModal(false)} style={{ background:'transparent', border:'none', color:'#74897c', padding:'16px', width:'100%', marginTop:'16px', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'12px' }}>CANCEL</button>
           </div>
         </div>
       )}
 
       {showUsernameModal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.92)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
-          <div style={{ background:'#111', border:'2px solid #7dff7d', padding:'32px', width:'100%', maxWidth:'420px', fontFamily:"'Share Tech Mono',monospace" }}>
-            <div style={{ fontFamily:"'Rubik Mono One',monospace", color:'#7dff7d', fontSize:'20px', letterSpacing:'3px', marginBottom:'8px', textAlign:'center' }}>SET USERNAME</div>
-            <div style={{ color:'#ffaa00', fontSize:'11px', textAlign:'center', marginBottom:'20px' }}>⚠️ Username is PERMANENT and cannot be changed!</div>
+          <div style={{ background:'#080d0a', border:'2px solid #00ff88', padding:'32px', width:'100%', maxWidth:'420px', fontFamily:"var(--font-body)" }}>
+            <div style={{ fontFamily:"var(--font-display)", color:'#00ff88', fontSize:'20px', letterSpacing:'3px', marginBottom:'8px', textAlign:'center' }}>SET USERNAME</div>
+            <div style={{ color:'#ffb020', fontSize:'11px', textAlign:'center', marginBottom:'20px' }}>⚠️ Username is PERMANENT and cannot be changed!</div>
             <input
-              style={{ width:'100%', padding:'10px 12px', background:'#1a1a2a', border:'1px solid #2a2a4a', color:'#e0e0e0', fontFamily:"'Share Tech Mono',monospace", fontSize:'13px', outline:'none', boxSizing:'border-box', marginBottom:'12px' }}
+              style={{ width:'100%', padding:'10px 12px', background:'#0d1510', border:'1px solid #1d2b22', color:'#e8fff1', fontFamily:"var(--font-body)", fontSize:'13px', outline:'none', boxSizing:'border-box', marginBottom:'12px' }}
               type="text" placeholder="your_username (3-16 chars)"
               value={usernameInput} onChange={e => setUsernameInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitUsername()} maxLength={16} autoFocus
             />
-            {usernameError && <div style={{ color:'#ff4444', fontSize:'11px', marginBottom:'12px' }}>⚠ {usernameError}</div>}
-            <button onClick={submitUsername} style={{ width:'100%', padding:'12px', border:'2px solid #7dff7d', background:'transparent', color:'#7dff7d', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'14px', letterSpacing:'1px' }}>
+            {usernameError && <div style={{ color:'#ff4560', fontSize:'11px', marginBottom:'12px' }}>⚠ {usernameError}</div>}
+            <button onClick={submitUsername} style={{ width:'100%', padding:'12px', border:'2px solid #00ff88', background:'transparent', color:'#00ff88', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'14px', letterSpacing:'1px' }}>
               CONFIRM & LOCK USERNAME
             </button>
           </div>

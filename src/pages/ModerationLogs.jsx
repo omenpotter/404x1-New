@@ -1,3 +1,4 @@
+import GateScreen from '@/components/GateScreen';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getSessionToken } from '@/lib/auth';
@@ -12,7 +13,7 @@ const ACTION_COLORS = {
   delete_message: 'var(--red)',
   award_rp: 'var(--green)',
   change_role: 'var(--purple)',
-  permanent_ban: '#ff0000',
+  permanent_ban: '#ff4560',
 };
 
 const PAGE_SIZE = 20;
@@ -54,11 +55,7 @@ export default function ModerationLogs() {
   };
 
   if (!user || !['moderator', 'admin', 'superuser'].includes(user.user_role)) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Share Tech Mono', monospace", color: 'var(--red)' }}>
-        ACCESS DENIED — MODERATORS AND ABOVE ONLY
-      </div>
-    );
+    return <GateScreen tone="denied" title="Moderators and above only" message="Moderation logs are restricted to moderator, admin and superuser roles." />;
   }
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -72,12 +69,12 @@ export default function ModerationLogs() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--dark)', color: 'var(--text)', fontFamily: "'Share Tech Mono', monospace", padding: '24px 20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--dark)', color: 'var(--text)', fontFamily: "var(--font-body)", padding: '24px 20px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontFamily: "'Rubik Mono One', monospace", color: 'var(--red)', fontSize: '28px', letterSpacing: '3px', marginBottom: '4px' }}>
+          <h1 style={{ fontFamily: "var(--font-display)", color: 'var(--red)', fontSize: '28px', letterSpacing: '3px', marginBottom: '4px' }}>
             MODERATION LOGS
           </h1>
           <p style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
@@ -93,7 +90,7 @@ export default function ModerationLogs() {
               value={searchMod}
               onChange={e => setSearchMod(e.target.value)}
               placeholder="Search by moderator..."
-              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "var(--font-body)", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
               onFocus={e => e.target.style.borderColor = 'var(--red)'}
               onBlur={e => e.target.style.borderColor = 'var(--border)'}
             />
@@ -104,7 +101,7 @@ export default function ModerationLogs() {
               value={searchTarget}
               onChange={e => setSearchTarget(e.target.value)}
               placeholder="Search by target..."
-              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "var(--font-body)", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
               onFocus={e => e.target.style.borderColor = 'var(--red)'}
               onBlur={e => e.target.style.borderColor = 'var(--border)'}
             />
@@ -112,9 +109,10 @@ export default function ModerationLogs() {
           <div>
             <label style={{ fontSize: '10px', color: 'var(--text-dim)', display: 'block', marginBottom: '4px', letterSpacing: '1px' }}>ACTION TYPE</label>
             <select
+              aria-label="Filter by action type"
               value={filterAction}
               onChange={e => setFilterAction(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--dark3)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: "var(--font-body)", fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
             >
               <option value="all">All Actions</option>
               {actionTypes.map(a => <option key={a} value={a}>{a}</option>)}
@@ -123,9 +121,9 @@ export default function ModerationLogs() {
           <div style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button
               onClick={() => { setSearchMod(''); setSearchTarget(''); setFilterAction('all'); }}
-              style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', cursor: 'pointer' }}
-              onMouseEnter={e => { e.target.style.borderColor = 'var(--red)'; e.target.style.color = 'var(--red)'; }}
-              onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text-dim)'; }}
+              style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', fontFamily: "var(--font-body)", fontSize: '12px', cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-dim)'; }}
             >
               CLEAR FILTERS
             </button>
@@ -133,7 +131,7 @@ export default function ModerationLogs() {
         </div>
 
         {/* Table */}
-        <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: '2px', overflowX: 'auto' }}>
+        <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: '2px', overflowX: 'auto' }} tabIndex={0} role="region" aria-label="Moderation log table">
           {/* Table Header */}
           <div style={{ display: 'grid', gridTemplateColumns: '140px 110px 110px 110px 80px 80px 1fr', padding: '10px 16px', borderBottom: '1px solid var(--border)', fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '1px', minWidth: '800px' }}>
             <span>DATE</span>
@@ -164,7 +162,7 @@ export default function ModerationLogs() {
                 display: 'grid',
                 gridTemplateColumns: '140px 110px 110px 110px 80px 80px 1fr',
                 padding: '10px 16px',
-                borderBottom: i < paginated.length - 1 ? '1px solid #0f0f0f' : 'none',
+                borderBottom: i < paginated.length - 1 ? '1px solid #080d0a' : 'none',
                 fontSize: '11px',
                 alignItems: 'center',
                 minWidth: '800px',
@@ -204,7 +202,7 @@ export default function ModerationLogs() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              style={{ padding: '6px 14px', background: 'transparent', border: '1px solid var(--border)', color: page === 1 ? 'var(--border)' : 'var(--text-dim)', fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '6px 14px', background: 'transparent', border: '1px solid var(--border)', color: page === 1 ? 'var(--border)' : 'var(--text-dim)', fontFamily: "var(--font-body)", fontSize: '11px', cursor: page === 1 ? 'not-allowed' : 'pointer' }}
             >
               ← PREV
             </button>
@@ -214,7 +212,7 @@ export default function ModerationLogs() {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              style={{ padding: '6px 14px', background: 'transparent', border: '1px solid var(--border)', color: page === totalPages ? 'var(--border)' : 'var(--text-dim)', fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '6px 14px', background: 'transparent', border: '1px solid var(--border)', color: page === totalPages ? 'var(--border)' : 'var(--text-dim)', fontFamily: "var(--font-body)", fontSize: '11px', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}
             >
               NEXT →
             </button>

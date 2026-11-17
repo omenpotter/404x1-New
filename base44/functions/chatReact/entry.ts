@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
-import { getSessionPlayer } from '../../shared/session.ts';
+import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 
 const DAILY_REACTION_RP_CAP = 20;
 
@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
 
         const reactor = await getSessionPlayer(base44, body.session_token);
         if (!reactor) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        if (isBanned(reactor)) return Response.json({ error: 'Your account is suspended' }, { status: 403 });
         const user_id = reactor.id;
 
         const message = await base44.asServiceRole.entities.Message.get(message_id);

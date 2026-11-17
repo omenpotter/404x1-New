@@ -15,5 +15,16 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
-  ]
+  ],
+  build: {
+    // Vendor groups are cached across deploys: a page edit no longer invalidates
+    // the React, chart and 3D bundles the browser already holds.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 });

@@ -1,10 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { getSessionPlayer, generateToken } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
 // Issues a server-side play session before a run. The token is the only proof that the
 // play time measured when the score is submitted was measured on the server.
 export default async function (req: Request): Promise<Response> {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+  const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response(null, { headers });
 
   try {

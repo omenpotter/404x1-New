@@ -1,12 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
 Deno.serve(async (req) => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    };
+    const headers = corsHeaders(req);
 
     if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
 

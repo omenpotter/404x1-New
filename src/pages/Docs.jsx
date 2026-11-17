@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPageUrl } from '@/utils';
 
 const sections = [
@@ -188,83 +188,101 @@ const sections = [
 export default function Docs() {
   const [activeSection, setActiveSection] = useState('platform');
 
+  const [query, setQuery] = useState('');
   const current = sections.find(s => s.id === activeSection);
+  const q = query.trim().toLowerCase();
+  // Client-side filter over the existing documentation text only.
+  const results = useMemo(() => {
+    if (!q) return null;
+    const out = [];
+    for (const sec of sections) for (const item of sec.content) {
+      const hay = (item.heading + ' ' + (item.body || '') + ' ' + (item.links || []).map(l => l.label).join(' ')).toLowerCase();
+      if (hay.includes(q)) out.push({ sec, item });
+    }
+    return out;
+  }, [q]);
+
+  const Card = ({ item, tag = '' }) => (
+    <article className="docs-card">
+      <h3 className="docs-card-heading">{item.heading}{tag && <span className="dc-tag">{tag}</span>}</h3>
+      {item.links ? (
+        <div className="docs-card-body dc-links">
+          {item.links.map((link, j) => (
+            <a key={j} href={link.url} target="_blank" rel="noopener noreferrer">→ {link.label}</a>
+          ))}
+        </div>
+      ) : (
+        <div className="docs-card-body">{item.body}</div>
+      )}
+    </article>
+  );
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 54px)', background: '#0a0a0a', display: 'flex' }}>
+    <div className="dc-wrap">
       <style>{`
-        .docs-sidebar { width: 220px; border-right: 1px solid #2a2a2a; padding: 20px 0; flex-shrink: 0; background: #0d0d0d; }
-        .docs-nav-item { padding: 10px 20px; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 12px; color: #888; display: flex; align-items: center; gap: 8px; transition: all 0.2s; border-left: 2px solid transparent; }
-        .docs-nav-item:hover { color: #e0e0e0; background: #111; }
-        .docs-nav-item.active { color: #7dff7d; border-left-color: #7dff7d; background: #111; }
-        .docs-main { flex: 1; padding: 32px; max-width: 800px; overflow-y: auto; }
-        .docs-title { font-family: 'Rubik Mono One', monospace; font-size: 28px; color: #7dff7d; letter-spacing: 4px; margin-bottom: 4px; text-shadow: 0 0 20px #7dff7d; }
-        .docs-subtitle { color: #888; font-size: 12px; margin-bottom: 32px; letter-spacing: 2px; }
-        .docs-section-title { font-family: 'Rubik Mono One', monospace; color: #7dff7d; font-size: 18px; letter-spacing: 2px; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; gap: 10px; }
-        .docs-card { background: #0d1219; border: 1px solid #1a2a1a; padding: 20px; margin-bottom: 16px; border-radius: 2px; }
-        .docs-card-heading { color: #5fffff; font-size: 13px; margin-bottom: 10px; letter-spacing: 1px; font-family: 'Share Tech Mono', monospace; }
-        .docs-card-body { color: #888; font-size: 12px; line-height: 1.8; white-space: pre-line; font-family: 'Share Tech Mono', monospace; }
-        .docs-cta { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
-        .docs-cta-btn { padding: 10px 20px; border: 1px solid #7dff7d; background: transparent; color: #7dff7d; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 12px; text-decoration: none; transition: all 0.2s; }
-        .docs-cta-btn:hover { background: #7dff7d; color: #0a0a0a; }
-        @media(max-width: 600px) {
-          .docs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #2a2a2a; padding: 10px 0; display: flex; flex-wrap: wrap; }
-          .docs-nav-item { border-left: none; border-bottom: 2px solid transparent; padding: 8px 12px; font-size: 11px; }
-          .docs-nav-item.active { border-bottom-color: #7dff7d; border-left-color: transparent; }
-          .docs-main { padding: 20px 16px; }
+        .dc-wrap { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; padding: clamp(20px, 4vw, 40px) var(--gutter) 64px; align-items: start; }
+        .docs-sidebar { position: sticky; top: calc(var(--nav-h) + 20px); width: auto; padding: 10px; border: 1px solid var(--border); border-radius: var(--r-lg); background: linear-gradient(180deg, rgba(19,32,26,.5), rgba(8,13,10,.75)); display: grid; gap: 4px; }
+        .docs-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--text-dim); text-align: left; cursor: pointer; font: 600 13px var(--font-display); letter-spacing: .08em; }
+        .docs-nav-item:hover { color: var(--text); background: var(--green-a08); }
+        .docs-nav-item.active { color: var(--green); border-left-color: var(--green); background: var(--green-a08); }
+        .docs-main { min-width: 0; padding: 0; max-width: none; }
+        .docs-title { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 5vw, 46px); color: var(--green); letter-spacing: .08em; margin: 0; text-shadow: 0 0 28px rgba(0,255,136,.35); }
+        .docs-subtitle { color: var(--text-dim); font: 500 12px var(--font-mono); margin: 6px 0 20px; letter-spacing: .18em; }
+        .dc-search { position: relative; margin-bottom: 22px; }
+        .dc-search input { width: 100%; min-height: 48px; padding: 0 16px 0 44px; background: rgba(8,13,10,.9); border: 1px solid var(--border-strong); border-radius: var(--r-md); color: var(--text); font: 400 15px var(--font-body); }
+        .dc-search svg { position: absolute; left: 15px; top: 14px; color: var(--text-faint); }
+        .dc-search kbd { position: absolute; right: 12px; top: 13px; font: 500 11px var(--font-mono); color: var(--text-faint); border: 1px solid var(--border-strong); border-radius: 5px; padding: 3px 7px; }
+        .docs-section-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); color: var(--text); font-size: 20px; letter-spacing: .1em; margin: 0 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .docs-card { padding: 20px 22px; margin-bottom: 14px; }
+        .docs-card-heading { color: var(--cyan); font: 600 15px var(--font-display); letter-spacing: .05em; margin: 0 0 10px; }
+        .docs-card-body { color: var(--text-dim); font-size: 14.5px; line-height: 1.75; white-space: pre-line; overflow-wrap: anywhere; }
+        .dc-links { display: grid; gap: 8px; white-space: normal; } .dc-links a { color: var(--cyan); text-decoration: none; min-height: 28px; } .dc-links a:hover { color: var(--green); }
+        .dc-tag { margin-left: 10px; font: 500 10px var(--font-mono); letter-spacing: .12em; color: var(--text-faint); border: 1px solid var(--border-strong); padding: 2px 7px; border-radius: 999px; vertical-align: middle; }
+        .dc-none { padding: 30px; text-align: center; color: var(--text-dim); }
+        .docs-cta { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+        @media (max-width: 860px) {
+          .dc-wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+          .docs-sidebar { position: static; display: flex; overflow-x: auto; gap: 6px; padding: 8px; -webkit-overflow-scrolling: touch; }
+          .docs-nav-item { width: auto; flex: 0 0 auto; white-space: nowrap; border-left: 0; border-bottom: 2px solid transparent; border-radius: 6px; }
+          .docs-nav-item.active { border-bottom-color: var(--green); }
         }
       `}</style>
 
-      {/* Sidebar */}
-      <div className="docs-sidebar">
+      <nav className="docs-sidebar" aria-label="Documentation sections">
         {sections.map(s => (
-          <div
-            key={s.id}
-            className={`docs-nav-item${activeSection === s.id ? ' active' : ''}`}
-            onClick={() => setActiveSection(s.id)}
-          >
-            <span>{s.icon}</span>
-            <span>{s.title}</span>
-          </div>
+          <button key={s.id} className={`docs-nav-item${!q && activeSection === s.id ? ' active' : ''}`} aria-current={!q && activeSection === s.id ? 'page' : undefined}
+            onClick={() => { setQuery(''); setActiveSection(s.id); }}>
+            <span aria-hidden="true">{s.icon}</span><span>{s.title}</span>
+          </button>
         ))}
-      </div>
+      </nav>
 
-      {/* Main */}
       <div className="docs-main">
-        <div className="docs-title">DOCS</div>
+        <p className="ds-eyebrow">KNOWLEDGE BASE</p>
+        <h1 className="docs-title">DOCS</h1>
         <div className="docs-subtitle">404x1 PLATFORM DOCUMENTATION</div>
 
-        {current && (
-          <>
-            <div className="docs-section-title">
-              <span>{current.icon}</span>
-              <span>{current.title}</span>
-            </div>
+        <div className="dc-search">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M20 20l-4-4" stroke="currentColor" strokeWidth="2" /></svg>
+          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the documentation…" aria-label="Search documentation" />
+        </div>
 
-            {current.content.map((item, i) => (
-              <div key={i} className="docs-card">
-                <div className="docs-card-heading">{item.heading}</div>
-                {item.links ? (
-                  <div className="docs-card-body" style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-                    {item.links.map((link, j) => (
-                      <a key={j} href={link.url} target="_blank" rel="noopener noreferrer"
-                        style={{color:'#5fffff',textDecoration:'none',fontSize:'12px',fontFamily:"'Share Tech Mono',monospace"}}>
-                        → {link.label}
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="docs-card-body">{item.body}</div>
-                )}
-              </div>
-            ))}
+        {results ? (
+          <>
+            <h2 className="docs-section-title"><span>{results.length} result{results.length === 1 ? '' : 's'} for “{query.trim()}”</span></h2>
+            {results.length === 0 && <div className="docs-card dc-none">Nothing in the docs matches that search.</div>}
+            {results.map(({ sec, item }, i) => <Card key={sec.id + i} item={item} tag={sec.title} />)}
+          </>
+        ) : current && (
+          <>
+            <h2 className="docs-section-title"><span aria-hidden="true">{current.icon}</span><span>{current.title}</span></h2>
+            {current.content.map((item, i) => <Card key={i} item={item} />)}
           </>
         )}
 
         <div className="docs-cta">
-          <a href={createPageUrl('Chat')} className="docs-cta-btn">→ ENTER CHAT</a>
-
-          <a href={createPageUrl('Home')} className="docs-cta-btn">→ TOKEN DASHBOARD</a>
+          <a href={createPageUrl('Chat')} className="ds-btn">→ Enter chat</a>
+          <a href={createPageUrl('Home')} className="ds-btn ghost">→ Token dashboard</a>
         </div>
       </div>
     </div>

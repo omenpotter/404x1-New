@@ -8,7 +8,7 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
 }
 
-const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
+const ROLE_COLORS = { member: '#82998b', trusted: '#4fe3ff', moderator: '#ffb020', admin: '#ff4560', superuser: '#a974ff' };
 const EMOJI_LIST = ['😂','😍','🔥','💯','🚀','😎','👀','💀','🤣','😭','👏','🎉','💪','🙏','❤️','⚡','🌙','👑','🤝','💎'];
 
 export default function Chat() {
@@ -319,72 +319,72 @@ export default function Chat() {
   };
 
   return (
-    <div style={{ height: 'calc(100vh - 54px)', display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
+    <div style={{ height: 'calc(100vh - var(--nav-h))', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
       <style>{`
         .chat-container { flex:1; display:flex; flex-direction:column; max-width:1400px; width:100%; margin:0 auto; height:100%; }
-        .chat-header { padding:12px 20px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; justify-content:space-between; background:#111; flex-shrink:0; }
-        .chat-title { font-family:'Rubik Mono One',monospace; color:#7dff7d; font-size:16px; letter-spacing:2px; }
-        .online-dot { width:8px;height:8px;border-radius:50%;background:#7dff7d;display:inline-block;margin-right:6px;box-shadow:0 0 6px #7dff7d; }
-        .pinned-bar { background:#1a1a1a;border-bottom:1px solid #ffaa00;padding:8px 20px;font-size:11px;color:#ffaa00;display:flex;gap:8px;flex-shrink:0; }
+        .chat-header { padding:12px 20px; border-bottom:1px solid #1d2b22; display:flex; align-items:center; justify-content:space-between; background:#080d0a; flex-shrink:0; }
+        .chat-title { font-family:var(--font-display); color:#00ff88; font-size:16px; letter-spacing:2px; }
+        .online-dot { width:8px;height:8px;border-radius:50%;background:#00ff88;display:inline-block;margin-right:6px;box-shadow:0 0 6px #00ff88; }
+        .pinned-bar { background:#0d1510;border-bottom:1px solid #ffb020;padding:8px 20px;font-size:11px;color:#ffb020;display:flex;gap:8px;flex-shrink:0; }
         .messages-area { flex:1;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:2px; }
         .msg-row { display:flex;gap:10px;padding:4px 0;align-items:flex-start;position:relative; }
-        .msg-avatar { width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:'Share Tech Mono',monospace;font-weight:bold;border:1px solid #2a2a2a; }
+        .msg-avatar { width:34px;height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--font-body);font-weight:bold;border:1px solid #1d2b22; }
         .msg-body { flex:1;min-width:0; }
         .msg-header { display:flex;align-items:baseline;gap:6px;margin-bottom:2px;flex-wrap:wrap; }
-        .msg-username { font-size:13px;font-weight:bold;font-family:'Share Tech Mono',monospace;cursor:pointer; }
-        .msg-time { font-size:10px;color:#444; }
-        .msg-role-badge { font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid;font-family:'Share Tech Mono',monospace; }
-        .msg-content { font-size:13px;color:#e0e0e0;line-height:1.6;word-break:break-word; }
-        .msg-content.deleted { color:#444;font-style:italic; }
-        .reply-quote { border-left:2px solid #444;padding:4px 8px;margin-bottom:4px;font-size:11px;color:#888;background:#1a1a1a; }
+        .msg-username { font-size:13px;font-weight:bold;font-family:var(--font-body);cursor:pointer; }
+        .msg-time { font-size:10px;color:#74897c; }
+        .msg-role-badge { font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid;font-family:var(--font-body); }
+        .msg-content { font-size:13px;color:#e8fff1;line-height:1.6;word-break:break-word; }
+        .msg-content.deleted { color:#74897c;font-style:italic; }
+        .reply-quote { border-left:2px solid #74897c;padding:4px 8px;margin-bottom:4px;font-size:11px;color:#82998b;background:#0d1510; }
         .msg-actions { display:none;gap:4px;margin-left:auto;flex-shrink:0;align-items:center; }
         .msg-row:hover .msg-actions { display:flex; }
-        .action-btn { padding:2px 8px;border:1px solid #2a2a2a;background:transparent;color:#888;cursor:pointer;font-size:10px;font-family:'Share Tech Mono',monospace;transition:all 0.15s; }
-        .action-btn:hover { border-color:#7dff7d;color:#7dff7d; }
+        .action-btn { padding:2px 8px;border:1px solid #1d2b22;background:transparent;color:#82998b;cursor:pointer;font-size:10px;font-family:var(--font-body);transition:all 0.15s; }
+        .action-btn:hover { border-color:#00ff88;color:#00ff88; }
         .reactions-row { display:flex;flex-wrap:wrap;gap:4px;margin-top:4px; }
-        .reaction-chip { display:flex;align-items:center;gap:3px;padding:2px 6px;border:1px solid #2a2a2a;background:#1a1a1a;border-radius:10px;cursor:pointer;font-size:12px;transition:all 0.15s; }
-        .reaction-chip:hover { border-color:#7dff7d; }
+        .reaction-chip { display:flex;align-items:center;gap:3px;padding:2px 6px;border:1px solid #1d2b22;background:#0d1510;border-radius:10px;cursor:pointer;font-size:12px;transition:all 0.15s; }
+        .reaction-chip:hover { border-color:#00ff88; }
         .reaction-chip.mine { border-color:#5fffff44;background:#5fffff11; }
-        .emoji-picker { position:absolute;bottom:60px;left:0;background:#1a1a1a;border:1px solid #2a2a2a;padding:8px;display:flex;flex-wrap:wrap;gap:4px;width:240px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.8); }
+        .emoji-picker { position:absolute;bottom:60px;left:0;background:#0d1510;border:1px solid #1d2b22;padding:8px;display:flex;flex-wrap:wrap;gap:4px;width:240px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.8); }
         .emoji-btn { font-size:18px;padding:4px;cursor:pointer;border-radius:4px;border:none;background:transparent;transition:background 0.15s; }
-        .emoji-btn:hover { background:#2a2a2a; }
-        .reaction-popup { position:fixed;background:#1a1a1a;border:1px solid #2a2a2a;padding:6px;display:flex;flex-wrap:wrap;gap:4px;width:200px;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,0.8);border-radius:4px; }
-        .typing-bar { padding:6px 20px;font-size:11px;color:#888;flex-shrink:0;min-height:24px; }
-        .input-area { padding:12px 20px;border-top:1px solid #2a2a2a;background:#111;flex-shrink:0;position:relative; }
-        .reply-preview { background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid #5fffff;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#888;display:flex;justify-content:space-between;align-items:center; }
+        .emoji-btn:hover { background:#1d2b22; }
+        .reaction-popup { position:fixed;background:#0d1510;border:1px solid #1d2b22;padding:6px;display:flex;flex-wrap:wrap;gap:4px;width:200px;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,0.8);border-radius:4px; }
+        .typing-bar { padding:6px 20px;font-size:11px;color:#82998b;flex-shrink:0;min-height:24px; }
+        .input-area { padding:12px 20px;border-top:1px solid #1d2b22;background:#080d0a;flex-shrink:0;position:relative; }
+        .reply-preview { background:#0d1510;border:1px solid #1d2b22;border-left:3px solid #4fe3ff;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#82998b;display:flex;justify-content:space-between;align-items:center; }
         .input-row { display:flex;gap:8px;align-items:flex-end; }
-        .chat-input { flex:1;padding:10px 14px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;resize:none;max-height:100px; }
-        .chat-input:focus { border-color:#7dff7d; }
-        .send-btn { padding:10px 20px;border:1px solid #7dff7d;background:transparent;color:#7dff7d;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;white-space:nowrap;transition:all 0.2s; }
-        .send-btn:hover:not(:disabled) { background:#7dff7d;color:#0a0a0a; }
+        .chat-input { flex:1;padding:10px 14px;background:#0d1510;border:1px solid #1d2b22;color:#e8fff1;font-family:var(--font-body);font-size:13px;outline:none;resize:none;max-height:100px; }
+        .chat-input:focus { border-color:#00ff88; }
+        .send-btn { padding:10px 20px;border:1px solid #00ff88;background:transparent;color:#00ff88;cursor:pointer;font-family:var(--font-body);font-size:12px;white-space:nowrap;transition:all 0.2s; }
+        .send-btn:hover:not(:disabled) { background:#00ff88;color:#030504; }
         .send-btn:disabled { opacity:0.4;cursor:not-allowed; }
         .header-btns { display:flex;gap:6px;align-items:center; }
-        .header-btn { padding:4px 10px;border:1px solid #2a2a2a;background:transparent;color:#888;cursor:pointer;font-size:10px;font-family:'Share Tech Mono',monospace; }
-        .header-btn:hover { border-color:#7dff7d;color:#7dff7d; }
+        .header-btn { padding:4px 10px;border:1px solid #1d2b22;background:transparent;color:#82998b;cursor:pointer;font-size:10px;font-family:var(--font-body); }
+        .header-btn:hover { border-color:#00ff88;color:#00ff88; }
         .search-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding-top:80px; }
-        .search-box { background:#111;border:1px solid #2a2a2a;width:100%;max-width:600px;padding:20px; }
+        .search-box { background:#080d0a;border:1px solid #1d2b22;width:100%;max-width:600px;padding:20px; }
         .search-input-row { display:flex;gap:8px;margin-bottom:16px; }
-        .search-input { flex:1;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none; }
-        .search-input:focus { border-color:#7dff7d; }
-        .search-result { padding:8px 12px;border-bottom:1px solid #1a1a1a;font-size:12px; }
-        .muted-bar { background:#1a1a1a;border:1px solid #ff4444;padding:10px 16px;text-align:center;color:#ff4444;font-size:12px; }
+        .search-input { flex:1;padding:10px 12px;background:#0d1510;border:1px solid #1d2b22;color:#e8fff1;font-family:var(--font-body);font-size:13px;outline:none; }
+        .search-input:focus { border-color:#00ff88; }
+        .search-result { padding:8px 12px;border-bottom:1px solid #0d1510;font-size:12px; }
+        .muted-bar { background:#0d1510;border:1px solid #ff4560;padding:10px 16px;text-align:center;color:#ff4560;font-size:12px; }
         .img-preview-wrap { position:relative;display:inline-block;margin-bottom:8px; }
-        .img-preview { max-height:80px;border:1px solid #2a2a2a;border-radius:2px; }
-        .img-remove { position:absolute;top:-6px;right:-6px;background:#ff4444;border:none;color:white;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center; }
+        .img-preview { max-height:80px;border:1px solid #1d2b22;border-radius:2px; }
+        .img-remove { position:absolute;top:-6px;right:-6px;background:#ff4560;border:none;color:white;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center; }
         .modal-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px; }
-        .modal-box { background:#111;border:1px solid #2a2a2a;padding:24px;width:100%;max-width:360px; }
-        .modal-title { font-family:'Rubik Mono One',monospace;color:#7dff7d;font-size:14px;margin-bottom:16px;letter-spacing:1px; }
-        .modal-input { width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box; }
-        .modal-input:focus { border-color:#7dff7d; }
+        .modal-box { background:#080d0a;border:1px solid #1d2b22;padding:24px;width:100%;max-width:360px; }
+        .modal-title { font-family:var(--font-display);color:#00ff88;font-size:14px;margin-bottom:16px;letter-spacing:1px; }
+        .modal-input { width:100%;padding:10px 12px;background:#0d1510;border:1px solid #1d2b22;color:#e8fff1;font-family:var(--font-body);font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box; }
+        .modal-input:focus { border-color:#00ff88; }
         .modal-btns { display:flex;gap:8px; }
         .verify-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px; }
-        .verify-modal { background:#111;border:1px solid #7dff7d;padding:30px;width:100%;max-width:440px;box-shadow:0 0 60px rgba(125,255,125,0.15); }
-        .verify-title { font-family:'Rubik Mono One',monospace;color:#7dff7d;font-size:16px;margin-bottom:6px;letter-spacing:2px; }
-        .verify-sub { font-size:11px;color:#888;margin-bottom:24px;line-height:1.6; }
-        .verify-question { background:#1a1a1a;border:1px solid #2a2a2a;border-left:3px solid #7dff7d;padding:14px 16px;font-size:14px;color:#e0e0e0;margin-bottom:16px;line-height:1.5; }
-        .verify-input { width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;font-family:'Share Tech Mono',monospace;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box; }
-        .verify-input:focus { border-color:#7dff7d; }
-        .verify-error { color:#ff4444;font-size:11px;margin-bottom:12px;padding:8px 10px;border:1px solid #ff444433;background:#ff44440a; }
+        .verify-modal { background:#080d0a;border:1px solid #00ff88;padding:30px;width:100%;max-width:440px;box-shadow:0 0 60px rgba(0,255,136,0.15); }
+        .verify-title { font-family:var(--font-display);color:#00ff88;font-size:16px;margin-bottom:6px;letter-spacing:2px; }
+        .verify-sub { font-size:11px;color:#82998b;margin-bottom:24px;line-height:1.6; }
+        .verify-question { background:#0d1510;border:1px solid #1d2b22;border-left:3px solid #00ff88;padding:14px 16px;font-size:14px;color:#e8fff1;margin-bottom:16px;line-height:1.5; }
+        .verify-input { width:100%;padding:10px 12px;background:#0d1510;border:1px solid #1d2b22;color:#e8fff1;font-family:var(--font-body);font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box; }
+        .verify-input:focus { border-color:#00ff88; }
+        .verify-error { color:#ff4560;font-size:11px;margin-bottom:12px;padding:8px 10px;border:1px solid #ff444433;background:#ff44440a; }
         @media(max-width:600px){ .msg-actions{display:flex;} }
       `}</style>
 
@@ -414,14 +414,14 @@ export default function Chat() {
 
       {/* Context menu */}
       {contextMenu && (
-        <div onClick={e => e.stopPropagation()} style={{ position:'fixed', top:contextMenu.y, left:contextMenu.x, background:'#1a1a1a', border:'1px solid #2a2a2a', zIndex:500, minWidth:'160px', boxShadow:'0 4px 20px rgba(0,0,0,0.8)' }}>
-          <div style={{ padding:'8px 12px', fontSize:'11px', color:'#888', borderBottom:'1px solid #2a2a2a', fontFamily:"'Share Tech Mono',monospace" }}>{contextMenu.username}</div>
-          <div className="action-btn" style={{ display:'block', padding:'10px 12px', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px', color:'#e0e0e0', borderBottom:'1px solid #1a1a1a' }}
+        <div onClick={e => e.stopPropagation()} style={{ position:'fixed', top:contextMenu.y, left:contextMenu.x, background:'#0d1510', border:'1px solid #1d2b22', zIndex:500, minWidth:'160px', boxShadow:'0 4px 20px rgba(0,0,0,0.8)' }}>
+          <div style={{ padding:'8px 12px', fontSize:'11px', color:'#82998b', borderBottom:'1px solid #1d2b22', fontFamily:"var(--font-body)" }}>{contextMenu.username}</div>
+          <div className="action-btn" style={{ display:'block', padding:'10px 12px', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'12px', color:'#e8fff1', borderBottom:'1px solid #0d1510' }}
             onClick={() => { window.location.href = createPageUrl('Profile') + '?id=' + contextMenu.playerId; setContextMenu(null); }}>
             👤 View Profile
           </div>
           {user && contextMenu.playerId !== user?.id && (
-            <div className="action-btn" style={{ display:'block', padding:'10px 12px', cursor:'pointer', fontFamily:"'Share Tech Mono',monospace", fontSize:'12px', color:'#e0e0e0' }}
+            <div className="action-btn" style={{ display:'block', padding:'10px 12px', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'12px', color:'#e8fff1' }}
               onClick={() => { window.location.href = createPageUrl('Messages') + '?with=' + contextMenu.playerId; setContextMenu(null); }}>
               💬 Send DM
             </div>
@@ -452,7 +452,7 @@ export default function Chat() {
                 </button>
               </>
             ) : (
-              <div style={{ color: verifyError ? '#ff4444' : '#888', fontSize:'13px', padding:'12px 0' }}>
+              <div style={{ color: verifyError ? '#ff4560' : '#82998b', fontSize:'13px', padding:'12px 0' }}>
                 {verifyError || 'Loading challenge...'}
               </div>
             )}
@@ -475,11 +475,11 @@ export default function Chat() {
               {searchResults.map(m => (
                 <div key={m.id} className="search-result">
                   <span style={{ color: ROLE_COLORS[m.player?.user_role || 'member'] }}>{m.player?.chat_username || m.username}</span>
-                  <span style={{ color:'#444', margin:'0 8px' }}>{formatTime(m.created_at || m.created_date)}</span>
-                  <span style={{ color:'#e0e0e0' }}>{m.content || m.message}</span>
+                  <span style={{ color:'#74897c', margin:'0 8px' }}>{formatTime(m.created_at || m.created_date)}</span>
+                  <span style={{ color:'#e8fff1' }}>{m.content || m.message}</span>
                 </div>
               ))}
-              {searchResults.length === 0 && searchQuery && <div style={{ color:'#444', fontSize:'12px', padding:'12px' }}>No results</div>}
+              {searchResults.length === 0 && searchQuery && <div style={{ color:'#74897c', fontSize:'12px', padding:'12px' }}>No results</div>}
             </div>
           </div>
         </div>
@@ -490,20 +490,20 @@ export default function Chat() {
         <div className="chat-header">
           <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
             <span className="chat-title">GLOBAL CHAT</span>
-            <span style={{ fontSize:'11px', color:'#888' }}>
+            <span style={{ fontSize:'11px', color:'#82998b' }}>
               <span className="online-dot" />{onlineCount} online
             </span>
           </div>
           <div className="header-btns">
             <button className="header-btn" onClick={() => setShowSearch(true)}>🔍 SEARCH</button>
-            {user && <span style={{ fontSize:'11px', color:'#7dff7d' }}>{(user.reputation_points || 0).toLocaleString()} RP</span>}
+            {user && <span style={{ fontSize:'11px', color:'#00ff88' }}>{(user.reputation_points || 0).toLocaleString()} RP</span>}
           </div>
         </div>
 
         {/* Pinned */}
         {pinnedMsg && (
           <div className="pinned-bar">
-            📌 PINNED: <span style={{ color:'#e0e0e0' }}>{pinnedMsg.content || pinnedMsg.message}</span>
+            📌 PINNED: <span style={{ color:'#e8fff1' }}>{pinnedMsg.content || pinnedMsg.message}</span>
           </div>
         )}
 
@@ -514,16 +514,16 @@ export default function Chat() {
 
         {/* Messages */}
         <div className="messages-area">
-          {loading && <div style={{ textAlign:'center', color:'#444', fontSize:'12px', paddingTop:'40px' }}>Loading messages...</div>}
+          {loading && <div style={{ textAlign:'center', color:'#74897c', fontSize:'12px', paddingTop:'40px' }}>Loading messages...</div>}
           {messages.map((msg) => {
             const isOwn      = user && (msg.player_id === user.id || msg.player?.id === user.id);
             const playerRole = msg.player?.user_role || 'member';
-            const roleColor  = ROLE_COLORS[playerRole] || '#888';
+            const roleColor  = ROLE_COLORS[playerRole] || '#82998b';
             const now = Date.now();
-            const usernameColor = (msg.player?.username_color && msg.player?.username_color_expires_at && new Date(msg.player.username_color_expires_at) > now)
+            const usernameColor = (msg.player?.username_color && msg.player?.username_color_expires_at && new Date(msg.player.username_color_expires_at).getTime() > now)
               ? msg.player.username_color : roleColor;
-            const FRAME_GLOW = { green_glow: '0 0 6px #7dff7d', cyan_pulse: '0 0 6px #5fffff', purple_flame: '0 0 6px #aa44ff' };
-            const frameGlow = (msg.player?.profile_frame && msg.player?.profile_frame_expires_at && new Date(msg.player.profile_frame_expires_at) > now)
+            const FRAME_GLOW = { green_glow: '0 0 6px #00ff88', cyan_pulse: '0 0 6px #4fe3ff', purple_flame: '0 0 6px #a974ff' };
+            const frameGlow = (msg.player?.profile_frame && msg.player?.profile_frame_expires_at && new Date(msg.player.profile_frame_expires_at).getTime() > now)
               ? FRAME_GLOW[msg.player.profile_frame] : undefined;
             const username   = msg.player?.chat_username || msg.username || 'Unknown';
             const content    = msg.content || msg.message;
@@ -566,28 +566,28 @@ export default function Chat() {
                         )}
                         {/* Tip — superuser ONLY */}
                         {isSuperuser && msgPlayerId !== user?.id && (
-                          <button className="action-btn" style={{ color:'#aa44ff', borderColor:'#aa44ff33' }}
+                          <button className="action-btn" style={{ color:'#a974ff', borderColor:'#aa44ff33' }}
                             onClick={() => { setTipModal({ playerId: msgPlayerId, username }); setTipAmount(''); }}>
                             💎
                           </button>
                         )}
                         {/* Report — all users, not own message */}
                         {msgPlayerId !== user?.id && (
-                          <button className="action-btn" style={{ color:'#ffaa00', borderColor:'#ffaa0033' }}
+                          <button className="action-btn" style={{ color:'#ffb020', borderColor:'#ffaa0033' }}
                             onClick={() => reportMessage(msg.id)}>
                             🚩
                           </button>
                         )}
                         {/* Pin — mod/admin/superuser */}
                         {canModerate && (
-                          <button className="action-btn" style={{ color:'#ffaa00', borderColor:'#ffaa0033' }}
+                          <button className="action-btn" style={{ color:'#ffb020', borderColor:'#ffaa0033' }}
                             onClick={() => pinMessage(msg.id)}>
                             📌
                           </button>
                         )}
                         {/* Delete — own message or moderator+ */}
                         {(isOwn || canModerate) && (
-                          <button className="action-btn" style={{ color:'#ff4444', borderColor:'#ff444433' }}
+                          <button className="action-btn" style={{ color:'#ff4560', borderColor:'#ff444433' }}
                             onClick={() => deleteMessage(msg.id)}>🗑</button>
                         )}
                       </div>
@@ -605,7 +605,7 @@ export default function Chat() {
                   </div>
 
                   {msg.image_url && !isDeleted && (
-                    <img src={msg.image_url} alt="" style={{ maxWidth:'320px', maxHeight:'220px', marginTop:'6px', border:'1px solid #2a2a2a', borderRadius:'2px' }} />
+                    <img src={msg.image_url} alt="" style={{ maxWidth:'320px', maxHeight:'220px', marginTop:'6px', border:'1px solid #1d2b22', borderRadius:'2px' }} />
                   )}
 
                   {/* Reactions */}
@@ -615,7 +615,7 @@ export default function Chat() {
                         <div key={r.emoji} className={`reaction-chip${r.user_reacted ? ' mine' : ''}`}
                           onClick={() => sendReaction(msg.id, r.emoji)}>
                           <span>{r.emoji}</span>
-                          <span style={{ fontSize:'10px', color:'#888' }}>{r.count}</span>
+                          <span style={{ fontSize:'10px', color:'#82998b' }}>{r.count}</span>
                         </div>
                       ))}
                     </div>
@@ -630,7 +630,7 @@ export default function Chat() {
         {/* Typing indicator */}
         {typingUsers.length > 0 && (
           <div className="typing-bar">
-            <span style={{ color:'#5fffff' }}>{typingUsers.join(', ')}</span> {typingUsers.length === 1 ? 'is' : 'are'} typing...
+            <span style={{ color:'#4fe3ff' }}>{typingUsers.join(', ')}</span> {typingUsers.length === 1 ? 'is' : 'are'} typing...
           </div>
         )}
 
@@ -638,8 +638,8 @@ export default function Chat() {
         <div className="input-area">
           {replyTo && (
             <div className="reply-preview">
-              <span>↩ Replying to <strong style={{ color:'#5fffff' }}>{replyTo.username}</strong>: {replyTo.content?.slice(0, 60)}</span>
-              <button onClick={() => setReplyTo(null)} style={{ background:'none', border:'none', color:'#888', cursor:'pointer' }}>✕</button>
+              <span>↩ Replying to <strong style={{ color:'#4fe3ff' }}>{replyTo.username}</strong>: {replyTo.content?.slice(0, 60)}</span>
+              <button onClick={() => setReplyTo(null)} style={{ background:'none', border:'none', color:'#82998b', cursor:'pointer' }}>✕</button>
             </div>
           )}
 
@@ -675,7 +675,7 @@ export default function Chat() {
               <button className="action-btn"
                 onClick={() => fileInputRef.current?.click()}
                 title="Upload image"
-                style={{ color: imageFile ? '#7dff7d' : '#888', borderColor: imageFile ? '#7dff7d' : '#2a2a2a', padding:'10px' }}>
+                style={{ color: imageFile ? '#00ff88' : '#82998b', borderColor: imageFile ? '#00ff88' : '#1d2b22', padding:'10px' }}>
                 🖼
               </button>
             )}
@@ -696,14 +696,14 @@ export default function Chat() {
           </div>
 
           {input.length > 0 && (
-            <div style={{ textAlign:'right', fontSize:'10px', color: input.length > 4800 ? '#ff4444' : '#444', marginTop:'4px' }}>
+            <div style={{ textAlign:'right', fontSize:'10px', color: input.length > 4800 ? '#ff4560' : '#74897c', marginTop:'4px' }}>
               {input.length}/5000
             </div>
           )}
 
           {!user && (
-            <div style={{ marginTop:'8px', fontSize:'11px', color:'#666', textAlign:'center' }}>
-              <a href={createPageUrl('Home')} style={{ color:'#7dff7d' }}>Connect wallet</a> to participate
+            <div style={{ marginTop:'8px', fontSize:'11px', color:'#74897c', textAlign:'center' }}>
+              <a href={createPageUrl('Home')} style={{ color:'#00ff88' }}>Connect wallet</a> to participate
             </div>
           )}
         </div>
