@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { getSessionPlayer } from '../../shared/session.ts';
+import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -7,6 +7,7 @@ Deno.serve(async (req) => {
 
   const player = await getSessionPlayer(base44, session_token);
   if (!player) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  if (isBanned(player)) return Response.json({ success: false, error: 'Your account is suspended' }, { status: 403 });
 
   const trimmed = (bio || '').slice(0, 300);
 

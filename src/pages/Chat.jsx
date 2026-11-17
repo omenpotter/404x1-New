@@ -520,10 +520,10 @@ export default function Chat() {
             const playerRole = msg.player?.user_role || 'member';
             const roleColor  = ROLE_COLORS[playerRole] || '#82998b';
             const now = Date.now();
-            const usernameColor = (msg.player?.username_color && msg.player?.username_color_expires_at && new Date(msg.player.username_color_expires_at) > now)
+            const usernameColor = (msg.player?.username_color && msg.player?.username_color_expires_at && new Date(msg.player.username_color_expires_at).getTime() > now)
               ? msg.player.username_color : roleColor;
             const FRAME_GLOW = { green_glow: '0 0 6px #00ff88', cyan_pulse: '0 0 6px #4fe3ff', purple_flame: '0 0 6px #a974ff' };
-            const frameGlow = (msg.player?.profile_frame && msg.player?.profile_frame_expires_at && new Date(msg.player.profile_frame_expires_at) > now)
+            const frameGlow = (msg.player?.profile_frame && msg.player?.profile_frame_expires_at && new Date(msg.player.profile_frame_expires_at).getTime() > now)
               ? FRAME_GLOW[msg.player.profile_frame] : undefined;
             const username   = msg.player?.chat_username || msg.username || 'Unknown';
             const content    = msg.content || msg.message;

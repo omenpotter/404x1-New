@@ -139,6 +139,11 @@ export default function WalletModal() {
   };
 
   const w = detectWallets();
+  /**
+   * @param {boolean} installed
+   * @param {boolean} highlight
+   * @returns {any}
+   */
   const btnStyle = (installed, highlight) => ({
     background: highlight && installed ? 'linear-gradient(135deg,#7dff7d22,#7dff7d11)' : 'transparent',
     border: `${highlight && installed ? '2px' : '1px'} solid ${installed ? (highlight ? '#00ff88' : '#74897c') : '#1d2b22'}`,

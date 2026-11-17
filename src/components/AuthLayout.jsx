@@ -1,6 +1,14 @@
 import React from "react";
 import MatrixRain from "@/components/MatrixRain";
 
+/**
+ * @param {Object} props
+ * @param {any} props.icon
+ * @param {any} props.title
+ * @param {any} [props.subtitle]
+ * @param {any} [props.footer]
+ * @param {any} [props.children]
+ */
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
     <div className="ds-shell min-h-screen flex items-center justify-center px-4">

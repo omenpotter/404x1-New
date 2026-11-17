@@ -29,6 +29,31 @@ export async function getSessionPlayer(base44: any, sessionToken: string | undef
   }
 }
 
+// Banned players keep a valid token until it expires, so every write path asks this
+// before acting. The ban flag is set by staff tooling, never by the player.
+export function isBanned(player: any): boolean {
+  return player?.is_banned === true;
+}
+
+// Drop the session token entirely: logout and any ban take effect immediately.
+export async function revokeSession(base44: any, playerId: string) {
+  if (!playerId) return;
+  await base44.asServiceRole.entities.Player.update(playerId, {
+    session_token: null,
+    session_expires_at: null
+  });
+}
+
+// Constant-time string compare, so a guessed cron secret cannot be timed byte by byte.
+function safeEqual(a: string, b: string): boolean {
+  const left = new TextEncoder().encode(a);
+  const right = new TextEncoder().encode(b);
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let i = 0; i < left.length; i++) diff |= left[i] ^ right[i];
+  return diff === 0;
+}
+
 // Issue (or refresh) a session token for a player. Returns { token, expiresAt }.
 export async function issueSession(base44: any, playerId: string) {
   const token = generateToken();
@@ -46,7 +71,7 @@ export async function issueSession(base44: any, playerId: string) {
 export async function authorizeCronOrAdmin(base44: any, body: any) {
   const cronSecret = Deno.env.get('CRON_SECRET') || Deno.env.get('TELEGRAM_BOT_TOKEN');
   const providedSecret = body?.cron_secret;
-  if (providedSecret && cronSecret && providedSecret === cronSecret) {
+  if (typeof providedSecret === 'string' && providedSecret && cronSecret && safeEqual(providedSecret, cronSecret)) {
     return { ok: true, mode: 'cron' as const, caller: null };
   }
   const caller = await getSessionPlayer(base44, body?.session_token);

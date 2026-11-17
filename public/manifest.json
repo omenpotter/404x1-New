@@ -1,0 +1,12 @@
+{
+  "name": "404X1",
+  "short_name": "404X1",
+  "description": "404 token on X1 mainnet: live price, verified swap chart, chat, leaderboard and game.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030504",
+  "theme_color": "#030504",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

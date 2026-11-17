@@ -488,7 +488,7 @@ export default function Profile() {
                 <div style={{ color:'#00ff88', fontSize:'13px', marginBottom:'6px', fontFamily:"var(--font-display)" }}>HIGHLIGHT MESSAGE</div>
                 <div style={{ color:'#82998b', fontSize:'11px', marginBottom:'10px', lineHeight:1.5 }}>Highlight your next message in chat</div>
                 <div style={{ color:'#ffb020', fontSize:'12px', marginBottom:'8px' }}>25 RP — one-time</div>
-                {economyPlayer.highlight_expires_at && new Date(economyPlayer.highlight_expires_at) > Date.now() && (
+                {economyPlayer.highlight_expires_at && new Date(economyPlayer.highlight_expires_at).getTime() > Date.now() && (
                   <div style={{ color:'#00ff88', fontSize:'11px', marginBottom:'8px' }}>✓ Active until {new Date(economyPlayer.highlight_expires_at).toLocaleTimeString()}</div>
                 )}
                 {spendMsg['highlight_message'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['highlight_message'].startsWith('✅')?'#00ff88':'#ff4560' }}>{spendMsg['highlight_message']}</div>}
@@ -525,7 +525,7 @@ export default function Profile() {
                     <button key={w} onClick={() => setColorWeeks(w)} style={{ padding:'4px 10px', border:`1px solid ${colorWeeks===w?'#4fe3ff':'#1d2b22'}`, background:'transparent', color:colorWeeks===w?'#4fe3ff':'#82998b', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'10px' }}>{w}W</button>
                   ))}
                 </div>
-                {economyPlayer.username_color_expires_at && new Date(economyPlayer.username_color_expires_at) > Date.now() && (
+                {economyPlayer.username_color_expires_at && new Date(economyPlayer.username_color_expires_at).getTime() > Date.now() && (
                   <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'8px' }}>
                     <div style={{ width:'12px', height:'12px', borderRadius:'50%', background: economyPlayer.username_color || '#fff' }} />
                     <span style={{ color:'#00ff88', fontSize:'11px' }}>Active until {new Date(economyPlayer.username_color_expires_at).toLocaleDateString()}</span>
@@ -553,7 +553,7 @@ export default function Profile() {
                     <button key={w} onClick={() => setFrameWeeks(w)} style={{ padding:'4px 10px', border:`1px solid ${frameWeeks===w?'#a974ff':'#1d2b22'}`, background:'transparent', color:frameWeeks===w?'#a974ff':'#82998b', cursor:'pointer', fontFamily:"var(--font-body)", fontSize:'10px' }}>{w}W</button>
                   ))}
                 </div>
-                {economyPlayer.profile_frame_expires_at && new Date(economyPlayer.profile_frame_expires_at) > Date.now() && (
+                {economyPlayer.profile_frame_expires_at && new Date(economyPlayer.profile_frame_expires_at).getTime() > Date.now() && (
                   <div style={{ color:'#00ff88', fontSize:'11px', marginBottom:'8px' }}>✓ Active until {new Date(economyPlayer.profile_frame_expires_at).toLocaleDateString()}</div>
                 )}
                 {spendMsg['profile_frame'] && <div style={{ fontSize:'11px', marginBottom:'8px', color:spendMsg['profile_frame'].startsWith('✅')?'#00ff88':'#ff4560' }}>{spendMsg['profile_frame']}</div>}

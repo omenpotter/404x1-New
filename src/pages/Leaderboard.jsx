@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { FUNCTIONS_BASE } from '@/lib/api';
 
-const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+const BASE = FUNCTIONS_BASE;
 const ROLE_COLORS = { member: '#82998b', trusted: '#4fe3ff', moderator: '#ffb020', admin: '#ff4560', superuser: '#a974ff' };
 
 function getUser() {

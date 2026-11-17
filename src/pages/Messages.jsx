@@ -12,7 +12,7 @@ function formatTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   const now = new Date();
-  const diff = now - d;
+  const diff = now.getTime() - d.getTime();
   if (diff < 60000) return 'now';
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
   if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -307,7 +307,7 @@ export default function Messages() {
               No conversations yet.<br />Click + NEW to start one.
             </div>
           )}
-          {[...convs].sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)).map(conv => (
+          {[...convs].sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()).map(conv => (
             <div
               key={conv.id}
               className={`conv-item${activeConv?.id === conv.id ? ' active' : ''}`}

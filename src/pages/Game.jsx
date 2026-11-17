@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { getSessionToken } from '@/lib/auth';
+import { FUNCTIONS_BASE } from '@/lib/api';
 
-const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+const BASE = FUNCTIONS_BASE;
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -27,7 +28,7 @@ export default function Game() {
   const [lastResult, setLastResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const canvasRef = useRef(null);
-  const gameRef = useRef({});
+  const gameRef = useRef(/** @type {any} */ ({}));
   const animRef = useRef(null);
 
   useEffect(() => {

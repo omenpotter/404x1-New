@@ -6,10 +6,11 @@ import { getSessionToken } from '@/lib/auth';
 import BrandMark from '@/components/BrandMark';
 import MatrixRain from '@/components/MatrixRain';
 import { useNetworkStatus } from '@/lib/xchart/useNetworkStatus';
+import { FUNCTIONS_BASE } from '@/lib/api';
 
-const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+const BASE_URL = FUNCTIONS_BASE;
 
-const BASE = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
+const BASE = FUNCTIONS_BASE;
 
 function getCurrentUser() {
   try {
@@ -73,6 +74,13 @@ export default function Layout({ children, currentPageName }) {
   }, [currentPageName]);
 
   const logout = () => {
+    const token = getSessionToken();
+    // Revoke server-side too: a token left valid after logout is a usable credential.
+    if (token) fetch(BASE + 'logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_token: token }),
+    }).catch(() => {});
     localStorage.removeItem('404x1_user');
     setUser(null);
     window.dispatchEvent(new Event('userAuthChanged'));

@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
-import { getSessionPlayer } from '../../shared/session.ts';
+import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 
 const MAX_SCORE = 50000;                     // hard cap — reject impossibly high scores
 const DAILY_GAME_RP_CAP = 500;                // max RP from games per day
@@ -18,6 +18,7 @@ export default async function (req: Request): Promise<Response> {
     // Player is the authenticated caller — never trust a client-supplied player id.
     const player = await getSessionPlayer(base44, session_token);
     if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
+    if (isBanned(player)) return Response.json({ error: 'Your account is suspended' }, { status: 403, headers });
 
     if (!play_token || typeof play_token !== 'string') {
       return Response.json({ error: 'Missing play_token — start a game to get one' }, { status: 400, headers });

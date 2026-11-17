@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
-import { getSessionPlayer } from '../../shared/session.ts';
+import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 
 const ACTION_COSTS = {
   highlight_message: { base: 25, per_week: false },
@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
     // Player is the authenticated caller — never trust client-supplied player_id.
     const player = await getSessionPlayer(base44, session_token);
     if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
+    if (isBanned(player)) return Response.json({ error: 'Your account is suspended' }, { status: 403, headers });
 
     const actionConfig = ACTION_COSTS[action];
     // duration_weeks is client-supplied — coerce it and bound it before it prices anything.

@@ -122,8 +122,8 @@ export default function ModerationLogs() {
             <button
               onClick={() => { setSearchMod(''); setSearchTarget(''); setFilterAction('all'); }}
               style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', fontFamily: "var(--font-body)", fontSize: '12px', cursor: 'pointer' }}
-              onMouseEnter={e => { e.target.style.borderColor = 'var(--red)'; e.target.style.color = 'var(--red)'; }}
-              onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text-dim)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-dim)'; }}
             >
               CLEAR FILTERS
             </button>

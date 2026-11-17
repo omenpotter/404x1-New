@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
-import { getSessionPlayer } from '../../shared/session.ts';
+import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 
 const COOLDOWN_MS = 3000;
 const DAILY_MSG_RP_CAP = 200;
@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
         // Author is the authenticated caller — never trust client-supplied user_id.
         const player = await getSessionPlayer(base44, session_token);
         if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        if (isBanned(player)) return Response.json({ success: false, error: 'Your account is suspended' }, { status: 403 });
 
         if (player.is_verified === false) {
             return Response.json({ success: false, error: 'Complete human verification first', needs_verification: true });
