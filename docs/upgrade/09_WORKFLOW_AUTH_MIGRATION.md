@@ -2,6 +2,8 @@
 
 Status: code on this branch is ready; the workflow-side change below is a **main-branch, owner action** (workflows cannot be edited from a feature branch). Until it is done, nothing runs, because all four workflows are currently **inactive**.
 
+The step-by-step activation order, including which workflows to enable and the standing decision that Stress Test Wave stays disabled in production, is in `13_WORKFLOW_ACTIVATION_RUNBOOK.md`.
+
 ## What changed
 
 Automated runners (`runChatModerator`, `runChatAdmin`, `runDailyStaffRewards`, `runStressTest`, `runSecurityAudit`) no longer accept the Telegram bot token as an authorisation key. `authorizeCronOrAdmin()` in `base44/shared/session.ts` accepts exactly three things:

@@ -32,7 +32,7 @@ Honest framing: this is a deploy-time and repeat-visit improvement. First-visit 
 ## Verification after the change
 
 - `vite build` → exit 0.
-- `npx vitest run` → 34/34 passing.
+- `npx vitest run` → 43/43 passing.
 - `npx tsc --noEmit -p ./jsconfig.json` → 0 errors.
 - Live data layer re-verified end to end against X1 mainnet: 24/24 checks (see `05_QA_REGRESSION.md`).
 

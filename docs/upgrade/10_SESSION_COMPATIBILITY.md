@@ -1,45 +1,64 @@
-# Session Token Hashing — Compatibility With Existing Sessions
+# Session Token Migration — Compatibility and Replay Safety
 
-Question this report answers: after moving session tokens from plaintext to SHA-256 at rest, are players who were already signed in logged out?
+Two questions this report answers:
 
-**Answer: no. A dual-read path keeps every existing session working and upgrades it in place on first use.**
+1. After moving session tokens from plaintext to a digest at rest, are players who were already signed in logged out?
+2. Can a stored value be replayed as a credential, and what does a production rollback do to migrated sessions?
 
-## What the code does now
+**Short answers: nobody is logged out, a stored value cannot be replayed, and a rollback costs each active player one wallet reconnection.**
 
-`getSessionPlayer()` in `base44/shared/session.ts` performs, in order:
+## 1. Storage format
 
-1. **Hashed lookup** — `SHA-256(presented token)` is compared against `Player.session_token`. This is the normal path for every session issued from now on.
-2. **Legacy lookup** — if no hash matches, the raw presented token is compared against `Player.session_token`. A match means the record predates hashing.
-3. **Lazy upgrade** — a legacy match is rewritten to its hash immediately, so that token exists in plaintext only until its owner makes one request. The upgrade is best-effort: if the write fails, the session still validates and the next request tries again.
-4. **Expiry check** — `session_expires_at` is evaluated after identity is resolved, in both paths.
+`Player.session_token` holds `sha256:<64 hex>` for every session issued now. The prefix is the whole reason the design is safe, so it is worth being precise about what it buys:
 
-`issueSession()` (wallet login) always writes the hash. `revokeSession()` (logout, ban) still nulls both columns, so revocation is unaffected by the storage format.
+| Property | Why it matters |
+| --- | --- |
+| Every lookup compares a digest the server computes | No comparison ever uses a caller-supplied value directly |
+| A presented value starting with `sha256:` is refused before any lookup | A database read yields a value that is useless as a credential |
+| Legacy plaintext tokens are hex only, so they cannot carry the prefix | The compatibility path cannot be reached with a stored value |
+| The value is a string in an existing text field | No schema change, no migration, no record rewrite sweep |
 
-## Why the two paths cannot cross
+## 2. The replay defect that was closed
 
-- Session tokens are 32 random bytes rendered as 64 hex characters; a hash is 64 hex characters of a different value. A presented token can therefore only match the hash column if it *is* a hash we issued, and can only match the legacy column if it *is* the original token.
-- No user input is ever written to either column, so there is no path for a crafted value to become a stored credential.
+Before this correction, lookup did two things in order: compare `SHA-256(presented)` to the column, then compare the raw `presented` value to the column. The second comparison is what made a stolen column value usable: given the stored digest `D`, presenting `D` itself missed the digest comparison (because `SHA-256(D) ≠ D`) and then matched verbatim in the legacy comparison. A read of the database therefore still handed out working sessions.
 
-## Evidence
+The correction keeps the compatibility path but makes it unreachable for stored values:
 
-`tests/session.test.js` (6 tests, all passing) asserts:
+1. If the presented value starts with `sha256:`, reject it. No token issued by the app can contain `s` or `:`, since tokens are pure hex.
+2. Look up `sha256:` + `SHA-256(presented)`.
+3. Only if that misses **and** the presented value is 64 hex characters (the shape of a pre-hashing token), compare the plaintext value. On a hit, rewrite the row as `sha256:<digest>` immediately.
 
-- hashing is deterministic for the same token (the property the stored-hash lookup depends on);
-- the digest is 64 lowercase hex characters;
-- the digest never equals the input token;
-- two different tokens never produce the same digest;
-- 50 generated tokens all match the expected 32-byte hex shape;
-- a generated token can never equal the hash of itself (the ambiguity that would make the dual-read unsafe).
+Stored digests can no longer enter step 3 at all, because they carry the prefix and step 1 has already refused them.
 
-Full suite: **34 tests across 4 files, all passing.**
+## 3. Evidence
 
-## Operational notes
+`tests/session.test.js` — **15 tests, all passing**, including the four that matter here:
 
-- **Removal date for the legacy branch:** safe to delete once no session older than 7 days can exist, i.e. 7 days after this branch is merged and published. After that, every stored token is a hash and the plaintext column is empty. The comment in the code marks this.
-- **What an attacker gains from a database read:** one SHA-256 digest, not a usable token. Sessions are 7-day, revocable and bound to a single Player row.
-- **What is *not* hashed:** nothing else. `session_expires_at` stays readable so expiry can be evaluated without a second lookup.
-- **Ban and logout remain immediate:** both null the column, and lookup fails on a null token without ever reaching the legacy branch.
+- a stored value presented as a token is flagged as a stored value, and real tokens never are;
+- a stored digest is never treated as a legacy token (the replay path is unreachable);
+- a legacy plaintext session authenticates and is rewritten in place as a prefixed digest;
+- after that upgrade, presenting the stored value returns no player.
 
-## Residual risk
+The last two run against an in-memory stand-in for the Player table, so they exercise `getSessionPlayer` itself rather than only its helpers. Full suite: **43 tests across 4 files**.
 
-A hashed token is still a bearer credential if the *hash* leaks and the attacker presents it: the first lookup would hash it again and miss, but the legacy lookup would compare it verbatim and match. This window exists only while the legacy branch is present, and it closes when the branch is removed 7 days after release. It is recorded as item **R1** in `12_PRODUCTION_READINESS_REPORT.md`.
+## 4. Existing sessions
+
+- **Plaintext session (the state of every row in production today):** accepted through the legacy comparison, upgraded in place on the same request. The player notices nothing.
+- **Digest without prefix:** only produced by development builds of this branch before the prefix existed; such a row no longer matches, and its owner reconnects once. No production row is in this state, because hashing has never been published.
+- **Banned or logged-out player:** the token column is nulled, so lookup fails on both paths and the session dies immediately.
+- **Expired session:** `session_expires_at` is evaluated after identity resolution, so an expired token is refused whether it was stored hashed or plaintext.
+
+## 5. Production rollback compatibility
+
+This is the one asymmetry in the design, and it cannot be engineered away:
+
+- **Forward (old clients, new server):** seamless. Both formats are understood.
+- **Backward (new clients, old server):** the old code reads only plaintext, so a player holding `sha256:...` is not recognised and must reconnect their wallet once. Wallet re-authentication is instant and rewrites a plaintext token under the old code.
+
+So a rollback after publishing produces a bounded wave of "connect wallet" prompts lasting one session lifetime (7 days), not a lockout, and no data repair. The mitigation is to keep any rollback window short. `ROLLBACK.md` carries the staged procedure.
+
+## 6. When to remove the compatibility path — deferred
+
+The legacy branch stays until the owner has confirmed migration progress, i.e. that no meaningful number of rows still holds a plaintext value. Check it in the data view by inspecting `session_token` on Player rows: a value starting with `sha256:` is migrated, a bare 64-hex value is not, and a null value is a signed-out or banned player.
+
+Removal is a deliberate step, not part of this release. It is the point of no return described in `ROLLBACK.md`, because once it is gone a rollback would invalidate every session at once.

@@ -7,11 +7,11 @@ Date of run: 2026-11-17. Branch: `claude/404x1-upgrade`. No production configura
 | Check | Command | Result |
 | --- | --- | --- |
 | Type safety | `npx tsc --noEmit -p ./jsconfig.json` | **0 errors** |
-| Unit tests | `npx vitest run` | **34/34 passing, 4 files** |
+| Unit tests | `npx vitest run` | **43/43 passing, 4 files** |
 | Production build | `npx vite build` | **exit 0** |
 | Live mainnet verification | `node scripts/live-verify.mjs` | **24/24 checks passed** |
 
-Unit test files: `rain.test.js`, `xchart.test.js`, `legacy-evidence.test.js`, and the new `session.test.js` (6 assertions covering token hashing determinism and collision properties).
+Unit test files: `rain.test.js` (6), `xchart.test.js` (19), `legacy-evidence.test.js` (3), `session.test.js` (15 — token hashing properties plus the lookup itself: legacy login, in-place upgrade, and refusal of a stored digest presented as a credential).
 
 Build output: `index` 570 KB + `react` vendor 180 KB (previously one 753 KB chunk).
 

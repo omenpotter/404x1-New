@@ -16,7 +16,8 @@ Twelve technical reports plus the consolidated production readiness report. Read
 | 9 | `09_WORKFLOW_AUTH_MIGRATION.md` | The cron secret change, and the exact workflow edits required |
 | 10 | `10_SESSION_COMPATIBILITY.md` | Whether existing sessions survive token hashing (they do) |
 | 11 | `11_PERFORMANCE_REPORT.md` | Bundle measurements before/after, and what was deliberately not changed |
-| 12 | `ROLLBACK.md` | How to reverse the branch safely, in order |
+| 12 | `ROLLBACK.md` | How to reverse the branch safely, in order, per stage |
+| 13 | `13_WORKFLOW_ACTIVATION_RUNBOOK.md` | Exact order for secrets and workflow activation; Stress Test stays off |
 
 Supporting material:
 

@@ -23,7 +23,9 @@ Rules enforced in this phase:
 
 Tokens are no longer stored in plaintext. `issueSession()` writes `SHA-256(token)` to `Player.session_token`, and lookups hash the presented token before querying. A database read (or a log that captured the field) can no longer be replayed as a working credential.
 
-Consequence: sessions issued before this change stop matching, so every player reconnects their wallet once. No schema change was needed — the hashed value occupies the existing field.
+Storage format: `sha256:<64 hex>`. The digest is prefixed so a stored value can never be mistaken for, or replayed as, a token; `10_SESSION_COMPATIBILITY.md` carries the reasoning and the tests that hold it.
+
+Consequence for existing sessions: **none.** A session issued before this change is still accepted, through a second lookup that compares the plaintext value, and is rewritten as a prefixed digest on that same request (lazy upgrade). Nobody reconnects their wallet. No schema change was needed — the digest occupies the existing text field.
 
 ## 3. Automation authorisation
 
@@ -47,7 +49,7 @@ Caveat: a packaged native app presents a non-http origin, which gets no CORS gra
 
 - `gameStats` with no credential returns 401 (auth gate is live, not decorative).
 - `chatHistory` remains readable without a credential, as designed for the public feed.
-- Typecheck: 0 errors. Unit tests: 28/28. Build: exit 0.
+- Typecheck: 0 errors. Unit tests: 43/43. Build: exit 0.
 
 ## 6. Open items that must be completed on the main branch
 
