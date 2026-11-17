@@ -1,0 +1,232 @@
+{
+ "at": "2026-11-17T06:09:57.372Z",
+ "pool": {
+  "pool": "DY9uWCwiue23mmq14G2YVYWyXHSYn8ZjSvYJ36CAvmq1",
+  "program": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN",
+  "authority": "9Dpjw2pB5kXJr6ZTHiqzEMfJPic3om9jgNacnwpLCoaU",
+  "lpMint": "69VYWwidxk9J7HxbtSfMbNVroAeT32Uy8cX52hmJtt1h",
+  "status": 0,
+  "tokenVault": "6G9EKKX3kF6UUyUtBbo731NGQnr88h9JD4zWzi1tf8DL",
+  "quoteVault": "5t5EsuS5kuofpT68j9qHfLuwZRpECJPk1zqRGHeJp922",
+  "tokenDecimals": 9,
+  "quoteDecimals": 9,
+  "tokenReserve": 111958.797117665,
+  "quoteReserve": 509.43212998,
+  "spot": 0.0045501750920439385,
+  "spotGross": 0.0045339624940959255
+ },
+ "results": [
+  {
+   "name": "pool state decodes; mints are 404 + WXNT",
+   "ok": true,
+   "detail": "program=sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN authority=9Dpjw2pB5kXJr6ZTHiqzEMfJPic3om9jgNacnwpLCoaU"
+  },
+  {
+   "name": "vault decimals are 9/9",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "XDEX pool address matches configured pool",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "XDEX vaults match on-chain decoded vaults",
+   "ok": true,
+   "detail": "5t5EsuS5kuofpT68j9qHfLuwZRpECJPk1zqRGHeJp922 / 6G9EKKX3kF6UUyUtBbo731NGQnr88h9JD4zWzi1tf8DL"
+  },
+  {
+   "name": "XDEX LP mint matches",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "XDEX oracle selected the same pool",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "on-chain spot (XNT/404) within 1% of XDEX USD(404)/USD(XNT)",
+   "ok": true,
+   "detail": "onchain=0.00455018 xdex=0.00455018 (USD 0.000838242539721, XNT 0.184222040419351)"
+  },
+  {
+   "name": "supply read from mint; mint authority revoked",
+   "ok": true,
+   "detail": "supply=404402.625473771"
+  },
+  {
+   "name": "holder balances sum to mint supply (nothing missed/double counted)",
+   "ok": true,
+   "detail": "sum=404402.625473771 supply=404402.625473771"
+  },
+  {
+   "name": "holders are unique wallets (<= token accounts)",
+   "ok": true,
+   "detail": "57 wallets (+1 pool authority) from 155 token accounts"
+  },
+  {
+   "name": "syncTrades returned swaps with no failed fetches",
+   "ok": true,
+   "detail": "70 swaps from 70 signatures in 727ms"
+  },
+  {
+   "name": "all swaps have finite positive price/amounts and BUY/SELL",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "prices within 40% of spot at the same era (no unit errors)",
+   "ok": true,
+   "detail": "last swap 0.004540 vs spot 0.004550"
+  },
+  {
+   "name": "token-vault balance chain is continuous across txs (parser sees every vault change)",
+   "ok": true,
+   "detail": "20 txs, 1 chain head(s)"
+  },
+  {
+   "name": "newest fetched tx post-balance equals live vault balance (vault state fully explained)",
+   "ok": true,
+   "detail": "post=113322429474894 live=113322429474894"
+  },
+  {
+   "name": "XDEX chart/history returns bars for from=404,to=WXNT",
+   "ok": true,
+   "detail": "39 hourly bars; first t=1794758400"
+  },
+  {
+   "name": "XDEX hourly close agrees (±5%) with last on-chain swap price in that hour",
+   "ok": true,
+   "detail": "25/25 within 5%, worst 0.40%"
+  },
+  {
+   "name": "candles tf=1m aggregate all swaps",
+   "ok": true,
+   "detail": "52 candles"
+  },
+  {
+   "name": "candles tf=5m aggregate all swaps",
+   "ok": true,
+   "detail": "43 candles"
+  },
+  {
+   "name": "candles tf=15m aggregate all swaps",
+   "ok": true,
+   "detail": "40 candles"
+  },
+  {
+   "name": "candles tf=60m aggregate all swaps",
+   "ok": true,
+   "detail": "25 candles"
+  },
+  {
+   "name": "candles tf=240m aggregate all swaps",
+   "ok": true,
+   "detail": "10 candles"
+  },
+  {
+   "name": "candles tf=1440m aggregate all swaps",
+   "ok": true,
+   "detail": "3 candles"
+  },
+  {
+   "name": "on-chain 24h XNT volume within 25% of XDEX token1_volume_24h",
+   "ok": true,
+   "detail": "onchain=20.8420 xdex=20.842042537"
+  }
+ ],
+ "sample": [
+  {
+   "time": 1794874370,
+   "price": 0.004522307859587045,
+   "tok": 26.732767152,
+   "xnt": 0.120893803,
+   "side": "BUY",
+   "maker": "FzzcttznBaA8B5agA9ZK62atdnrbFDW9yG9DUydsoSsF",
+   "sig": "ZpRAcgr5nVAgECncXiHiDmX5BjdxHKDPfLiWA6Mr1xheZSpNBknJquL2EY9twqbceVEK8e2uDrSS1jqrPLmJQ7Z"
+  },
+  {
+   "time": 1794874371,
+   "price": 0.0045297065222203005,
+   "tok": 109.474458349,
+   "xnt": 0.495887168,
+   "side": "BUY",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "4ZDaRRXUmBgjyJBuptbcbhPiYPzfaPcGgxqQtyjeWY6nzSZGzjQEM3wuZprAE4SxLcWQN9cguiKt9Njyax33f6k2"
+  },
+  {
+   "time": 1794874942,
+   "price": 0.004538563363117314,
+   "tok": 109.699828815,
+   "xnt": 0.497879624,
+   "side": "BUY",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "2575msNNqxo1wsNatgFpriT1zwqmNhJxtmpQXEnXx894gWJP8ys8JjvpVoeH78pZ6xXsfsZrFqvjvpaqcnsQthEM"
+  },
+  {
+   "time": 1794875740,
+   "price": 0.004545678782775383,
+   "tok": 65.890519835,
+   "xnt": 0.299517138,
+   "side": "BUY",
+   "maker": "3n7NQgbVUfxyzwGJosuv68RHAPa8FE6dWn6c6NzKWC7F",
+   "sig": "4mcDS34UAb7AeMV5hK1CSw5zfrsmXBoeVQMzV9ir36eSjAB4hPeFHsBx3FpEuG5HmNCs4KtcZp9vE6u5gshbhNfU"
+  },
+  {
+   "time": 1794876821,
+   "price": 0.004557011169675589,
+   "tok": 213.008321871,
+   "xnt": 0.970681302,
+   "side": "BUY",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "4SvzwZP3i62iKnYAVvrRPz4DYkFnDTvxYtuziSGtrBAcGw58ZjiZvfodzjxHJEMpAquhawfDYiEa7ntoW6BQzdCe"
+  },
+  {
+   "time": 1794876821,
+   "price": 0.004535688198975158,
+   "tok": 110.873632829,
+   "xnt": 0.502888228,
+   "side": "SELL",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "5zBmyFdSPYcJq8arbPrYWa7RzYW47GMkTRNZS2AcLaS7aquqHxt7vKb4gRmKBkgdSVAKbd9yuLvbrinU4e4SYgRT"
+  },
+  {
+   "time": 1794878324,
+   "price": 0.004528462829269745,
+   "tok": 67.990582811,
+   "xnt": 0.307892827,
+   "side": "SELL",
+   "maker": "6cPHtBUqQrCBYyjhpbzBdq3jnDsxQ712mXV1PzUMmHwQ",
+   "sig": "3P6RZd84CN7nKx45mhiD6Z5p7PduaiKVpH1FCUqiCwPsASnYTBgkSXnsY487YVtmfwvLptf8ewLCRxULJFXkVht8"
+  },
+  {
+   "time": 1794888527,
+   "price": 0.004555598611460489,
+   "tok": 108.990478167,
+   "xnt": 0.496516871,
+   "side": "BUY",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "22btMJB2ZsSpVNmBW7r9V9Lqni7HPiqiWoRH9VrNNKG9CU4PJ1EsaDtw1NBQfFW41rmfpqCMhgQwN8hxPobjJkXZ"
+  },
+  {
+   "time": 1794888565,
+   "price": 0.004563905870597528,
+   "tok": 94.847219525,
+   "xnt": 0.432873782,
+   "side": "BUY",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "5Yq6LwKusDKfdC8VsEWRnPivKg3fbFqHLjyRosRBoprZ1fpMLL7BVQE3ieaL5pSmhp2n1ybkANvNPRE5MEMdx2Uk"
+  },
+  {
+   "time": 1794891079,
+   "price": 0.004539838076903898,
+   "tok": 59.323027482,
+   "xnt": 0.269316939,
+   "side": "SELL",
+   "maker": "6cPHtBUqQrCBYyjhpbzBdq3jnDsxQ712mXV1PzUMmHwQ",
+   "sig": "4y4Vefk77sG8sgvbbf4HueJaQbLUf7UL85wEtVEWVcw2LmqsnAi5UKq9EmFKmMuoadHaLiskteL7yxSrq1ZPrkz8"
+  }
+ ]
+}

@@ -1,4 +1,4 @@
-import { X1_RPC, RPC_CONCURRENCY, BATCH_SIZE } from './config.js';
+import { X1_RPC, X1_RPC_FALLBACKS, RPC_CONCURRENCY, BATCH_SIZE } from './config.js';
 
 const sleep = (ms, signal) => new Promise((res, rej) => {
   const t = setTimeout(res, ms);
@@ -7,7 +7,7 @@ const sleep = (ms, signal) => new Promise((res, rej) => {
 
 /** POST JSON with timeout, retry+exponential backoff (network/429/5xx), cancellation. */
 /** @param {any} body @param {any} [opts] */
-export async function rpcPost(body, { signal, retries = 3, timeoutMs = 12000, url = X1_RPC, fetchImpl = fetch } = /** @type {any} */ ({})) {
+async function postOne(body, { signal, retries = 3, timeoutMs = 12000, url = X1_RPC, fetchImpl = fetch } = /** @type {any} */ ({})) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -28,6 +28,19 @@ export async function rpcPost(body, { signal, retries = 3, timeoutMs = 12000, ur
     } finally {
       clearTimeout(timer); signal?.removeEventListener('abort', onAbort);
     }
+  }
+  throw lastErr;
+}
+
+/** @param {string} method @param {any[]} params @param {any} [opts] */
+/** Ordered failover across the primary RPC and fallbacks (unless a specific url is requested). */
+export async function rpcPost(body, opts = {}) {
+  if (opts.url) return postOne(body, opts);
+  const urls = [X1_RPC, ...X1_RPC_FALLBACKS];
+  let lastErr;
+  for (let i = 0; i < urls.length; i++) {
+    try { return await postOne(body, { ...opts, url: urls[i], retries: i === urls.length - 1 ? (opts.retries ?? 3) : Math.min(opts.retries ?? 3, 1) }); }
+    catch (e) { if (e.name === 'AbortError') throw e; lastErr = e; }
   }
   throw lastErr;
 }

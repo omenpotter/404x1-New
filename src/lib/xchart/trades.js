@@ -1,56 +1,38 @@
-import { TOKEN_MINT, WXNT_MINT, POOL_ADDRESS, NATIVE_DECIMALS } from './config.js';
+import { NATIVE_DECIMALS } from './config.js';
 
 const toBig = (v) => { try { return BigInt(v ?? '0'); } catch { return 0n; } };
-const scale = (raw, dec) => Number(raw) / 10 ** dec; // raw is small enough after delta
-
-function keyOf(k) { return typeof k === 'string' ? k : k?.pubkey; }
+const keyOf = (k) => (typeof k === 'string' ? k : k?.pubkey);
 
 /**
- * Parse one confirmed transaction (jsonParsed) into a 404/XNT swap, judged from the
- * POOL's perspective: the pool's 404 vault and quote-side balance must move in
- * opposite directions. Returns null for anything that is not a genuine swap
- * (failed tx, liquidity add/remove, transfers, unrelated txs).
- * Price = XNT per 1 404. BUY = trader received 404 (pool 404 decreased).
+ * Parse one confirmed transaction (jsonParsed) into a 404/XNT swap for ONE specific pool, judged from
+ * the pool's own two vault token accounts (looked up by ADDRESS in the transaction's account keys;
+ * the vault authority is shared by many pools so it cannot be used to identify this pool).
+ * Rejects failed txs, liquidity add/remove (vault deltas in the same direction), and transactions
+ * that do not move both vaults. Price = XNT per 1 404 (execution price incl. pool fee).
+ * BUY = trader received 404 (token vault decreased). Multi-hop routes through the pool are fine.
+ * @param {any} tx @param {string} signature
+ * @param {{tokenVault:string, quoteVault:string, tokenDecimals:number, quoteDecimals:number}} pool
  */
-export function parseSwap(tx, signature = '', cfg = {}) {
-  const token = cfg.token ?? TOKEN_MINT, wxnt = cfg.wxnt ?? WXNT_MINT, pool = cfg.pool ?? POOL_ADDRESS;
-  if (!tx || !tx.meta || tx.meta.err) return null;
-  if (!tx.blockTime) return null;
-  const pre = tx.meta.preTokenBalances || [], post = tx.meta.postTokenBalances || [];
-
-  let tokDelta = 0n, tokDec = null, quoteDelta = 0n, quoteDec = NATIVE_DECIMALS, sawQuoteToken = false;
-  const idxs = new Set([...pre, ...post].filter(b => b.owner === pool).map(b => b.accountIndex));
-  for (const i of idxs) {
-    const a = pre.find(b => b.accountIndex === i), b = post.find(x => x.accountIndex === i);
-    const mint = (b || a).mint;
-    const d = toBig(b?.uiTokenAmount?.amount) - toBig(a?.uiTokenAmount?.amount);
-    const dec = (b || a).uiTokenAmount?.decimals;
-    if (mint === token) { tokDelta += d; tokDec = dec; }
-    else if (mint === wxnt) { quoteDelta += d; quoteDec = dec ?? NATIVE_DECIMALS; sawQuoteToken = true; }
-  }
-  if (tokDec == null) return null; // pool vault for the token not touched -> not our pool
-
-  // Native XNT held directly by the pool account (only if no wrapped vault moved).
-  if (!sawQuoteToken || quoteDelta === 0n) {
-    const keys = (tx.transaction?.message?.accountKeys || []).map(keyOf);
-    const i = keys.indexOf(pool);
-    if (i >= 0 && tx.meta.preBalances && tx.meta.postBalances) {
-      quoteDelta = BigInt(tx.meta.postBalances[i]) - BigInt(tx.meta.preBalances[i]);
-      quoteDec = NATIVE_DECIMALS;
-    }
-  }
-  if (tokDelta === 0n || quoteDelta === 0n) return null;
-  if ((tokDelta > 0n) === (quoteDelta > 0n)) return null; // same direction => liquidity/transfer, not a swap
-
-  const tok = Math.abs(scale(tokDelta, tokDec)), xnt = Math.abs(scale(quoteDelta, quoteDec));
+export function parseSwap(tx, signature, pool) {
+  if (!tx?.meta || tx.meta.err || !tx.blockTime || !pool) return null;
+  const keys = (tx.transaction?.message?.accountKeys || []).map(keyOf);
+  const iTok = keys.indexOf(pool.tokenVault), iQuote = keys.indexOf(pool.quoteVault);
+  if (iTok < 0 || iQuote < 0) return null;
+  const delta = (i) => {
+    const a = (tx.meta.preTokenBalances || []).find(b => b.accountIndex === i);
+    const b = (tx.meta.postTokenBalances || []).find(x => x.accountIndex === i);
+    if (!a || !b) return null;
+    return toBig(b.uiTokenAmount?.amount) - toBig(a.uiTokenAmount?.amount);
+  };
+  const dTok = delta(iTok), dQuote = delta(iQuote);
+  if (dTok === null || dQuote === null || dTok === 0n || dQuote === 0n) return null;
+  if ((dTok > 0n) === (dQuote > 0n)) return null; // same direction => liquidity change, not a swap
+  const abs = (x) => (x < 0n ? -x : x);
+  const tok = Number(abs(dTok)) / 10 ** (pool.tokenDecimals ?? 9);
+  const xnt = Number(abs(dQuote)) / 10 ** (pool.quoteDecimals ?? NATIVE_DECIMALS);
   const price = xnt / tok;
   if (!(price > 0) || !Number.isFinite(price)) return null;
-  const keys = tx.transaction?.message?.accountKeys || [];
-  return {
-    time: tx.blockTime, price, tok, xnt,
-    side: tokDelta < 0n ? 'BUY' : 'SELL',
-    maker: keyOf(keys[0]) || '', sig: signature,
-  };
+  return { time: tx.blockTime, price, tok, xnt, side: dTok < 0n ? 'BUY' : 'SELL', maker: keys[0] || '', sig: signature };
 }
 
 /** Dedupe by signature, sort ascending by time (stable on sig). */

@@ -14,14 +14,14 @@ const buy = {
     postTokenBalances: [b(1, T, P, 90e6, 6), b(2, W, P, 6e9, 9), b(3, T, 'trader', 10e6, 6), b(4, W, 'trader', 1e9, 9)],
     preBalances: [5_000_000_000, 0], postBalances: [4_999_000_000, 0],
   },
-  transaction: { message: { accountKeys: ['trader', P] } },
+  transaction: { message: { accountKeys: ['trader', 'TOKV', 'XNTV'] } },
 };
 describe('legacy parser defects (evidence)', () => {
   it('legacy parser inverts BUY/SELL: later trader wSOL account overwrites the pool vault delta', () => {
     expect(legacyParseTrade(buy, 'x').side).toBe('SELL'); // WRONG: trader bought 404
   });
   it('new parser reads the pool vaults and reports BUY with price 0.1', () => {
-    expect(parseSwap(buy, 'x')).toMatchObject({ side: 'BUY', price: 0.1, tok: 10, xnt: 1 });
+    expect(parseSwap(buy, 'x', { tokenVault: 'TOKV', quoteVault: 'XNTV', tokenDecimals: 6, quoteDecimals: 9 })).toMatchObject({ side: 'BUY', price: 0.1, tok: 10, xnt: 1 });
   });
   it('legacy parser records a plain 404 transfer as a trade using an unrelated lamport delta (fee)', () => {
     const transfer = { blockTime: 1, meta: { err: null,

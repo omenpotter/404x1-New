@@ -1,17 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
-import { getSessionToken } from '@/lib/auth';
 import PriceChart from '@/components/chart/PriceChart';
 import { useTrades } from '@/lib/xchart/useTrades';
-import { TOKEN_MINT as TOKEN_CA, WXNT_MINT as WXNT_ADDRESS, POOL_ADDRESS as PAIR_ADDRESS, X1_RPC } from '@/lib/xchart/config';
-
-async function xdex(endpoint) {
-  const res = await base44.functions.invoke('xdexProxy', { endpoint, session_token: getSessionToken() });
-  return res.data;
-}
-
-const TOTAL_SUPPLY = 404404;
+import { TOKEN_MINT as TOKEN_CA } from '@/lib/xchart/config';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
@@ -19,65 +10,16 @@ function getUser() {
 function saveUser(u) { localStorage.setItem('404x1_user', JSON.stringify(u)); }
 function clearUser() { localStorage.removeItem('404x1_user'); }
 
-async function rpc(method, params) {
-  const res = await fetch(X1_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
-  });
-  const d = await res.json();
-  return d.result;
-}
-
-// Derive spot price from AMM pool reserves: XNT_reserve / 404_reserve
-// This matches what xdex.xyz and x1.ninja display for the pair.
-async function fetchPriceFromPool() {
-  try {
-    const [r1, r2, solBal] = await Promise.all([
-      rpc('getTokenAccountsByOwner', [PAIR_ADDRESS,
-        { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
-        { encoding: 'jsonParsed' }
-      ]).catch(() => null),
-      rpc('getTokenAccountsByOwner', [PAIR_ADDRESS,
-        { programId: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' },
-        { encoding: 'jsonParsed' }
-      ]).catch(() => null),
-      rpc('getBalance', [PAIR_ADDRESS]).catch(() => null),
-    ]);
-    const accounts = [...(r1?.value || []), ...(r2?.value || [])];
-    let wxntAmt = 0, tokAmt = 0;
-    for (const a of accounts) {
-      const info = a.account?.data?.parsed?.info;
-      if (!info) continue;
-      const ui = info.tokenAmount?.uiAmount || 0;
-      if (info.mint === WXNT_ADDRESS) wxntAmt = ui;
-      if (info.mint === TOKEN_CA) tokAmt = ui;
-    }
-    // Pool may hold native XNT rather than wrapped WXNT token
-    if (wxntAmt === 0 && solBal > 0) wxntAmt = solBal / 1e9;
-    if (wxntAmt > 0 && tokAmt > 0) return wxntAmt / tokAmt;
-  } catch {}
-  return 0;
-}
-
 export default function Home() {
   const [user, setUser] = useState(getUser());
-  const [price, setPrice] = useState('Loading...');
-  const [holders, setHolders] = useState('Loading...');
-  const [marketCap, setMarketCap] = useState('Loading...');
-  const [chartPrice, setChartPrice] = useState('—');
-  const [chartChange, setChartChange] = useState('');
   const [ohlcv, setOhlcv] = useState(null);
   const [currentTF, setCurrentTF] = useState(60);
   const [showVol, setShowVol] = useState(false);
-  const [transactions, setTransactions] = useState([]);
-  const [holderList, setHolderList] = useState([]);
   const [feedTab, setFeedTab] = useState('transactions');
   const [copyDone, setCopyDone] = useState(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const currentPriceRef = useRef(0);
 
 
 
@@ -107,131 +49,27 @@ export default function Home() {
     } catch {}
   }, []);
 
-  function findOutputAmount(obj, depth = 0) {
-    if (depth > 4 || obj == null) return null;
-    if (typeof obj === 'number' && obj >= 10 && obj <= 999999) return obj;
-    if (typeof obj === 'string') { const n = parseFloat(obj); if (!isNaN(n) && n >= 10 && n <= 999999) return n; }
-    if (typeof obj !== 'object') return null;
-    const priority = ['estimatedOutputAmount', 'output_amount', 'outputAmount', 'estimated_output_amount', 'result', 'amount', 'out'];
-    for (const k of priority) { if (obj[k] != null) { const v = findOutputAmount(obj[k], depth + 1); if (v != null) return v; } }
-    for (const k of Object.keys(obj)) { if (priority.includes(k)) continue; const v = findOutputAmount(obj[k], depth + 1); if (v != null) return v; }
-    return null;
-  }
+  const { trades, status: tradeStatus, error: tradeError, updatedAt, retry: retryTrades, pool, poolError, supply, holders: holderData, holdersError } = useTrades();
 
-  const applyPrice = (p) => {
-    if (!p || p <= 0) return;
-    currentPriceRef.current = p;
-    setPrice(p.toFixed(6) + ' XNT');
-    setChartPrice(p.toFixed(6));
-    const cap = p * TOTAL_SUPPLY;
-    if (cap >= 1_000_000) setMarketCap((cap / 1_000_000).toFixed(2) + 'M XNT');
-    else if (cap >= 1000) setMarketCap((cap / 1000).toFixed(2) + 'K XNT');
-    else setMarketCap(cap.toFixed(2) + ' XNT');
-  };
-
-  const fetchPrice = async () => {
-    // 1. Bulk USD prices → divide to get XNT-denominated price
-    //    USD_404 / USD_XNT = how many XNT per 1 token (correct conversion)
-    try {
-      const resp = await xdex(`/api/token-price/prices?network=X1%20Mainnet&token_addresses=${TOKEN_CA},${WXNT_ADDRESS}`);
-      const prices = resp?.data || resp || {};
-
-      const extractPrice = (entry) => parseFloat(entry?.price ?? entry ?? 0);
-      const extractChange = (entry) => entry?.change_24h ?? null;
-
-      let usd404 = 0, usdXNT = 0, ch = null;
-      if (prices[TOKEN_CA] !== undefined) {
-        usd404 = extractPrice(prices[TOKEN_CA]);
-        ch = extractChange(prices[TOKEN_CA]);
-        usdXNT = extractPrice(prices[WXNT_ADDRESS]);
-      } else if (Array.isArray(prices)) {
-        const tok = prices.find(x => x.address === TOKEN_CA || x.mint === TOKEN_CA);
-        const xnt = prices.find(x => x.address === WXNT_ADDRESS || x.mint === WXNT_ADDRESS);
-        usd404 = extractPrice(tok);
-        usdXNT = extractPrice(xnt);
-        ch = tok?.change_24h ?? null;
-      }
-
-      if (usd404 > 0 && usdXNT > 0) {
-        applyPrice(usd404 / usdXNT);
-        if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
-        return;
-      }
-    } catch {}
-
-    // 2. Single token price endpoint (may return XNT price directly)
-    try {
-      const d1 = await xdex(`/api/token-price/price?network=X1%20Mainnet&address=${TOKEN_CA}`);
-      const p1 = parseFloat(d1?.data?.price ?? d1?.price ?? 0);
-      if (p1 > 0) {
-        applyPrice(p1);
-        const ch = d1?.data?.change_24h ?? d1?.change_24h;
-        if (ch != null) setChartChange((ch >= 0 ? '+' : '') + parseFloat(ch).toFixed(2) + '%');
-        return;
-      }
-    } catch {}
-
-    // 3. Pool reserves spot price fallback
-    const poolP = await fetchPriceFromPool();
-    if (poolP > 0) { applyPrice(poolP); return; }
-
-    // 4. Swap quote last resort
-    try {
-      const d2 = await xdex(`/api/xendex/swap/quote?network=X1%20Mainnet&token_in=${WXNT_ADDRESS}&token_out=${TOKEN_CA}&token_in_amount=1`);
-      const out2 = findOutputAmount(d2);
-      if (out2 && out2 > 0) applyPrice(1 / out2);
-    } catch (e) {
-      console.warn('Price fetch failed:', e.message);
-    }
-  };
-
-  const { trades, status: tradeStatus, error: tradeError, updatedAt, retry: retryTrades } = useTrades();
-
-  useEffect(() => {
-    if (trades.length) {
-      applyPrice(trades[trades.length - 1].price);
-      setTransactions([...trades].reverse().slice(0, 20));
-    }
-  }, [trades]);
-
-  const fetchHolders = async () => {
-    try {
-      const LEGACY = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-      const T2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
-      const [legacyRes, t2022Res] = await Promise.all([
-        rpc('getProgramAccounts', [LEGACY, {
-          encoding: 'jsonParsed',
-          filters: [{ dataSize: 165 }, { memcmp: { offset: 0, bytes: TOKEN_CA } }]
-        }]).catch(() => []),
-        rpc('getProgramAccounts', [T2022, {
-          encoding: 'jsonParsed',
-          filters: [{ memcmp: { offset: 0, bytes: TOKEN_CA } }]
-        }]).catch(() => []),
-      ]);
-      const combined = [...(legacyRes || []), ...(t2022Res || [])];
-      if (!combined.length) { setHolders('N/A'); return; }
-      const accts = combined
-        .map(a => ({
-          wallet: a.account?.data?.parsed?.info?.owner || a.pubkey,
-          tokenAccount: a.pubkey,
-          balance: a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0
-        }))
-        .filter(a => a.balance > 0)
-        .sort((a, b) => b.balance - a.balance);
-      setHolders(accts.length.toLocaleString());
-      setHolderList(accts.slice(0, 50));
-    } catch (e) {
-      console.warn('Holders fetch failed:', e.message);
-      setHolders('N/A');
-    }
-  };
-
-  useEffect(() => {
-    fetchPrice();
-    fetchHolders();
-    const priceInt = setInterval(fetchPrice, 30000);
-    return () => { clearInterval(priceInt); };
-  }, []);
+  // ---- Derived market data (all from verified on-chain state; nothing is guessed) ----
+  const spot = pool?.spot ?? null; // XNT per 1 404, from pool reserves net of accrued fees
+  const fmtXnt = (c) => (c >= 1_000_000 ? (c / 1_000_000).toFixed(2) + 'M XNT' : c >= 1000 ? (c / 1000).toFixed(2) + 'K XNT' : c.toFixed(2) + ' XNT');
+  const price = spot ? spot.toFixed(6) + ' XNT' : poolError ? 'N/A' : 'Loading...';
+  const chartPrice = spot ? spot.toFixed(6) : '—';
+  const marketCap = spot && supply ? fmtXnt(spot * supply) : poolError ? 'N/A' : 'Loading...';
+  const holders = holderData ? holderData.holders.length.toLocaleString() : holdersError ? 'N/A' : 'Loading...';
+  const holderList = React.useMemo(() => holderData
+    ? [...holderData.excluded.map(h => ({ ...h, label: 'AMM POOLS' })), ...holderData.holders].slice(0, 50) : [], [holderData]);
+  const transactions = React.useMemo(() => [...trades].reverse().slice(0, 20), [trades]);
+  // 24h change only when we really have a swap at least 24h old; otherwise show nothing.
+  const chartChange = React.useMemo(() => {
+    if (!spot || !trades.length) return '';
+    const cutoff = Math.floor(Date.now() / 1000) - 86400;
+    const ref = [...trades].reverse().find(t => t.time <= cutoff);
+    if (!ref) return '';
+    const ch = ((spot - ref.price) / ref.price) * 100;
+    return (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+  }, [spot, trades]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(TOKEN_CA).then(() => {
@@ -612,7 +450,7 @@ export default function Home() {
                     <div>Rank</div><div>Wallet</div><div>Balance</div><div>Share</div>
                   </div>
                   <div className="feed-list404">
-                    {holderList.length === 0 && <div className="loading-row404">Loading holder data from xDEX...</div>}
+                    {holderList.length === 0 && <div className="loading-row404">Loading holder data from X1 RPC...</div>}
                     {holderList.map((h, i) => (
                       <a
                         key={i}
@@ -628,7 +466,7 @@ export default function Home() {
                           {Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </span>
                         <span style={{ color: '#7dff7d' }}>
-                          {((h.balance / TOTAL_SUPPLY) * 100).toFixed(2)}%
+                          {supply ? ((h.balance / supply) * 100).toFixed(2) + '%' : ''}
                         </span>
                       </a>
                     ))}

@@ -10,7 +10,10 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:live": "node scripts/live-verify.mjs",
+    "test:e2e": "node tests/e2e/chart.e2e.cjs",
+    "test:e2e:live": "MODE=live node tests/e2e/chart.e2e.cjs"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.60",
