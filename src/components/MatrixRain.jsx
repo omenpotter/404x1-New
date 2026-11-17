@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { randomGlyph } from '@/lib/rainGlyphs';
 
-const GLYPHS = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ404X1';
 
 /**
  * Lightweight procedural Matrix code rain on one <canvas>.
@@ -35,7 +35,7 @@ export default function MatrixRain() {
       for (let i = 0; i < cols; i++) {
         const x = i * size * step, y = drops[i] * size;
         ctx.fillStyle = Math.random() > 0.97 ? '#c8ffe2' : '#00ff41';
-        ctx.fillText(GLYPHS[(Math.random() * GLYPHS.length) | 0], x, y);
+        ctx.fillText(randomGlyph(), x, y);
         if (y > h && Math.random() > 0.975) drops[i] = 0; else drops[i] += 0.55;
       }
     };

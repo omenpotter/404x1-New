@@ -35,7 +35,7 @@ export default function PriceChart({ trades, tf, showVol, onHover }) {
         onHoverRef.current?.({ o: d.open, h: d.high, l: d.low, c: d.close, v: c?.volume ?? 0, trades: c?.trades ?? 0 });
       } else onHoverRef.current?.(null);
     });
-    const ro = new ResizeObserver(() => chart.applyOptions({ width: el.current.clientWidth, height: el.current.clientHeight }));
+    const ro = new ResizeObserver(() => { const node = el.current; if (node) chart.applyOptions({ width: node.clientWidth, height: node.clientHeight }); }); // guard: may fire after unmount
     ro.observe(el.current);
     return () => { ro.disconnect(); chart.remove(); chartRef.current = candleRef.current = volRef.current = null; };
   }, []);
