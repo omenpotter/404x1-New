@@ -9,12 +9,19 @@ export function generateToken(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Tokens are stored hashed, so a database read cannot be replayed as a credential.
+export async function hashToken(token: string): Promise<string> {
+  const bytes = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Look up the Player owning sessionToken. Returns null if missing/expired/invalid.
 export async function getSessionPlayer(base44: any, sessionToken: string | undefined | null) {
   if (!sessionToken || typeof sessionToken !== 'string') return null;
   try {
     const players = await base44.asServiceRole.entities.Player.filter(
-      { session_token: sessionToken },
+      { session_token: await hashToken(sessionToken) },
       null,
       1
     );
@@ -59,7 +66,7 @@ export async function issueSession(base44: any, playerId: string) {
   const token = generateToken();
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
   await base44.asServiceRole.entities.Player.update(playerId, {
-    session_token: token,
+    session_token: await hashToken(token),
     session_expires_at: expiresAt
   });
   return { token, expiresAt };
@@ -69,7 +76,9 @@ export async function issueSession(base44: any, playerId: string) {
 // Cron calls pass cron_secret matching CRON_SECRET (fallback TELEGRAM_BOT_TOKEN).
 // Admin calls pass a session_token owned by an admin/superuser player.
 export async function authorizeCronOrAdmin(base44: any, body: any) {
-  const cronSecret = Deno.env.get('CRON_SECRET') || Deno.env.get('TELEGRAM_BOT_TOKEN');
+  // A dedicated CRON_SECRET only: reusing the Telegram bot token here would make the
+  // messaging credential double as a backend authorisation key.
+  const cronSecret = Deno.env.get('CRON_SECRET');
   const providedSecret = body?.cron_secret;
   if (typeof providedSecret === 'string' && providedSecret && cronSecret && safeEqual(providedSecret, cronSecret)) {
     return { ok: true, mode: 'cron' as const, caller: null };
@@ -77,6 +86,12 @@ export async function authorizeCronOrAdmin(base44: any, body: any) {
   const caller = await getSessionPlayer(base44, body?.session_token);
   if (caller && ['admin', 'superuser'].includes(caller.user_role)) {
     return { ok: true, mode: 'admin' as const, caller };
+  }
+  // Platform-identity admins reach these runners from the dashboard and from the
+  // scheduled workflow runner, which supplies its own admin credential.
+  const platformUser = await base44.auth.me().catch(() => null);
+  if (platformUser?.role === 'admin') {
+    return { ok: true, mode: 'platform' as const, caller: null };
   }
   return { ok: false, mode: 'none' as const, caller: null };
 }

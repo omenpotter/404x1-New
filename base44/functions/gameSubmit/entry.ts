@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
 const MAX_SCORE = 50000;                     // hard cap — reject impossibly high scores
 const DAILY_GAME_RP_CAP = 500;                // max RP from games per day
@@ -7,7 +8,7 @@ const MAX_SCORE_PER_ELAPSED_SECOND = 200;     // ceiling derived from server-mea
 const DURATION_GRACE_SECONDS = 10;            // allowance for load/submit latency
 
 export default async function (req: Request): Promise<Response> {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+  const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response(null, { headers });
 
   try {

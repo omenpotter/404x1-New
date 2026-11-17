@@ -1,10 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
 const WEEKLY_CAP = 3000;
 
 Deno.serve(async (req) => {
-    const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response(null, { headers });
 
   try {

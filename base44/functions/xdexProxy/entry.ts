@@ -1,11 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { getSessionPlayer } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// Origin policy comes from the shared helper: only the app's own hosts are granted.
 
 // Strict validation: only allow relative paths on api.xdex.xyz.
 // Blocks @ (userinfo redirect), :// (other hosts), .. (path traversal),
@@ -19,7 +16,7 @@ function isValidEndpoint(endpoint: unknown): endpoint is string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(req) });
 
   try {
     const body = await req.json();
@@ -27,10 +24,10 @@ Deno.serve(async (req) => {
 
     const base44 = createClientFromRequest(req);
     const caller = await getSessionPlayer(base44, session_token);
-    if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
+    if (!caller) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(req) });
 
     if (!isValidEndpoint(endpoint)) {
-      return Response.json({ error: 'Invalid or disallowed endpoint' }, { status: 400, headers: CORS });
+      return Response.json({ error: 'Invalid or disallowed endpoint' }, { status: 400, headers: corsHeaders(req) });
     }
 
     const res = await fetch(`https://api.xdex.xyz${endpoint}`, {
@@ -41,8 +38,8 @@ Deno.serve(async (req) => {
     let data: unknown;
     try { data = await res.json(); } catch { data = { error: 'Upstream returned non-JSON' }; }
     // Pass the upstream status through so callers can tell failures from empty data.
-    return Response.json(data, { status: res.ok ? 200 : 502, headers: CORS });
+    return Response.json(data, { status: res.ok ? 200 : 502, headers: corsHeaders(req) });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500, headers: CORS });
+    return Response.json({ error: error.message }, { status: 500, headers: corsHeaders(req) });
   }
 });

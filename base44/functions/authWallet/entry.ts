@@ -3,6 +3,7 @@ import nacl from 'npm:tweetnacl@1.0.3';
 import bs58 from 'npm:bs58@4.0.1';
 import { ethers } from 'npm:ethers@6.13.4';
 import { issueSession } from '../../shared/session.ts';
+import { corsHeaders } from '../../shared/cors.ts';
 
 const RESERVED_USERNAMES = [
     'admin','mod','moderator','superuser','system','bot','staff',
@@ -44,12 +45,7 @@ function verifySignature(address: string, message: string, signature: string): b
 }
 
 Deno.serve(async (req) => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Type': 'application/json'
-    };
+    const headers = corsHeaders(req);
 
     if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
 
