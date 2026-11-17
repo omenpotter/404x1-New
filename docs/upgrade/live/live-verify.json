@@ -1,5 +1,5 @@
 {
- "at": "2026-11-17T07:14:28.731Z",
+ "at": "2026-11-17T14:39:49.029Z",
  "pool": {
   "pool": "DY9uWCwiue23mmq14G2YVYWyXHSYn8ZjSvYJ36CAvmq1",
   "program": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN",
@@ -10,10 +10,10 @@
   "quoteVault": "5t5EsuS5kuofpT68j9qHfLuwZRpECJPk1zqRGHeJp922",
   "tokenDecimals": 9,
   "quoteDecimals": 9,
-  "tokenReserve": 111958.797117665,
-  "quoteReserve": 509.43212998,
-  "spot": 0.0045501750920439385,
-  "spotGross": 0.0045339624940959255
+  "tokenReserve": 112049.679955395,
+  "quoteReserve": 509.019742462,
+  "spot": 0.004542804072841902,
+  "spotGross": 0.004526690043058058
  },
  "results": [
   {
@@ -49,7 +49,7 @@
   {
    "name": "on-chain spot (XNT/404) within 1% of XDEX USD(404)/USD(XNT)",
    "ok": true,
-   "detail": "onchain=0.00455018 xdex=0.00455018 (USD 0.000838961044106, XNT 0.184379947394451)"
+   "detail": "onchain=0.00454280 xdex=0.00454280 (USD 0.000856882154835, XNT 0.188624061503816)"
   },
   {
    "name": "supply read from mint; mint authority revoked",
@@ -69,7 +69,7 @@
   {
    "name": "syncTrades returned swaps with no failed fetches",
    "ok": true,
-   "detail": "70 swaps from 70 signatures in 546ms"
+   "detail": "71 swaps from 71 signatures in 1469ms"
   },
   {
    "name": "all swaps have finite positive price/amounts and BUY/SELL",
@@ -79,7 +79,7 @@
   {
    "name": "prices within 40% of spot at the same era (no unit errors)",
    "ok": true,
-   "detail": "last swap 0.004540 vs spot 0.004550"
+   "detail": "last swap 0.004534 vs spot 0.004543"
   },
   {
    "name": "token-vault balance chain is continuous across txs (parser sees every vault change)",
@@ -89,42 +89,42 @@
   {
    "name": "newest fetched tx post-balance equals live vault balance (vault state fully explained)",
    "ok": true,
-   "detail": "post=113322429474894 live=113322429474894"
+   "detail": "post=113413388718388 live=113413388718388"
   },
   {
    "name": "XDEX chart/history returns bars for from=404,to=WXNT",
    "ok": true,
-   "detail": "40 hourly bars; first t=1794758400"
+   "detail": "47 hourly bars; first t=1794758400"
   },
   {
    "name": "XDEX hourly close agrees (±5%) with last on-chain swap price in that hour",
    "ok": true,
-   "detail": "25/25 within 5%, worst 0.40%"
+   "detail": "26/26 within 5%, worst 0.40%"
   },
   {
    "name": "candles tf=1m aggregate all swaps",
    "ok": true,
-   "detail": "52 candles"
+   "detail": "53 candles"
   },
   {
    "name": "candles tf=5m aggregate all swaps",
    "ok": true,
-   "detail": "43 candles"
+   "detail": "44 candles"
   },
   {
    "name": "candles tf=15m aggregate all swaps",
    "ok": true,
-   "detail": "40 candles"
+   "detail": "41 candles"
   },
   {
    "name": "candles tf=60m aggregate all swaps",
    "ok": true,
-   "detail": "25 candles"
+   "detail": "26 candles"
   },
   {
    "name": "candles tf=240m aggregate all swaps",
    "ok": true,
-   "detail": "10 candles"
+   "detail": "11 candles"
   },
   {
    "name": "candles tf=1440m aggregate all swaps",
@@ -134,19 +134,10 @@
   {
    "name": "on-chain 24h XNT volume within 25% of XDEX token1_volume_24h",
    "ok": true,
-   "detail": "onchain=19.9856 xdex=19.985560316"
+   "detail": "onchain=12.9859 xdex=12.985882556"
   }
  ],
  "sample": [
-  {
-   "time": 1794874370,
-   "price": 0.004522307859587045,
-   "tok": 26.732767152,
-   "xnt": 0.120893803,
-   "side": "BUY",
-   "maker": "FzzcttznBaA8B5agA9ZK62atdnrbFDW9yG9DUydsoSsF",
-   "sig": "ZpRAcgr5nVAgECncXiHiDmX5BjdxHKDPfLiWA6Mr1xheZSpNBknJquL2EY9twqbceVEK8e2uDrSS1jqrPLmJQ7Z"
-  },
   {
    "time": 1794874371,
    "price": 0.0045297065222203005,
@@ -227,6 +218,15 @@
    "side": "SELL",
    "maker": "6cPHtBUqQrCBYyjhpbzBdq3jnDsxQ712mXV1PzUMmHwQ",
    "sig": "4y4Vefk77sG8sgvbbf4HueJaQbLUf7UL85wEtVEWVcw2LmqsnAi5UKq9EmFKmMuoadHaLiskteL7yxSrq1ZPrkz8"
+  },
+  {
+   "time": 1794906896,
+   "price": 0.004533761519544768,
+   "tok": 90.959243494,
+   "xnt": 0.412387518,
+   "side": "SELL",
+   "maker": "2MekoiKUgpbVywryEfVQ8k1FFvbSo5jSMCQXUwK6BMqu",
+   "sig": "25myQQ6nwephQfdNCN2MLn6NHhGfmHm59VzQoxHh5tLe3un8pwig94jAVMbFvHFfkfx6eND8LKymBFQJ5Vd2gbt3"
   }
  ]
 }

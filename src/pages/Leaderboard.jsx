@@ -41,7 +41,14 @@ export default function Leaderboard() {
         .lb-wrap { max-width: 900px; margin: 0 auto; }
         .lb-title { font-family: var(--font-display); color: #00ff88; font-size: 28px; text-align: center; margin-bottom: 8px; letter-spacing: 4px; text-shadow: 0 0 20px #00ff88; }
         .lb-sub { text-align: center; color: #82998b; font-size: 12px; margin-bottom: 24px; }
-        .lb-table { width: 100%; border-collapse: collapse; }
+        .lb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .lb-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+        @media (max-width: 560px) {
+          .lb-title { font-size: 20px; letter-spacing: 2px; }
+          .lb-thead th { padding: 8px 6px; }
+          .lb-row td { padding: 8px 6px; font-size: 12px; }
+          .rank-cell { font-size: 15px; min-width: 30px; }
+        }
         .lb-thead th { padding: 10px 12px; text-align: left; font-size: 11px; color: #82998b; border-bottom: 1px solid #1d2b22; font-family: var(--font-body); }
         .lb-row { border-bottom: 1px solid #080d0a; transition: background 0.15s; }
         .lb-row:hover { background: #080d0a; }
@@ -61,6 +68,7 @@ export default function Leaderboard() {
         {loading && <div className="loading-state">Loading leaderboard...</div>}
 
         {!loading && (
+          <div className="lb-scroll">
           <table className="lb-table">
             <thead>
               <tr className="lb-thead">
@@ -97,6 +105,7 @@ export default function Leaderboard() {
               )}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

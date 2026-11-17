@@ -17,16 +17,41 @@ export async function hashToken(token: string): Promise<string> {
 }
 
 // Look up the Player owning sessionToken. Returns null if missing/expired/invalid.
+//
+// Compatibility: sessions issued before tokens were hashed sit in the column as
+// plaintext. Those are still accepted once, then rewritten as a hash (lazy upgrade),
+// so nobody is logged out by the change and the plaintext column drains over one
+// session lifetime. Remove the second branch after 7 days of hashed-only issuance.
 export async function getSessionPlayer(base44: any, sessionToken: string | undefined | null) {
   if (!sessionToken || typeof sessionToken !== 'string') return null;
   try {
-    const players = await base44.asServiceRole.entities.Player.filter(
+    let player = null;
+
+    const hashed = await base44.asServiceRole.entities.Player.filter(
       { session_token: await hashToken(sessionToken) },
       null,
       1
     );
-    if (!players || players.length === 0) return null;
-    const player = players[0];
+    if (hashed && hashed.length > 0) player = hashed[0];
+
+    if (!player) {
+      const legacy = await base44.asServiceRole.entities.Player.filter(
+        { session_token: sessionToken },
+        null,
+        1
+      );
+      if (legacy && legacy.length > 0) {
+        player = legacy[0];
+        // Upgrade in place so the token stops existing in plaintext.
+        try {
+          await base44.asServiceRole.entities.Player.update(player.id, {
+            session_token: await hashToken(sessionToken)
+          });
+        } catch { /* upgrade is best effort; the session still validates */ }
+      }
+    }
+
+    if (!player) return null;
     if (player.session_expires_at && new Date(player.session_expires_at) < new Date()) {
       return null;
     }
