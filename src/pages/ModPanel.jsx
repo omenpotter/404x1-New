@@ -1,14 +1,15 @@
+import GateScreen from '@/components/GateScreen';
 import React, { useState, useEffect } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { getSessionToken } from '@/lib/auth';
 
-const ROLE_COLORS = { member: '#888', trusted: '#5fffff', moderator: '#ffaa00', admin: '#ff4444', superuser: '#aa44ff' };
+const ROLE_COLORS = { member: '#82998b', trusted: '#4fe3ff', moderator: '#ffb020', admin: '#ff4560', superuser: '#a974ff' };
 const ROLES = ['member', 'trusted', 'moderator', 'admin', 'superuser'];
 const ACTION_COLORS = {
-  mute: '#ff4444', unmute: '#7dff7d', spam_penalty: '#ffaa00', warning: '#ffaa00',
-  delete_message: '#ff4444', change_role: '#5fffff', award_rp: '#7dff7d',
-  permanent_ban: '#aa44ff', ban: '#aa44ff',
+  mute: '#ff4560', unmute: '#00ff88', spam_penalty: '#ffb020', warning: '#ffb020',
+  delete_message: '#ff4560', change_role: '#4fe3ff', award_rp: '#00ff88',
+  permanent_ban: '#a974ff', ban: '#a974ff',
 };
 
 function getUser() {
@@ -112,89 +113,73 @@ export default function ModPanel() {
   const handleChangeRole = () => callAPI('changeRole', { session_token: getSessionToken(), target_player_id: tid, new_role: newRole });
   const handleGrantRp    = () => callAPI('awardRp', { session_token: getSessionToken(), to_player_id: tid, amount: rpAmount, reason: rpReason });
 
-  if (!user) return (
-    <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
-      <div style={{ color: '#ff4444', fontFamily: "'Share Tech Mono',monospace", textAlign: 'center' }}>
-        <div style={{ fontSize: '16px', marginBottom: '12px' }}>⚠ LOGIN REQUIRED</div>
-        <a href={createPageUrl('Chat')} style={{ color: '#7dff7d', fontSize: '12px' }}>← Back</a>
-      </div>
-    </div>
-  );
+  if (!user) return <GateScreen title="Moderation panel" message="Sign in with a moderator account to continue." href={createPageUrl('Chat')} linkLabel="Back" />;
 
   const canAccess  = ['moderator', 'admin', 'superuser'].includes(user.user_role);
   const isSuperuser = user.user_role === 'superuser';
 
-  if (!canAccess) return (
-    <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
-      <div style={{ color: '#ff4444', fontFamily: "'Share Tech Mono',monospace", textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🚫</div>
-        <div style={{ fontSize: '16px', marginBottom: '8px' }}>ACCESS DENIED</div>
-        <div style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>Moderator role required</div>
-        <a href={createPageUrl('Chat')} style={{ color: '#7dff7d', fontSize: '12px' }}>← Back to Chat</a>
-      </div>
-    </div>
-  );
+  if (!canAccess) return <GateScreen tone="denied" title="Moderator role required" message="This area is limited to moderators and above." href={createPageUrl('Chat')} linkLabel="Back to Chat" />;
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 54px)', background: '#0a0a0a', padding: '20px', fontFamily: "'Share Tech Mono',monospace" }}>
+    <div style={{ minHeight: 'calc(100vh - var(--nav-h))', background: 'transparent', padding: '20px', fontFamily: "var(--font-body)" }}>
       <style>{`
         .mod-wrap { max-width: 900px; margin: 0 auto; }
-        .mod-title { font-family:'Rubik Mono One',monospace; color:#ff4444; font-size:22px; letter-spacing:3px; text-shadow:0 0 12px #ff4444; }
-        .mod-sub { color:#888; font-size:11px; margin-bottom:20px; margin-top:4px; }
+        .mod-title { font-family:var(--font-display); color:#ff4560; font-size:22px; letter-spacing:3px; text-shadow:0 0 12px #ff4560; }
+        .mod-sub { color:#82998b; font-size:11px; margin-bottom:20px; margin-top:4px; }
         .role-badge { display:inline-block; padding:3px 10px; border-radius:2px; font-size:11px; border:1px solid; margin-left:10px; vertical-align:middle; }
 
         /* Search */
         .search-wrap { position:relative; margin-bottom:16px; }
-        .search-input { width:100%; padding:12px 16px; background:#111; border:1px solid #2a2a2a; color:#e0e0e0; font-family:'Share Tech Mono',monospace; font-size:13px; outline:none; }
-        .search-input:focus { border-color:#ff4444; }
-        .search-results { position:absolute; top:100%; left:0; right:0; background:#111; border:1px solid #2a2a2a; border-top:none; z-index:100; max-height:260px; overflow-y:auto; }
-        .search-item { padding:10px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1a1a1a; font-size:12px; }
-        .search-item:hover { background:#1a1a1a; }
+        .search-input { width:100%; padding:12px 16px; background:#080d0a; border:1px solid #1d2b22; color:#e8fff1; font-family:var(--font-body); font-size:13px; outline:none; }
+        .search-input:focus { border-color:#ff4560; }
+        .search-results { position:absolute; top:100%; left:0; right:0; background:#080d0a; border:1px solid #1d2b22; border-top:none; z-index:100; max-height:260px; overflow-y:auto; }
+        .search-item { padding:10px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #0d1510; font-size:12px; }
+        .search-item:hover { background:#0d1510; }
         .search-item:last-child { border-bottom:none; }
         .status-chip { display:inline-block; padding:1px 6px; border-radius:2px; font-size:9px; border:1px solid; margin-left:6px; }
 
         /* Selected player */
-        .sel-player { background:#111; border:1px solid #ff4444; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
-        .sel-name { font-family:'Rubik Mono One',monospace; font-size:15px; }
-        .sel-meta { font-size:11px; color:#888; margin-top:3px; }
-        .empty-target { background:#111; border:1px dashed #2a2a2a; padding:14px; margin-bottom:20px; text-align:center; font-size:11px; color:#333; }
+        .sel-player { background:#080d0a; border:1px solid #ff4560; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+        .sel-name { font-family:var(--font-display); font-size:15px; }
+        .sel-meta { font-size:11px; color:#82998b; margin-top:3px; }
+        .empty-target { background:#080d0a; border:1px dashed #1d2b22; padding:14px; margin-bottom:20px; text-align:center; font-size:11px; color:#74897c; }
 
         /* Tabs */
-        .tabs { display:flex; flex-wrap:wrap; border:1px solid #2a2a2a; margin-bottom:20px; }
-        .tab-btn { padding:10px 14px; border:none; background:transparent; color:#888; cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:11px; transition:all 0.2s; }
-        .tab-btn.active { background:#1a1a1a; color:#ff4444; border-bottom:2px solid #ff4444; }
-        .tab-btn:hover:not(.active) { color:#e0e0e0; }
+        .tabs { display:flex; flex-wrap:wrap; border:1px solid #1d2b22; margin-bottom:20px; }
+        .tab-btn { padding:10px 14px; border:none; background:transparent; color:#82998b; cursor:pointer; font-family:var(--font-body); font-size:11px; transition:all 0.2s; }
+        .tab-btn.active { background:#0d1510; color:#ff4560; border-bottom:2px solid #ff4560; }
+        .tab-btn:hover:not(.active) { color:#e8fff1; }
         .tab-btn:disabled { opacity:0.3; cursor:not-allowed; }
 
         /* Panel */
-        .panel { background:#111; border:1px solid #2a2a2a; padding:22px; }
+        .panel { background:#080d0a; border:1px solid #1d2b22; padding:22px; }
         .field { margin-bottom:14px; }
-        .field-label { font-size:11px; color:#888; margin-bottom:5px; display:block; letter-spacing:0.5px; }
-        .field-input { width:100%; padding:10px 12px; background:#1a1a1a; border:1px solid #2a2a2a; color:#e0e0e0; font-family:'Share Tech Mono',monospace; font-size:13px; outline:none; }
-        .field-input:focus { border-color:#ff4444; }
+        .field-label { font-size:11px; color:#82998b; margin-bottom:5px; display:block; letter-spacing:0.5px; }
+        .field-input { width:100%; padding:10px 12px; background:#0d1510; border:1px solid #1d2b22; color:#e8fff1; font-family:var(--font-body); font-size:13px; outline:none; }
+        .field-input:focus { border-color:#ff4560; }
         .action-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
-        .mod-btn { padding:10px 18px; border:1px solid; background:transparent; cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:12px; transition:all 0.2s; }
-        .mod-btn.danger { border-color:#ff4444; color:#ff4444; }
-        .mod-btn.danger:hover { background:#ff4444; color:#fff; }
-        .mod-btn.warn { border-color:#ffaa00; color:#ffaa00; }
-        .mod-btn.warn:hover { background:#ffaa00; color:#0a0a0a; }
-        .mod-btn.safe { border-color:#7dff7d; color:#7dff7d; }
-        .mod-btn.safe:hover { background:#7dff7d; color:#0a0a0a; }
-        .mod-btn.info { border-color:#5fffff; color:#5fffff; }
-        .mod-btn.info:hover { background:#5fffff; color:#0a0a0a; }
+        .mod-btn { padding:10px 18px; border:1px solid; background:transparent; cursor:pointer; font-family:var(--font-body); font-size:12px; transition:all 0.2s; }
+        .mod-btn.danger { border-color:#ff4560; color:#ff4560; }
+        .mod-btn.danger:hover { background:#ff4560; color:#fff; }
+        .mod-btn.warn { border-color:#ffb020; color:#ffb020; }
+        .mod-btn.warn:hover { background:#ffb020; color:#030504; }
+        .mod-btn.safe { border-color:#00ff88; color:#00ff88; }
+        .mod-btn.safe:hover { background:#00ff88; color:#030504; }
+        .mod-btn.info { border-color:#4fe3ff; color:#4fe3ff; }
+        .mod-btn.info:hover { background:#4fe3ff; color:#030504; }
         .mod-btn:disabled { opacity:0.4; cursor:not-allowed; }
-        .result-box { margin-top:14px; padding:12px; border:1px solid #7dff7d; background:rgba(125,255,125,0.05); font-size:12px; color:#7dff7d; }
-        .error-box { margin-top:14px; padding:12px; border:1px solid #ff4444; background:rgba(255,68,68,0.05); font-size:12px; color:#ff4444; }
+        .result-box { margin-top:14px; padding:12px; border:1px solid #00ff88; background:rgba(0,255,136,0.05); font-size:12px; color:#00ff88; }
+        .error-box { margin-top:14px; padding:12px; border:1px solid #ff4560; background:rgba(255,69,96,0.05); font-size:12px; color:#ff4560; }
         .dur-grid { display:flex; gap:6px; flex-wrap:wrap; }
-        .dur-btn { padding:6px 12px; border:1px solid #2a2a2a; background:transparent; color:#888; cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:11px; }
-        .dur-btn.active { border-color:#ff4444; color:#ff4444; }
+        .dur-btn { padding:6px 12px; border:1px solid #1d2b22; background:transparent; color:#82998b; cursor:pointer; font-family:var(--font-body); font-size:11px; }
+        .dur-btn.active { border-color:#ff4560; color:#ff4560; }
         select.field-input { cursor:pointer; }
 
         /* Logs */
-        .log-row { padding:10px 0; border-bottom:1px solid #1a1a1a; }
+        .log-row { padding:10px 0; border-bottom:1px solid #0d1510; }
         .log-row:last-child { border-bottom:none; }
         .log-action { display:inline-block; padding:2px 8px; border-radius:2px; font-size:10px; border:1px solid; margin-right:8px; }
-        .warn-notice { padding:10px 14px; background:rgba(255,170,0,0.06); border:1px solid #ffaa0066; font-size:11px; color:#ffaa00; margin-bottom:14px; border-radius:2px; }
+        .warn-notice { padding:10px 14px; background:rgba(255,170,0,0.06); border:1px solid #ffaa0066; font-size:11px; color:#ffb020; margin-bottom:14px; border-radius:2px; }
       `}</style>
 
       <div className="mod-wrap">
@@ -215,7 +200,7 @@ export default function ModPanel() {
             onChange={e => setSearchQuery(e.target.value)}
           />
           {searching && (
-            <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#111', border:'1px solid #2a2a2a', borderTop:'none', padding:'10px 16px', fontSize:'11px', color:'#444' }}>
+            <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#080d0a', border:'1px solid #1d2b22', borderTop:'none', padding:'10px 16px', fontSize:'11px', color:'#74897c' }}>
               Searching...
             </div>
           )}
@@ -224,13 +209,13 @@ export default function ModPanel() {
               {searchResults.map(p => (
                 <div key={p.id} className="search-item" onClick={() => selectPlayer(p)}>
                   <div>
-                    <span style={{ color:ROLE_COLORS[p.user_role]||'#888', fontFamily:"'Rubik Mono One',monospace" }}>{p.username}</span>
-                    {p.is_muted && <span className="status-chip" style={{ color:'#ff4444', borderColor:'#ff4444' }}>MUTED</span>}
-                    {p.is_banned && <span className="status-chip" style={{ color:'#aa44ff', borderColor:'#aa44ff' }}>BANNED</span>}
+                    <span style={{ color:ROLE_COLORS[p.user_role]||'#82998b', fontFamily:"var(--font-display)" }}>{p.username}</span>
+                    {p.is_muted && <span className="status-chip" style={{ color:'#ff4560', borderColor:'#ff4560' }}>MUTED</span>}
+                    {p.is_banned && <span className="status-chip" style={{ color:'#a974ff', borderColor:'#a974ff' }}>BANNED</span>}
                   </div>
                   <div style={{ display:'flex', gap:'12px', alignItems:'center' }}>
-                    <span style={{ color:ROLE_COLORS[p.user_role]||'#888', fontSize:'10px' }}>{p.user_role?.toUpperCase()}</span>
-                    <span style={{ color:'#7dff7d', fontSize:'11px' }}>{(p.reputation_points||0).toLocaleString()} RP</span>
+                    <span style={{ color:ROLE_COLORS[p.user_role]||'#82998b', fontSize:'10px' }}>{p.user_role?.toUpperCase()}</span>
+                    <span style={{ color:'#00ff88', fontSize:'11px' }}>{(p.reputation_points||0).toLocaleString()} RP</span>
                   </div>
                 </div>
               ))}
@@ -242,14 +227,14 @@ export default function ModPanel() {
         {selectedPlayer ? (
           <div className="sel-player">
             <div>
-              <div className="sel-name" style={{ color:ROLE_COLORS[selectedPlayer.user_role]||'#888' }}>
+              <div className="sel-name" style={{ color:ROLE_COLORS[selectedPlayer.user_role]||'#82998b' }}>
                 {selectedPlayer.username}
-                {selectedPlayer.is_muted && <span className="status-chip" style={{ color:'#ff4444', borderColor:'#ff4444', marginLeft:'8px' }}>MUTED</span>}
-                {selectedPlayer.is_banned && <span className="status-chip" style={{ color:'#aa44ff', borderColor:'#aa44ff', marginLeft:'8px' }}>BANNED</span>}
+                {selectedPlayer.is_muted && <span className="status-chip" style={{ color:'#ff4560', borderColor:'#ff4560', marginLeft:'8px' }}>MUTED</span>}
+                {selectedPlayer.is_banned && <span className="status-chip" style={{ color:'#a974ff', borderColor:'#a974ff', marginLeft:'8px' }}>BANNED</span>}
               </div>
               <div className="sel-meta">
                 {selectedPlayer.user_role?.toUpperCase()} · {(selectedPlayer.reputation_points||0).toLocaleString()} RP
-                <span style={{ color:'#333', marginLeft:'12px', fontSize:'10px' }}>ID: {selectedPlayer.id}</span>
+                <span style={{ color:'#74897c', marginLeft:'12px', fontSize:'10px' }}>ID: {selectedPlayer.id}</span>
               </div>
             </div>
             <div style={{ display:'flex', gap:'8px' }}>
@@ -353,7 +338,7 @@ export default function ModPanel() {
                   {ROLES.map(r => <option key={r} value={r}>{r.toUpperCase()}</option>)}
                 </select>
               </div>
-              <div style={{ padding:'10px', background:'#1a1a1a', border:'1px solid #2a2a2a', fontSize:'11px', color:'#666', marginBottom:'14px' }}>
+              <div style={{ padding:'10px', background:'#0d1510', border:'1px solid #1d2b22', fontSize:'11px', color:'#74897c', marginBottom:'14px' }}>
                 Role hierarchy: member → trusted → moderator → admin → superuser · Only superusers can assign roles.
               </div>
               <div className="action-row">
@@ -387,7 +372,7 @@ export default function ModPanel() {
           {tab === 'logs' && (
             <>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
-                <span style={{ fontSize:'11px', color:'#888' }}>
+                <span style={{ fontSize:'11px', color:'#82998b' }}>
                   {selectedPlayer ? `Filtered: ${selectedPlayer.username}` : 'All recent moderation logs'}
                 </span>
                 <button className="mod-btn info" style={{ padding:'5px 12px', fontSize:'10px' }} onClick={fetchLogs} disabled={logsLoading}>
@@ -395,31 +380,31 @@ export default function ModPanel() {
                 </button>
               </div>
               {logsLoading ? (
-                <div style={{ textAlign:'center', color:'#444', fontSize:'12px', padding:'20px' }}>Loading logs...</div>
+                <div style={{ textAlign:'center', color:'#74897c', fontSize:'12px', padding:'20px' }}>Loading logs...</div>
               ) : logs.length > 0 ? logs.map((log, i) => {
-                const c = ACTION_COLORS[log.action_type] || '#888';
+                const c = ACTION_COLORS[log.action_type] || '#82998b';
                 return (
                   <div key={i} className="log-row">
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'6px' }}>
                       <div>
                         <span className="log-action" style={{ color:c, borderColor:c+'66' }}>{log.action_type?.toUpperCase()}</span>
-                        <span style={{ color:'#e0e0e0', fontSize:'12px' }}>
-                          <span style={{ color:ROLE_COLORS[log.moderator_role]||'#888' }}>{log.moderator_username}</span>
+                        <span style={{ color:'#e8fff1', fontSize:'12px' }}>
+                          <span style={{ color:ROLE_COLORS[log.moderator_role]||'#82998b' }}>{log.moderator_username}</span>
                           {' → '}
-                          <span style={{ color:'#5fffff' }}>{log.target_username}</span>
+                          <span style={{ color:'#4fe3ff' }}>{log.target_username}</span>
                         </span>
                       </div>
-                      <span style={{ color:'#333', fontSize:'10px' }}>
+                      <span style={{ color:'#74897c', fontSize:'10px' }}>
                         {log.created_date ? new Date(log.created_date).toLocaleString() : ''}
                       </span>
                     </div>
-                    {log.reason && <div style={{ color:'#888', fontSize:'11px', marginTop:'3px' }}>Reason: {log.reason}</div>}
-                    {log.duration_hours && <div style={{ color:'#888', fontSize:'11px', marginTop:'2px' }}>Duration: {log.duration_hours}h</div>}
-                    {log.rp_change && <div style={{ color:log.rp_change>0?'#7dff7d':'#ff4444', fontSize:'11px', marginTop:'2px' }}>RP: {log.rp_change>0?'+':''}{log.rp_change}</div>}
+                    {log.reason && <div style={{ color:'#82998b', fontSize:'11px', marginTop:'3px' }}>Reason: {log.reason}</div>}
+                    {log.duration_hours && <div style={{ color:'#82998b', fontSize:'11px', marginTop:'2px' }}>Duration: {log.duration_hours}h</div>}
+                    {log.rp_change && <div style={{ color:log.rp_change>0?'#00ff88':'#ff4560', fontSize:'11px', marginTop:'2px' }}>RP: {log.rp_change>0?'+':''}{log.rp_change}</div>}
                   </div>
                 );
               }) : (
-                <div style={{ textAlign:'center', color:'#444', fontSize:'12px', padding:'20px' }}>No logs found.</div>
+                <div style={{ textAlign:'center', color:'#74897c', fontSize:'12px', padding:'20px' }}>No logs found.</div>
               )}
             </>
           )}
@@ -427,7 +412,7 @@ export default function ModPanel() {
           {result && (
             <div className="result-box">
               ✓ {result.message || 'Action successful!'}
-              {result.action_taken && <div style={{ marginTop:'4px', color:'#5fffff' }}>{result.action_taken}</div>}
+              {result.action_taken && <div style={{ marginTop:'4px', color:'#4fe3ff' }}>{result.action_taken}</div>}
               {result.old_role && result.new_role && <div>Role: {result.old_role} → {result.new_role}</div>}
               {result.total_rp && <div>Total RP: {result.total_rp.toLocaleString()}</div>}
             </div>

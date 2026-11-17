@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import WalletModal from '@/components/WalletModal';
 import { getSessionToken } from '@/lib/auth';
+import BrandMark from '@/components/BrandMark';
+import MatrixRain from '@/components/MatrixRain';
+import { useNetworkStatus } from '@/lib/xchart/useNetworkStatus';
 
 const BASE_URL = 'https://code-quest-zone.base44.app/api/apps/6988b1920d2dc3e06784fc73/functions/';
 
@@ -20,6 +23,7 @@ export default function Layout({ children, currentPageName }) {
   const [rp, setRp] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const net = useNetworkStatus();
 
   const refreshRp = async (u) => {
     if (!u?.id) return;
@@ -89,169 +93,69 @@ export default function Layout({ children, currentPageName }) {
     ] : []),
   ];
 
+  const connect = () => { setMenuOpen(false); window.dispatchEvent(new CustomEvent('open_wallet_modal')); };
+
+  // close the drawer on page change / Escape
+  useEffect(() => { setMenuOpen(false); }, [currentPageName]);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--dark)', color: 'var(--text)', fontFamily: "'Share Tech Mono', monospace" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Share+Tech+Mono&display=swap');
-        :root {
-          --green: #7dff7d;
-          --cyan: #5fffff;
-          --dark: #0a0a0a;
-          --dark2: #111111;
-          --dark3: #1a1a1a;
-          --dark4: #222222;
-          --border: #2a2a2a;
-          --text: #e0e0e0;
-          --text-dim: #888888;
-          --red: #ff4444;
-          --orange: #ffaa00;
-          --purple: #aa44ff;
-        }
-        * { box-sizing: border-box; }
-        body { background: var(--dark) !important; }
-        body::before {
-          content: '';
-          position: fixed;
-          top:0;left:0;right:0;bottom:0;
-          background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
-          pointer-events:none;
-          z-index:9999;
-        }
-        ::-webkit-scrollbar{width:4px;height:4px}
-        ::-webkit-scrollbar-track{background:var(--dark2)}
-        ::-webkit-scrollbar-thumb{background:var(--green);border-radius:2px}
-        .nav-404 {
-          position: sticky; top: 0; z-index: 1000;
-          background: rgba(10,10,10,0.95);
-          border-bottom: 1px solid var(--border);
-          padding: 0 20px;
-          display: flex; align-items: center; justify-content: space-between;
-          height: 54px;
-          backdrop-filter: blur(10px);
-        }
-        .nav-logo {
-          font-family: 'Rubik Mono One', monospace;
-          font-size: 22px;
-          color: var(--green);
-          text-decoration: none;
-          letter-spacing: 2px;
-          text-shadow: 0 0 10px var(--green);
-        }
-        .nav-links { display: flex; gap: 4px; align-items: center; }
-        .nav-link {
-          padding: 6px 12px;
-          color: var(--text-dim);
-          text-decoration: none;
-          font-size: 12px;
-          border: 1px solid transparent;
-          transition: all 0.2s;
-          font-family: 'Share Tech Mono', monospace;
-          position: relative;
-        }
-        .nav-link:hover, .nav-link.active { color: var(--green); border-color: var(--border); }
-        .nav-link.active { color: var(--green); border-color: var(--green); }
-        .nav-link[data-page="ModPanel"] { color: var(--red) !important; }
-        .nav-link[data-page="ModPanel"]:hover, .nav-link[data-page="ModPanel"].active { border-color: var(--red) !important; }
-        .nav-right { display: flex; align-items: center; gap: 12px; }
-        .nav-user { font-size: 11px; color: var(--text-dim); }
-        .nav-rp { color: var(--green); font-size: 12px; }
-        .nav-btn {
-          padding: 5px 12px; border: 1px solid var(--green);
-          background: transparent; color: var(--green);
-          cursor: pointer; font-size: 11px; font-family: 'Share Tech Mono', monospace;
-          transition: all 0.2s;
-        }
-        .nav-btn:hover { background: var(--green); color: var(--dark); }
-        .dm-badge {
-          background: var(--green); color: var(--dark);
-          border-radius: 50%; width: 16px; height: 16px;
-          font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
-          position: absolute; top: 2px; right: 2px;
-        }
-        .hamburger { display: none; flex-direction: column; gap: 4px; cursor: pointer; background: none; border: none; }
-        .hamburger span { width: 20px; height: 2px; background: var(--green); display: block; }
-        .mobile-menu {
-          display: none; position: fixed; top: 54px; left: 0; right: 0;
-          background: rgba(10,10,10,0.98); border-bottom: 1px solid var(--border);
-          flex-direction: column; padding: 12px; z-index: 999;
-        }
-        .mobile-menu.open { display: flex; }
-        .mobile-nav-link {
-          padding: 12px 16px; color: var(--text-dim); text-decoration: none;
-          font-size: 14px; border-bottom: 1px solid var(--border);
-          font-family: 'Share Tech Mono', monospace;
-        }
-        .mobile-nav-link:hover, .mobile-nav-link.active { color: var(--green); }
-        @media(max-width:768px) {
-          .nav-links { display: none; }
-          .hamburger { display: flex; }
-          .nav-right .nav-user { display: none; }
-        }
-        @keyframes glitch {
-          0%{text-shadow:2px 0 #5fffff,-2px 0 #ff4444}
-          25%{text-shadow:-2px 0 #5fffff,2px 0 #ff4444}
-          50%{text-shadow:2px 2px #5fffff,-2px -2px #ff4444}
-          75%{text-shadow:0 0 0}
-          100%{text-shadow:2px 0 #5fffff,-2px 0 #ff4444}
-        }
-      `}</style>
+    <div className="ds-shell">
+      <a href="#main" className="skip-link">Skip to content</a>
+      <div className="ds-atmos" aria-hidden="true">
+        <div className="ds-vignette" /><div className="ds-grid" /><MatrixRain /><div className="ds-scan" />
+      </div>
 
-      {/* Navbar */}
-      <nav className="nav-404">
-        <Link to={createPageUrl('Home')} className="nav-logo">404x1</Link>
+      <header className="ds-nav">
+        <Link to={createPageUrl('Home')} className="ds-brand" aria-label="404X1 home">
+          <BrandMark />
+          <span className="ds-brand-word">404<b>X1</b></span>
+        </Link>
 
-        <div className="nav-links">
+        <nav className="ds-links" aria-label="Primary">
           {navLinks.map(l => (
-            <Link
-              key={l.page}
-              to={createPageUrl(l.page)}
-              className={`nav-link${currentPageName === l.page ? ' active' : ''}`}
-            >
+            <Link key={l.page} to={createPageUrl(l.page)} className={`ds-link${l.page.startsWith('Mod') ? ' is-mod' : ''}`} aria-current={currentPageName === l.page ? 'page' : undefined}>
               {l.label}
-              {l.page === 'Messages' && unread > 0 && (
-                <span className="dm-badge">{unread > 9 ? '9+' : unread}</span>
-              )}
+              {l.page === 'Messages' && unread > 0 && <span className="ds-badge-dot" aria-label={`${unread} unread`}>{unread > 9 ? '9+' : unread}</span>}
             </Link>
           ))}
-        </div>
+        </nav>
 
-        <div className="nav-right">
+        <div className="ds-nav-right">
+          <span className="ds-net" data-state={net.state} role="status" aria-live="polite" title={net.state === 'ok' ? 'X1 mainnet RPC reachable' : net.state === 'down' ? 'X1 RPC unreachable' : 'Checking X1 RPC'}>
+            <span className="dot" aria-hidden="true" />
+            <span className="label">{net.state === 'down' ? 'X1 RPC OFFLINE' : 'X1 MAINNET'}</span>
+            {net.state === 'ok' && net.slot != null && <span className="num">{net.slot.toLocaleString('en-US')}</span>}
+          </span>
           {user ? (
             <>
-              <span className="nav-user">{user.username || user.chat_username}</span>
-              <span className="nav-rp">{rp.toLocaleString()} RP</span>
-              <button className="nav-btn" onClick={logout}>LOGOUT</button>
+              <span className="ds-user"><span className="name">{user.username || user.chat_username}</span><span className="rp">{rp.toLocaleString()} RP</span></span>
+              <button className="ds-btn ghost desktop-only" onClick={logout}>Logout</button>
             </>
           ) : (
-            <button className="nav-btn" onClick={() => window.dispatchEvent(new CustomEvent('open_wallet_modal'))}>CONNECT</button>
+            <button className="ds-btn desktop-only" onClick={connect}>Connect</button>
           )}
-          <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
-            <span/><span/><span/>
-          </button>
+          <button className="ds-burger" aria-label="Menu" aria-expanded={menuOpen} aria-controls="ds-drawer" onClick={() => setMenuOpen(!menuOpen)}><span /><span /><span /></button>
         </div>
-      </nav>
+      </header>
 
-      {/* Mobile menu */}
-      <div className={`mobile-menu${menuOpen ? ' open' : ''}`}>
+      <div id="ds-drawer" className={`ds-drawer${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen}>
         {navLinks.map(l => (
-          <Link
-            key={l.page}
-            to={createPageUrl(l.page)}
-            className={`mobile-nav-link${currentPageName === l.page ? ' active' : ''}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            {l.label} {l.page === 'Messages' && unread > 0 ? `(${unread})` : ''}
+          <Link key={l.page} to={createPageUrl(l.page)} tabIndex={menuOpen ? 0 : -1} aria-current={currentPageName === l.page ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
+            <span>{l.label}</span>{l.page === 'Messages' && unread > 0 && <span className="ds-badge-dot">{unread}</span>}
           </Link>
         ))}
         {user ? (
-          <button className="mobile-nav-link" style={{background:'none',border:'none',textAlign:'left',cursor:'pointer',color:'var(--red)'}} onClick={logout}>LOGOUT</button>
+          <button className="row" tabIndex={menuOpen ? 0 : -1} style={{ color: 'var(--red)' }} onClick={() => { setMenuOpen(false); logout(); }}>LOGOUT <span className="num" style={{ color: 'var(--green)' }}>{rp.toLocaleString()} RP</span></button>
         ) : (
-          <button className="mobile-nav-link" style={{background:'none',border:'none',textAlign:'left',cursor:'pointer',color:'var(--green)'}} onClick={() => { setMenuOpen(false); window.dispatchEvent(new CustomEvent('open_wallet_modal')); }}>CONNECT WALLET</button>
+          <button className="row" tabIndex={menuOpen ? 0 : -1} style={{ color: 'var(--green)' }} onClick={connect}>CONNECT WALLET</button>
         )}
       </div>
 
-      {/* Page content */}
-      <main>{children}</main>
+      <main id="main" className="ds-main">{children}</main>
 
       {/* Global wallet modal — works on all pages */}
       <WalletModal />

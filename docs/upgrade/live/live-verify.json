@@ -1,5 +1,5 @@
 {
- "at": "2026-11-17T06:09:57.372Z",
+ "at": "2026-11-17T07:14:28.731Z",
  "pool": {
   "pool": "DY9uWCwiue23mmq14G2YVYWyXHSYn8ZjSvYJ36CAvmq1",
   "program": "sEsYH97wqmfnkzHedjNcw3zyJdPvUmsa9AixhS4b4fN",
@@ -49,7 +49,7 @@
   {
    "name": "on-chain spot (XNT/404) within 1% of XDEX USD(404)/USD(XNT)",
    "ok": true,
-   "detail": "onchain=0.00455018 xdex=0.00455018 (USD 0.000838242539721, XNT 0.184222040419351)"
+   "detail": "onchain=0.00455018 xdex=0.00455018 (USD 0.000838961044106, XNT 0.184379947394451)"
   },
   {
    "name": "supply read from mint; mint authority revoked",
@@ -69,7 +69,7 @@
   {
    "name": "syncTrades returned swaps with no failed fetches",
    "ok": true,
-   "detail": "70 swaps from 70 signatures in 727ms"
+   "detail": "70 swaps from 70 signatures in 546ms"
   },
   {
    "name": "all swaps have finite positive price/amounts and BUY/SELL",
@@ -94,7 +94,7 @@
   {
    "name": "XDEX chart/history returns bars for from=404,to=WXNT",
    "ok": true,
-   "detail": "39 hourly bars; first t=1794758400"
+   "detail": "40 hourly bars; first t=1794758400"
   },
   {
    "name": "XDEX hourly close agrees (±5%) with last on-chain swap price in that hour",
@@ -134,7 +134,7 @@
   {
    "name": "on-chain 24h XNT volume within 25% of XDEX token1_volume_24h",
    "ok": true,
-   "detail": "onchain=20.8420 xdex=20.842042537"
+   "detail": "onchain=19.9856 xdex=19.985560316"
   }
  ],
  "sample": [

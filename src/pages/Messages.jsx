@@ -1,3 +1,4 @@
+import GateScreen from '@/components/GateScreen';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -188,9 +189,9 @@ export default function Messages() {
     const deliveredTo = msg.delivered_to || [];
     const othersRead = readBy.filter(id => id !== user.id).length > 0;
     const othersDelivered = deliveredTo.filter(id => id !== user.id).length > 0;
-    if (othersRead) return <span style={{ color: '#7dff7d', fontSize: '11px' }}>✓✓</span>;
-    if (othersDelivered) return <span style={{ color: '#888', fontSize: '11px' }}>✓✓</span>;
-    return <span style={{ color: '#444', fontSize: '11px' }}>✓</span>;
+    if (othersRead) return <span style={{ color: '#00ff88', fontSize: '11px' }}>✓✓</span>;
+    if (othersDelivered) return <span style={{ color: '#82998b', fontSize: '11px' }}>✓✓</span>;
+    return <span style={{ color: '#74897c', fontSize: '11px' }}>✓</span>;
   };
 
   // Debounced player search
@@ -210,58 +211,50 @@ export default function Messages() {
   }, [newDMTarget]);
 
   if (!user) {
-    return (
-      <div style={{ minHeight: 'calc(100vh - 54px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
-        <div style={{ textAlign: 'center', fontFamily: "'Share Tech Mono', monospace" }}>
-          <div style={{ color: '#ff4444', fontSize: '16px', marginBottom: '12px' }}>⚠ LOGIN REQUIRED</div>
-          <div style={{ color: '#888', fontSize: '12px', marginBottom: '16px' }}>Please connect your wallet to access Messages</div>
-          <a href={createPageUrl('Home')} style={{ color: '#7dff7d', fontSize: '13px' }}>← Return to Home</a>
-        </div>
-      </div>
-    );
+    return <GateScreen title="Private messages" message="Please connect your wallet to access Messages." href={createPageUrl('Home')} linkLabel="Return to Home" />;
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 54px)', display: 'flex', background: '#0a0a0a', overflow: 'hidden' }}>
+    <div style={{ height: 'calc(100vh - var(--nav-h))', display: 'flex', background: 'transparent', overflow: 'hidden' }}>
       <style>{`
-        .dm-sidebar { width: 280px; border-right: 1px solid #2a2a2a; display: flex; flex-direction: column; background: #0d0d0d; flex-shrink: 0; }
-        .dm-sidebar-header { padding: 14px 16px; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; justify-content: space-between; }
-        .dm-sidebar-title { font-family: 'Rubik Mono One', monospace; color: #7dff7d; font-size: 14px; letter-spacing: 2px; }
-        .new-dm-btn { padding: 4px 10px; border: 1px solid #7dff7d; background: transparent; color: #7dff7d; cursor: pointer; font-size: 11px; font-family: 'Share Tech Mono', monospace; }
-        .new-dm-btn:hover { background: #7dff7d; color: #0a0a0a; }
+        .dm-sidebar { width: 280px; border-right: 1px solid #1d2b22; display: flex; flex-direction: column; background: #080d0a; flex-shrink: 0; }
+        .dm-sidebar-header { padding: 14px 16px; border-bottom: 1px solid #1d2b22; display: flex; align-items: center; justify-content: space-between; }
+        .dm-sidebar-title { font-family: var(--font-display); color: #00ff88; font-size: 14px; letter-spacing: 2px; }
+        .new-dm-btn { padding: 4px 10px; border: 1px solid #00ff88; background: transparent; color: #00ff88; cursor: pointer; font-size: 11px; font-family: var(--font-body); }
+        .new-dm-btn:hover { background: #00ff88; color: #030504; }
         .conv-list { flex: 1; overflow-y: auto; }
-        .conv-item { padding: 12px 16px; border-bottom: 1px solid #111; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
-        .conv-item:hover { background: #111; }
-        .conv-item.active { background: #1a1a1a; border-left: 2px solid #7dff7d; }
-        .conv-avatar { width: 36px; height: 36px; border-radius: 2px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; color: #7dff7d; font-size: 14px; font-weight: bold; flex-shrink: 0; border: 1px solid #2a2a2a; }
+        .conv-item { padding: 12px 16px; border-bottom: 1px solid #080d0a; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+        .conv-item:hover { background: #080d0a; }
+        .conv-item.active { background: #0d1510; border-left: 2px solid #00ff88; }
+        .conv-avatar { width: 36px; height: 36px; border-radius: 2px; display: flex; align-items: center; justify-content: center; background: #0d1510; color: #00ff88; font-size: 14px; font-weight: bold; flex-shrink: 0; border: 1px solid #1d2b22; }
         .conv-info { flex: 1; min-width: 0; }
-        .conv-name { font-size: 13px; color: #e0e0e0; margin-bottom: 2px; }
-        .conv-preview { font-size: 11px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conv-name { font-size: 13px; color: #e8fff1; margin-bottom: 2px; }
+        .conv-preview { font-size: 11px; color: #74897c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-        .conv-time { font-size: 10px; color: #444; }
-        .unread-badge { background: #7dff7d; color: #0a0a0a; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .conv-time { font-size: 10px; color: #74897c; }
+        .unread-badge { background: #00ff88; color: #030504; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         .dm-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .dm-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #444; font-size: 13px; font-family: 'Share Tech Mono', monospace; flex-direction: column; gap: 12px; }
-        .dm-header { padding: 12px 16px; border-bottom: 1px solid #2a2a2a; background: #111; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .dm-header-avatar { width: 32px; height: 32px; border-radius: 2px; background: #1a1a1a; border: 1px solid #2a2a2a; display: flex; align-items: center; justify-content: center; color: #7dff7d; font-size: 13px; }
+        .dm-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #74897c; font-size: 13px; font-family: var(--font-body); flex-direction: column; gap: 12px; }
+        .dm-header { padding: 12px 16px; border-bottom: 1px solid #1d2b22; background: #080d0a; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .dm-header-avatar { width: 32px; height: 32px; border-radius: 2px; background: #0d1510; border: 1px solid #1d2b22; display: flex; align-items: center; justify-content: center; color: #00ff88; font-size: 13px; }
         .dm-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
         .dm-msg { max-width: 70%; display: flex; flex-direction: column; gap: 2px; }
         .dm-msg.own { align-self: flex-end; align-items: flex-end; }
         .dm-msg.other { align-self: flex-start; align-items: flex-start; }
         .dm-bubble { padding: 8px 12px; font-size: 13px; line-height: 1.5; word-break: break-word; border-radius: 2px; }
-        .dm-msg.own .dm-bubble { background: #1a2a1a; border: 1px solid #2a3a2a; color: #e0e0e0; }
-        .dm-msg.other .dm-bubble { background: #1a1a1a; border: 1px solid #2a2a2a; color: #e0e0e0; }
-        .dm-msg-meta { font-size: 10px; color: #444; display: flex; align-items: center; gap: 4px; }
-        .dm-input-area { padding: 12px 16px; border-top: 1px solid #2a2a2a; background: #111; flex-shrink: 0; }
+        .dm-msg.own .dm-bubble { background: #16271d; border: 1px solid #1d2b22; color: #e8fff1; }
+        .dm-msg.other .dm-bubble { background: #0d1510; border: 1px solid #1d2b22; color: #e8fff1; }
+        .dm-msg-meta { font-size: 10px; color: #74897c; display: flex; align-items: center; gap: 4px; }
+        .dm-input-area { padding: 12px 16px; border-top: 1px solid #1d2b22; background: #080d0a; flex-shrink: 0; }
         .dm-input-row { display: flex; gap: 8px; }
-        .dm-input { flex: 1; padding: 10px 12px; background: #1a1a1a; border: 1px solid #2a2a2a; color: #e0e0e0; font-family: 'Share Tech Mono', monospace; font-size: 13px; outline: none; }
-        .dm-input:focus { border-color: #7dff7d; }
-        .dm-send-btn { padding: 10px 16px; border: 1px solid #7dff7d; background: transparent; color: #7dff7d; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 12px; transition: all 0.2s; }
-        .dm-send-btn:hover:not(:disabled) { background: #7dff7d; color: #0a0a0a; }
+        .dm-input { flex: 1; padding: 10px 12px; background: #0d1510; border: 1px solid #1d2b22; color: #e8fff1; font-family: var(--font-body); font-size: 13px; outline: none; }
+        .dm-input:focus { border-color: #00ff88; }
+        .dm-send-btn { padding: 10px 16px; border: 1px solid #00ff88; background: transparent; color: #00ff88; cursor: pointer; font-family: var(--font-body); font-size: 12px; transition: all 0.2s; }
+        .dm-send-btn:hover:not(:disabled) { background: #00ff88; color: #030504; }
         .dm-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .new-dm-form { padding: 12px 16px; border-bottom: 1px solid #2a2a2a; background: #111; }
-        .new-dm-input { width: 100%; padding: 8px 10px; background: #1a1a1a; border: 1px solid #2a2a2a; color: #e0e0e0; font-family: 'Share Tech Mono', monospace; font-size: 12px; outline: none; margin-bottom: 8px; }
-        .new-dm-input:focus { border-color: #7dff7d; }
+        .new-dm-form { padding: 12px 16px; border-bottom: 1px solid #1d2b22; background: #080d0a; }
+        .new-dm-input { width: 100%; padding: 8px 10px; background: #0d1510; border: 1px solid #1d2b22; color: #e8fff1; font-family: var(--font-body); font-size: 12px; outline: none; margin-bottom: 8px; }
+        .new-dm-input:focus { border-color: #00ff88; }
         @media(max-width: 600px) {
           .dm-sidebar { width: 100%; display: ${activeConv ? 'none' : 'flex'}; }
           .dm-main { display: ${activeConv ? 'flex' : 'none'}; }
@@ -277,7 +270,7 @@ export default function Messages() {
 
         {showNewDM && (
           <div className="new-dm-form">
-            <div style={{ fontSize: '10px', color: '#888', marginBottom: '6px' }}>SEARCH PLAYER BY USERNAME:</div>
+            <div style={{ fontSize: '10px', color: '#82998b', marginBottom: '6px' }}>SEARCH PLAYER BY USERNAME:</div>
             <input
               className="new-dm-input"
               placeholder="Type username..."
@@ -285,24 +278,24 @@ export default function Messages() {
               onChange={e => setNewDMTarget(e.target.value)}
               autoFocus
             />
-            {searching && <div style={{ fontSize:'10px', color:'#888', marginBottom:'6px' }}>Searching...</div>}
+            {searching && <div style={{ fontSize:'10px', color:'#82998b', marginBottom:'6px' }}>Searching...</div>}
             {searchResults.length > 0 && (
-              <div style={{ background:'#0d0d0d', border:'1px solid #2a2a2a', marginBottom:'8px', maxHeight:'160px', overflowY:'auto' }}>
+              <div style={{ background:'#080d0a', border:'1px solid #1d2b22', marginBottom:'8px', maxHeight:'160px', overflowY:'auto' }}>
                 {searchResults.map(p => (
                   <div key={p.id}
-                    style={{ padding:'8px 10px', cursor:'pointer', fontSize:'12px', color:'#e0e0e0', borderBottom:'1px solid #111', display:'flex', justifyContent:'space-between', alignItems:'center' }}
-                    onMouseOver={e => e.currentTarget.style.background='#1a1a1a'}
+                    style={{ padding:'8px 10px', cursor:'pointer', fontSize:'12px', color:'#e8fff1', borderBottom:'1px solid #080d0a', display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                    onMouseOver={e => e.currentTarget.style.background='#0d1510'}
                     onMouseOut={e => e.currentTarget.style.background='transparent'}
                     onClick={() => startNewDM(p.id)}
                   >
-                    <span style={{ color:'#7dff7d' }}>{p.username}</span>
-                    <span style={{ fontSize:'10px', color:'#444' }}>{p.user_role}</span>
+                    <span style={{ color:'#00ff88' }}>{p.username}</span>
+                    <span style={{ fontSize:'10px', color:'#74897c' }}>{p.user_role}</span>
                   </div>
                 ))}
               </div>
             )}
             <button onClick={() => { setShowNewDM(false); setSearchResults([]); setNewDMTarget(''); }}
-              style={{ background:'none', border:'1px solid #2a2a2a', color:'#888', cursor:'pointer', padding:'4px 10px', fontSize:'11px', fontFamily:"'Share Tech Mono',monospace", width:'100%' }}>
+              style={{ background:'none', border:'1px solid #1d2b22', color:'#82998b', cursor:'pointer', padding:'4px 10px', fontSize:'11px', fontFamily:"var(--font-body)", width:'100%' }}>
               CANCEL
             </button>
           </div>
@@ -310,7 +303,7 @@ export default function Messages() {
 
         <div className="conv-list">
           {convs.length === 0 && (
-            <div style={{ padding: '24px 16px', textAlign: 'center', color: '#444', fontSize: '11px' }}>
+            <div style={{ padding: '24px 16px', textAlign: 'center', color: '#74897c', fontSize: '11px' }}>
               No conversations yet.<br />Click + NEW to start one.
             </div>
           )}
@@ -333,7 +326,7 @@ export default function Messages() {
                 <button
                   onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }}
                   disabled={deletingConv === conv.id}
-                  style={{ background:'none', border:'none', color:'#444', cursor:'pointer', fontSize:'12px', padding:'2px 4px', lineHeight:1 }}
+                  style={{ background:'none', border:'none', color:'#74897c', cursor:'pointer', fontSize:'12px', padding:'2px 4px', lineHeight:1 }}
                   title="Delete conversation"
                 >
                   {deletingConv === conv.id ? '...' : '🗑'}
@@ -357,13 +350,13 @@ export default function Messages() {
             <div className="dm-header">
               <div className="dm-header-avatar">{(activeConv.other_username || '?')[0].toUpperCase()}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ color: '#e0e0e0', fontSize: '13px' }}>{activeConv.other_username || 'Unknown'}</div>
-                <div style={{ color: '#444', fontSize: '10px' }}>Direct Message</div>
+                <div style={{ color: '#e8fff1', fontSize: '13px' }}>{activeConv.other_username || 'Unknown'}</div>
+                <div style={{ color: '#74897c', fontSize: '10px' }}>Direct Message</div>
               </div>
               {activeConv.other_player_id && (
                 <a
                   href={`${createPageUrl('Profile')}?id=${activeConv.other_player_id}`}
-                  style={{ fontSize: '11px', color: '#7dff7d', border: '1px solid #2a4a2a', padding: '4px 10px', textDecoration: 'none', fontFamily: "'Share Tech Mono', monospace" }}
+                  style={{ fontSize: '11px', color: '#00ff88', border: '1px solid #234530', padding: '4px 10px', textDecoration: 'none', fontFamily: "var(--font-body)" }}
                 >
                   VIEW PROFILE
                 </a>
@@ -372,19 +365,19 @@ export default function Messages() {
 
             <div className="dm-messages">
               {loadingHistory && messages.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#444', fontSize: '12px', padding: '20px' }}>Loading...</div>
+                <div style={{ textAlign: 'center', color: '#74897c', fontSize: '12px', padding: '20px' }}>Loading...</div>
               )}
               {messages.map((msg, i) => {
                 const isOwn = msg.sender_id === user?.id;
                 return (
                   <div key={msg.id || i} className={`dm-msg${isOwn ? ' own' : ' other'}`}>
                     {!isOwn && (
-                      <div style={{ fontSize: '10px', color: '#7dff7d', marginBottom: '2px' }}>
+                      <div style={{ fontSize: '10px', color: '#00ff88', marginBottom: '2px' }}>
                         {msg.sender_username || 'Unknown'}
                       </div>
                     )}
                     <div className="dm-bubble">
-                      {msg.is_deleted ? <em style={{ color: '#444' }}>[deleted]</em> : (msg.content || '')}
+                      {msg.is_deleted ? <em style={{ color: '#74897c' }}>[deleted]</em> : (msg.content || '')}
                     </div>
                     <div className="dm-msg-meta">
                       <span>{formatTime(msg.created_at || msg.created_date)}</span>
@@ -410,7 +403,7 @@ export default function Messages() {
                   {sending ? '...' : 'SEND'}
                 </button>
               </div>
-              <div style={{ marginTop: '4px', fontSize: '10px', color: '#444', textAlign: 'right' }}>
+              <div style={{ marginTop: '4px', fontSize: '10px', color: '#74897c', textAlign: 'right' }}>
                 {input.length}/2000
               </div>
             </div>

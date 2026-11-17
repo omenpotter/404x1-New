@@ -64,32 +64,32 @@ async function routeRpc(page) {
     page.on('pageerror', e => errors.push(name + ': ' + e.message));
     mode = 'ok'; await routeRpc(page); await home(page);
     await page.waitForSelector('[data-testid="price-chart"] canvas', { timeout: 20000 });
-    await page.waitForFunction(() => /\d+\.\d{6} XNT/.test(document.body.innerText), null, { timeout: 40000 });
-    await page.waitForFunction(() => document.querySelectorAll('.txn-row404').length > 0, null, { timeout: 40000 });
+    await page.waitForFunction(() => /\d\.\d{6}/.test(document.querySelector('.hm-metric-value')?.innerText || ''), null, { timeout: 40000 });
+    await page.waitForFunction(() => document.querySelectorAll('a.hm-row.txn').length > 0, null, { timeout: 40000 });
     await page.waitForTimeout(2500);
     await page.screenshot({ path: `${OUT}home-${name}.png`, fullPage: false });
-    await page.locator('.chart-wrap404').screenshot({ path: `${OUT}chart-${name}.png` });
-    const stats = await page.locator('.stat-val404').allInnerTexts();
+    await page.locator('.hm-chart').screenshot({ path: `${OUT}chart-${name}.png` });
+    const stats = await page.locator('.hm-metric-value').allInnerTexts();
     console.log(name, 'stats', JSON.stringify(stats));
-    check(`${name}: price/holders/market-cap all resolved (none Loading)`, stats.length >= 3 && stats.every(t => !/loading/i.test(t)), stats.join(' | '));
+    check(`${name}: price/holders/market-cap all resolved (none Loading)`, stats.length >= 7 && stats.every(t => !/^0000\.00$/.test(t) && t !== 'N/A'), stats.join(' | '));
     check(`${name}: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
-    const rows = await page.locator('.txn-row404').count();
-    check(`${name}: transactions listed with BUY/SELL`, rows > 0 && (await page.locator('.txn-row404').first().innerText()).match(/BUY|SELL/) !== null, `${rows} rows; first: ${(await page.locator('.txn-row404').first().innerText()).replace(/\s+/g, ' ')}`);
+    const rows = await page.locator('a.hm-row.txn').count();
+    check(`${name}: transactions listed with BUY/SELL`, rows > 0 && (await page.locator('a.hm-row.txn').first().innerText()).match(/BUY|SELL/) !== null, `${rows} rows; first: ${(await page.locator('a.hm-row.txn').first().innerText()).replace(/\s+/g, ' ')}`);
     if (name === 'desktop') {
       if (MODE === 'live') {
         const spot = parseFloat(stats[0]); check('page spot price within 1% of XDEX', Math.abs(spot - xdexSpot) / xdexSpot < 0.01, `page=${spot} xdex=${xdexSpot}`);
-        const holders = parseInt(stats[1].replace(/,/g, ''), 10); check('holders is a plausible unique-wallet count (not 66 token-account count)', holders > 0 && holders !== 66, String(holders));
+        const holders = parseInt(stats[5].replace(/,/g, ''), 10); check('holders is a plausible unique-wallet count (not 66 token-account count)', holders > 0 && holders !== 66, String(holders));
         const mc = stats[2]; check('market cap = spot x supply (404,402.6)', (() => { const v = parseFloat(mc) * (mc.includes('K') ? 1e3 : mc.includes('M') ? 1e6 : 1); return Math.abs(v - spot * 404402.625) / v < 0.01; })(), mc);
       }
-      await page.click('.tf-btns404 >> text=Vol');
-      for (const tf of ['1m', '5m', '15m', '4h', '1d', '1h']) { await page.click(`.tf-btns404 >> text=${tf}`); await page.waitForTimeout(200); }
-      await page.screenshot({ path: `${OUT}chart-desktop-vol.png`, clip: await page.locator('.chart-wrap404').boundingBox() });
+      await page.click('.hm-vol');
+      for (const tf of ['1m', '5m', '15m', '4h', '1d', '1h']) { await page.click(`.hm-seg button:text-is("${tf}")`); await page.waitForTimeout(200); }
+      await page.screenshot({ path: `${OUT}chart-desktop-vol.png`, clip: await page.locator('.hm-chart').boundingBox() });
       check('all six timeframes + volume toggle: no crash', true);
-      await page.click('.feed-tab404 >> text=/holders/i'); await page.waitForSelector('.hld-row404', { timeout: 15000 });
-      check('holders tab lists wallets', (await page.locator('.hld-row404').count()) > 0 && (MODE === 'live' || stats[1] === '2'), `${await page.locator('.hld-row404').count()} rows`);
-      await page.locator('.feed-tab404').first().click();
-      const box = await page.locator('[data-testid="price-chart"]').boundingBox(); let hit = false;
-      for (let x = 0.1; x < 0.95 && !hit; x += 0.02) { await page.mouse.move(box.x + box.width * x, box.y + box.height * 0.5); await page.waitForTimeout(60); hit = (await page.locator('.ohlcv404').innerText()).includes('Volume'); }
+      await page.click('.hm-tabs button:text-is("Holders")'); await page.waitForSelector('a.hm-row.hld', { timeout: 15000 });
+      check('holders tab lists wallets', (await page.locator('a.hm-row.hld').count()) > 0 && (MODE === 'live' || stats[5] === '2'), `${await page.locator('a.hm-row.hld').count()} rows`);
+      await page.locator('.hm-tabs button').first().click();
+      await page.locator('[data-testid="price-chart"]').scrollIntoViewIfNeeded(); const box = await page.locator('[data-testid="price-chart"]').boundingBox(); let hit = false;
+      for (let x = 0.1; x < 0.95 && !hit; x += 0.02) { await page.mouse.move(box.x + box.width * x, box.y + box.height * 0.5); await page.waitForTimeout(60); hit = (await page.locator('.hm-ohlcv').innerText()).includes('Volume'); }
       check('crosshair shows OHLCV on hover', hit);
       await page.setViewportSize({ width: 700, height: 800 }); await page.waitForTimeout(300);
       check('resize keeps chart', await page.locator('[data-testid="price-chart"] canvas').count() > 0);
@@ -102,7 +102,7 @@ async function routeRpc(page) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } }); const page = await ctx.newPage();
     mode = m; await routeRpc(page); await home(page);
     const want = m === 'fail' ? 'Could not load chart data' : 'No 404/XNT swaps';
-    await page.waitForSelector(`text=${want}`, { timeout: 60000 }); await page.locator('.chart-wrap404').screenshot({ path: `${OUT}chart-${m}.png` });
+    await page.waitForSelector(`text=${want}`, { timeout: 60000 }); await page.locator('.hm-chart').screenshot({ path: `${OUT}chart-${m}.png` });
     check(`${m} state shown`, true);
     if (m === 'fail') { mode = 'ok'; await page.click('button:text-is("Retry")'); await page.waitForFunction(() => !document.body.innerText.includes('Could not load chart data'), null, { timeout: 30000 }); check('retry recovers', true); }
     await ctx.close();
