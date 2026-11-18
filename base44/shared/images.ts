@@ -57,17 +57,32 @@ export function isAllowedImageUrl(raw: unknown, appId?: string): boolean {
   return normalizeImageUrl(raw, appId) !== null;
 }
 
-// Size check for an already-validated URL. The host is this app's own storage by then,
-// so this cannot be pointed at an internal address. A failed check allows the image:
-// refusing on a network hiccup would break image messages rather than protect anything.
-export async function isOversizedImage(url: string): Promise<boolean> {
+// One HEAD inspection of an already-validated URL: size ceiling and media type together.
+// The host is this app's own storage by then, so this cannot be pointed at an internal
+// address. A failed check allows the image: refusing on a network hiccup would break image
+// messages rather than protect anything.
+//
+// The type check matters because the upload happens in a browser and the browser decides
+// what it stores: without asking the storage host what it actually serves, a message could
+// point at a non-image (or at an SVG, which is a document, not a picture).
+export async function inspectStoredImage(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, { method: 'HEAD' });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
+
     const bytes = Number(res.headers.get('content-length') || 0);
-    return Number.isFinite(bytes) && bytes > MAX_IMAGE_BYTES;
+    if (Number.isFinite(bytes) && bytes > MAX_IMAGE_BYTES) {
+      return 'Image is too large (max 5 MB)';
+    }
+
+    const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (type) {
+      if (!type.startsWith('image/')) return 'Only image files can be attached';
+      if (type === 'image/svg+xml') return 'SVG images are not accepted — use PNG, JPG, GIF or WEBP';
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 

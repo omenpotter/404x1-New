@@ -53,3 +53,46 @@ describe('image URL policy', () => {
     expect(MAX_IMAGE_SIZE_BYTES).toBe(5 * 1024 * 1024);
   });
 });
+
+describe('stored-image inspection (mocked storage response)', () => {
+  const withFetch = async (headers, run) => {
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => ({ ok: true, headers: { get: (k) => headers[k.toLowerCase()] ?? null } });
+    try { return await run(); } finally { globalThis.fetch = original; }
+  };
+
+  it('accepts a normal image under the size ceiling', async () => {
+    const { inspectStoredImage } = await import('../base44/shared/images.ts');
+    const problem = await withFetch({ 'content-length': '120000', 'content-type': 'image/png' }, () => inspectStoredImage(OWNED));
+    expect(problem).toBeNull();
+  });
+
+  it('rejects an oversized file', async () => {
+    const { inspectStoredImage } = await import('../base44/shared/images.ts');
+    const problem = await withFetch({ 'content-length': String(6 * 1024 * 1024), 'content-type': 'image/png' }, () => inspectStoredImage(OWNED));
+    expect(problem).toMatch(/too large/i);
+  });
+
+  it('rejects a stored file that is not an image', async () => {
+    const { inspectStoredImage } = await import('../base44/shared/images.ts');
+    const problem = await withFetch({ 'content-length': '1000', 'content-type': 'text/html' }, () => inspectStoredImage(OWNED));
+    expect(problem).toMatch(/only image files/i);
+  });
+
+  it('rejects SVG, which is a document rather than a picture', async () => {
+    const { inspectStoredImage } = await import('../base44/shared/images.ts');
+    const problem = await withFetch({ 'content-length': '1000', 'content-type': 'image/svg+xml' }, () => inspectStoredImage(OWNED));
+    expect(problem).toMatch(/svg/i);
+  });
+
+  it('allows the image when storage cannot be reached (no silent breakage)', async () => {
+    const { inspectStoredImage } = await import('../base44/shared/images.ts');
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => { throw new Error('network down'); };
+    try {
+      expect(await inspectStoredImage(OWNED)).toBeNull();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
-import { normalizeImageUrl, isOversizedImage } from '../../shared/images.ts';
+import { normalizeImageUrl, inspectStoredImage } from '../../shared/images.ts';
 import { participantsOf, withUnhiddenFor } from '../../shared/conversations.ts';
 
 Deno.serve(async (req) => {
@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
             if (!attachedImage) {
                 return Response.json({ error: 'External image links are not allowed — upload the image instead' }, { status: 400 });
             }
-            if (await isOversizedImage(attachedImage)) {
-                return Response.json({ error: 'Image is too large (max 5 MB)' }, { status: 400 });
+            const imageProblem = await inspectStoredImage(attachedImage);
+            if (imageProblem) {
+                return Response.json({ error: imageProblem }, { status: 400 });
             }
         }
         const messageType = attachedImage ? 'image' : 'text';

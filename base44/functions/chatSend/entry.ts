@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
-import { normalizeImageUrl, isOversizedImage } from '../../shared/images.ts';
+import { normalizeImageUrl, inspectStoredImage } from '../../shared/images.ts';
 
 const COOLDOWN_MS = 3000;
 const DAILY_MSG_RP_CAP = 200;
@@ -12,7 +12,8 @@ async function resolveMessageImage(raw: unknown): Promise<{ url: string | null; 
     if (raw === undefined || raw === null || raw === '') return { url: null };
     const url = normalizeImageUrl(raw);
     if (!url) return { url: null, error: 'External image links are not allowed — upload the image instead' };
-    if (await isOversizedImage(url)) return { url: null, error: 'Image is too large (max 5 MB)' };
+    const problem = await inspectStoredImage(url);
+    if (problem) return { url: null, error: problem };
     return { url };
 }
 
