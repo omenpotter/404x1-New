@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { getSessionToken } from '@/lib/auth';
+import { safeImageSrc } from '@/lib/images';
 
 const ROLE_COLORS = { member: '#82998b', trusted: '#4fe3ff', moderator: '#ffb020', admin: '#ff4560', superuser: '#a974ff' };
 const ROLE_ORDER = ['member', 'trusted', 'moderator', 'admin', 'superuser'];
@@ -466,8 +467,8 @@ export default function Profile() {
                   <div style={{ fontSize:'13px', color:'#e8fff1', lineHeight:1.5, wordBreak:'break-word' }}>
                     {m.message || m.content}
                   </div>
-                  {m.image_url && (
-                    <img src={m.image_url} alt="" style={{ maxWidth:'200px', maxHeight:'120px', marginTop:'6px', border:'1px solid #1d2b22' }} />
+                  {safeImageSrc(m.image_url) && (
+                    <img src={safeImageSrc(m.image_url)} alt="" style={{ maxWidth:'200px', maxHeight:'120px', marginTop:'6px', border:'1px solid #1d2b22' }} />
                   )}
                 </div>
               ))

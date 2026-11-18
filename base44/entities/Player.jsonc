@@ -12,6 +12,10 @@
       "description": "Unique username (3-16 characters)",
       "unique": true
     },
+    "username_key": {
+      "type": "string",
+      "description": "Lowercase form of username. Uniqueness is decided on this key, so names differing only by case cannot both be claimed."
+    },
     "bio": {
       "type": "string",
       "description": "Short user bio (max 300 chars)"

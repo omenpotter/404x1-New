@@ -124,9 +124,11 @@ Deno.serve(async (req) => {
       botsToUse = [];
       for (let i = 0; i < TOTAL_BOTS; i++) {
         try {
+          const botName = randomBotName(i);
           const bot = await base44.asServiceRole.entities.Player.create({
             wallet_address: randomWallet(i),
-            username: randomBotName(i),
+            username: botName,
+            username_key: botName.toLowerCase(),
             reputation_points: 0,
             total_score: 0,
             games_played: 0,

@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 import { corsHeaders } from '../../shared/cors.ts';
+import { normalizeImageUrl } from '../../shared/images.ts';
 
 // Public chat history. Reads stay open (the Message entity is world-readable by design),
 // but the caller is identified from the session token when one is sent, the reply never
@@ -20,19 +21,28 @@ function pick(source: any) {
     return out;
 }
 
+// A session token is a credential, so it is read from the request body or an explicit
+// header and never from the query string: URLs land in browser history, proxy logs and
+// Referer headers, which would leak a working session to anyone who can read them.
+function sessionTokenFrom(req: Request): string | null {
+    const header = req.headers.get('x-session-token')
+        || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+        || null;
+    return header && header.trim() ? header.trim() : null;
+}
+
 async function readParams(req: Request) {
     const url = new URL(req.url);
     const fromQuery = {
         limit: url.searchParams.get('limit'),
-        offset: url.searchParams.get('offset'),
-        session_token: url.searchParams.get('session_token')
+        offset: url.searchParams.get('offset')
     };
-    if (req.method !== 'POST') return fromQuery;
+    if (req.method !== 'POST') return { ...fromQuery, session_token: sessionTokenFrom(req) };
     const body = await req.json().catch(() => ({}));
     return {
         limit: body?.limit ?? fromQuery.limit,
         offset: body?.offset ?? fromQuery.offset,
-        session_token: body?.session_token ?? fromQuery.session_token
+        session_token: body?.session_token ?? sessionTokenFrom(req)
     };
 }
 
@@ -82,8 +92,14 @@ Deno.serve(async (req) => {
                 rxMap[r.emoji].count++;
                 if (callerId && r.from_player_id === callerId) rxMap[r.emoji].user_reacted = true;
             }
+            // Images written before this policy existed may point anywhere. They are left
+            // out of the response rather than embedded, so an old message keeps its text
+            // while no reader's browser is sent to a third-party host.
+            const image = normalizeImageUrl(msg.image_url);
             return {
                 ...pick(msg),
+                image_url: image,
+                has_image: !!image && !msg.is_deleted,
                 content: msg.message,
                 player: {
                     id: msg.player_id,
@@ -104,8 +120,11 @@ Deno.serve(async (req) => {
         });
 
         const pinned = (pinnedList || [])[0] || null;
+        const pinnedImage = normalizeImageUrl(pinned?.image_url);
         const pinnedMsg = pinned ? {
             ...pick(pinned),
+            image_url: pinnedImage,
+            has_image: !!pinnedImage,
             content: pinned.message,
             player: { chat_username: playerMap[pinned.player_id]?.username ?? pinned.username }
         } : null;

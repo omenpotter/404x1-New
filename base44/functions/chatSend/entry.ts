@@ -1,8 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
+import { normalizeImageUrl, isOversizedImage } from '../../shared/images.ts';
 
 const COOLDOWN_MS = 3000;
 const DAILY_MSG_RP_CAP = 200;
+
+// A message image is accepted only when it points at a file this app itself uploaded.
+// Any other URL would make every reader's browser call that host, which is how an
+// external tracking image works, so it is refused before the message is written.
+async function resolveMessageImage(raw: unknown): Promise<{ url: string | null; error?: string }> {
+    if (raw === undefined || raw === null || raw === '') return { url: null };
+    const url = normalizeImageUrl(raw);
+    if (!url) return { url: null, error: 'External image links are not allowed — upload the image instead' };
+    if (await isOversizedImage(url)) return { url: null, error: 'Image is too large (max 5 MB)' };
+    return { url };
+}
 
 Deno.serve(async (req) => {
     try {
@@ -35,6 +47,9 @@ Deno.serve(async (req) => {
                 await base44.asServiceRole.entities.Player.update(player.id, { is_muted: false, muted_until: null, muted_by: null });
             }
         }
+
+        const image = await resolveMessageImage(image_url);
+        if (image.error) return Response.json({ success: false, error: image.error }, { status: 400 });
 
         const now = Date.now();
         const lastMsg = player.last_message_at ? new Date(player.last_message_at).getTime() : 0;
@@ -71,7 +86,8 @@ Deno.serve(async (req) => {
         }
 
         const is_reply = !!replyMeta.reply_to_message_id;
-        const has_image = !!image_url;
+        // Only a validated image earns the image reward, so a bare external URL cannot buy RP.
+        const has_image = !!image.url;
         let rp_earned = 0;
         if (dailyMsgRp < DAILY_MSG_RP_CAP) {
             rp_earned = Math.min(has_image ? 3 : 2, DAILY_MSG_RP_CAP - dailyMsgRp);
@@ -84,7 +100,7 @@ Deno.serve(async (req) => {
             is_reply,
             ...replyMeta,
             has_image,
-            image_url: image_url || null,
+            image_url: image.url,
             is_deleted: false,
             is_flagged: false,
             reaction_count: 0

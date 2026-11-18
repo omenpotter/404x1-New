@@ -3,12 +3,14 @@ import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { getSessionToken } from '@/lib/auth';
+import { safeImageSrc } from '@/lib/images';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('404x1_user') || 'null'); } catch { return null; }
 }
 
 const ROLE_COLORS = { member: '#82998b', trusted: '#4fe3ff', moderator: '#ffb020', admin: '#ff4560', superuser: '#a974ff' };
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const EMOJI_LIST = ['😂','😍','🔥','💯','🚀','😎','👀','💀','🤣','😭','👏','🎉','💪','🙏','❤️','⚡','🌙','👑','🤝','💎'];
 
 export default function Chat() {
@@ -84,7 +86,7 @@ export default function Chat() {
   const fetchMessages = async () => {
     try {
       const u = getUser();
-      const res = await base44.functions.invoke('chatHistory', { limit: 100, offset: 0, user_id: u?.id });
+      const res = await base44.functions.invoke('chatHistory', { limit: 100, offset: 0, session_token: getSessionToken() });
       const data = res.data;
       if (data.success) {
         setMessages(data.messages || []);
@@ -101,7 +103,7 @@ export default function Chat() {
       const u = getUser();
       // Ping last_seen so this user counts in the online count
       if (u?.id) base44.functions.invoke('chatTyping', { session_token: getSessionToken() }).catch(() => {});
-      const res = await base44.functions.invoke('chatHistory', { limit: 1, offset: 0, user_id: u?.id });
+      const res = await base44.functions.invoke('chatHistory', { limit: 1, offset: 0, session_token: getSessionToken() });
       const data = res.data;
       if (data.success) {
         setOnlineCount(data.online_count || 0);
@@ -293,6 +295,18 @@ export default function Chat() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Checked before the upload starts, so an oversized or non-image file is never sent
+    // to storage. The server repeats the size check on the stored file.
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files can be attached');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error('Image must be 5 MB or smaller');
+      e.target.value = '';
+      return;
+    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -604,8 +618,8 @@ export default function Chat() {
                     {isDeleted ? '[message deleted]' : content}
                   </div>
 
-                  {msg.image_url && !isDeleted && (
-                    <img src={msg.image_url} alt="" style={{ maxWidth:'320px', maxHeight:'220px', marginTop:'6px', border:'1px solid #1d2b22', borderRadius:'2px' }} />
+                  {safeImageSrc(msg.image_url) && !isDeleted && (
+                    <img src={safeImageSrc(msg.image_url)} alt="" style={{ maxWidth:'320px', maxHeight:'220px', marginTop:'6px', border:'1px solid #1d2b22', borderRadius:'2px' }} />
                   )}
 
                   {/* Reactions */}
