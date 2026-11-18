@@ -3,12 +3,14 @@ import { randomGlyph } from '@/lib/rainGlyphs';
 import { RAIN } from '@/lib/rainConfig';
 
 /**
- * Lightweight procedural Matrix code rain on one <canvas>.
- * - ~24 fps cap, column count scales with viewport, DPR capped at 1.5
- * - each column keeps its glyph until it re-rolls (about twice a second) instead of
- *   changing every frame, so the numerals read as rain rather than flicker
- * - paused when the tab is hidden; a single static frame when prefers-reduced-motion
- * - purely decorative (aria-hidden), pointer-events none
+ * Matrix number rain on one <canvas>, matching the 404X1_Matrix_Rain reference:
+ * - every column is a stream of 0-9 digits with a pale glowing head and a tail
+ *   that fades out glyph by glyph
+ * - columns fall at 15-40 px/s on a 17px grid and recycle above the top edge
+ * - time-based motion, so a slower frame rate never changes the speed
+ * - paused when the tab is hidden; nothing runs when the visitor asks for
+ *   reduced motion (the stylesheet also hides the canvas in that case)
+ * - purely decorative: aria-hidden, pointer-events none
  */
 export default function MatrixRain() {
   const ref = useRef(null);
@@ -16,63 +18,95 @@ export default function MatrixRain() {
     const canvas = ref.current; if (!canvas) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    let w = 0, h = 0, cols = 0, raf = 0, last = 0, running = false;
-    let drops = [], glyphs = [], bright = [];
     const size = RAIN.cellSize;
+    let w = 0, h = 0, cols = [], raf = 0, running = false, prev = 0, drawn = 0;
 
-    const roll = (i) => {
-      glyphs[i] = randomGlyph();
-      bright[i] = Math.random() < RAIN.brightChance;
+    const speed = () => RAIN.fallMin + Math.random() * (RAIN.fallMax - RAIN.fallMin);
+
+    const digits = () => {
+      const count = Math.ceil(h / size) + RAIN.extraDigits;
+      const out = [];
+      for (let i = 0; i < count; i++) out.push(randomGlyph());
+      return out;
     };
+
+    const column = (i) => ({
+      x: i * size + RAIN.spawnPadX,
+      y: Math.random() * (h + RAIN.spawnSpread) - RAIN.spawnAbove,
+      speed: speed(),
+      digits: digits(),
+      len: RAIN.trailMin + Math.floor(Math.random() * RAIN.trailExtra),
+    });
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      w = window.innerWidth; h = window.innerHeight;
-      canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const step = w < 640 ? RAIN.phoneColumnStep : 1;
-      cols = Math.ceil(w / size / step);
-      drops = Array.from({ length: cols }, () => Math.random() * -h / size);
-      glyphs = [];
-      bright = [];
-      for (let i = 0; i < cols; i++) roll(i);
-      canvas.dataset.step = String(step);
-      ctx.fillStyle = RAIN.backdrop; ctx.fillRect(0, 0, w, h);
+      w = canvas.clientWidth || window.innerWidth;
+      h = canvas.clientHeight || window.innerHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.ceil(w / size);
+      cols = [];
+      for (let i = 0; i < count; i++) cols.push(column(i));
+      prev = 0; drawn = 0;
     };
 
-    const paint = (advance) => {
-      const step = Number(canvas.dataset.step || 1);
-      ctx.fillStyle = `rgba(3,5,4,${RAIN.trailAlpha})`; ctx.fillRect(0, 0, w, h);
-      ctx.font = `${size}px "JetBrains Mono Variable", monospace`;
-      for (let i = 0; i < cols; i++) {
-        if (advance) {
-          if (Math.random() < RAIN.glyphRefreshChance) roll(i);
+    const paint = (dt) => {
+      ctx.fillStyle = RAIN.backdrop; ctx.fillRect(0, 0, w, h);
+      ctx.font = RAIN.font;
+      ctx.shadowColor = RAIN.glowColor;
+      for (let c = 0; c < cols.length; c++) {
+        const col = cols[c];
+        if (dt) {
+          col.y += col.speed * dt;
+          if (col.y - col.len * size > h) {
+            col.y = -Math.random() * RAIN.respawnAbove;
+            col.speed = speed();
+          }
         }
-        const x = i * size * step, y = drops[i] * size;
-        ctx.fillStyle = bright[i] ? RAIN.headColor : RAIN.bodyColor;
-        ctx.fillText(glyphs[i], x, y);
-        if (!advance) continue;
-        if (y > h && Math.random() > RAIN.resetChance) { drops[i] = 0; roll(i); } else drops[i] += RAIN.fallPxPerFrame;
+        const head = Math.floor(col.y / size) * size;
+        const n = col.digits.length;
+        for (let j = 0; j < col.len; j++) {
+          const y = head - j * size;
+          if (y < 0 || y > h + size) continue;
+          ctx.shadowBlur = j === 0 ? RAIN.headGlow : RAIN.bodyGlow;
+          ctx.fillStyle = j === 0
+            ? RAIN.headColor
+            : `rgba(${RAIN.bodyColor},${Math.pow(1 - j / col.len, RAIN.fadeExponent) * RAIN.bodyAlpha})`;
+          ctx.fillText(col.digits[((Math.floor(y / size) % n) + n) % n], col.x, y);
+        }
       }
+      ctx.shadowBlur = 0;
     };
 
     const frame = (t) => {
       raf = requestAnimationFrame(frame);
-      if (t - last < RAIN.frameMs) return; last = t;
-      paint(true);
+      const minFrame = w < RAIN.phoneWidth ? RAIN.phoneFrameMs : 0;
+      if (t - drawn < minFrame) return;
+      const dt = Math.min((t - prev) / 1000, RAIN.maxDt);
+      prev = t; drawn = t;
+      paint(dt);
     };
-    const start = () => { if (!running && !reduce?.matches && !document.hidden) { running = true; raf = requestAnimationFrame(frame); } };
+
+    const start = () => {
+      if (running || reduce?.matches || document.hidden) return;
+      running = true; prev = 0; drawn = 0;
+      raf = requestAnimationFrame(frame);
+    };
     const stop = () => { running = false; cancelAnimationFrame(raf); };
     const vis = () => (document.hidden ? stop() : start());
+    const mq = () => (reduce?.matches ? stop() : start());
+
     resize();
-    if (reduce?.matches) {
-      // One still frame: same colours and density, nothing keeps moving.
-      for (let i = 0; i < cols; i++) drops[i] = Math.random() * h / size;
-      for (let k = 0; k < 120; k++) paint(true);
+    start();
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', vis);
+    reduce?.addEventListener?.('change', mq);
+    return () => {
       stop();
-    } else start();
-    window.addEventListener('resize', resize); document.addEventListener('visibilitychange', vis);
-    const mq = () => (reduce.matches ? stop() : start()); reduce?.addEventListener?.('change', mq);
-    return () => { stop(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', vis); reduce?.removeEventListener?.('change', mq); };
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', vis);
+      reduce?.removeEventListener?.('change', mq);
+    };
   }, []);
   return <canvas ref={ref} aria-hidden="true" />;
 }

@@ -1,17 +1,28 @@
 // Tuning for the decorative Matrix rain.
-// Phase 2C: fall speed halved and per-column glyph churn cut, so the columns drift
-// instead of racing and the numerals stop flickering. Colours, glyph set, trail
-// fade, column density and accessibility behaviour are unchanged.
+// Values mirror the approved 404X1_Matrix_Rain.html reference: 17px cells, 15px
+// numerals, 15-40 px/s fall speed, 17-36 glyph trails, a pale glowing head and a
+// per-glyph alpha fade down the tail.
 export const RAIN = {
-  cellSize: 16,
-  frameMs: 42, // ~24 fps cap
-  fallPxPerFrame: 0.275, // was 0.55 per frame
-  trailAlpha: 0.14, // per-frame fade: keeps the existing trail length
-  glyphRefreshChance: 0.1, // each column re-rolls its glyph about twice a second
-  brightChance: 0.06, // a pale head is decided per column, not per frame
-  headColor: '#c8ffe2',
-  bodyColor: '#00ff41',
+  cellSize: 17,
+  font: '15px monospace',
+  spawnPadX: 2,
+  fallMin: 15, // px per second
+  fallMax: 40,
+  spawnAbove: 150, // first spawn starts this far above the top edge
+  spawnSpread: 400, // plus a random offset across the viewport height
+  respawnAbove: 250, // recycled columns restart within this distance above the top
+  extraDigits: 80, // random digits held per column beyond one screen height
+  trailMin: 17, // glyphs per stream
+  trailExtra: 20,
+  headColor: '#d4ffe0',
+  headGlow: 10,
+  bodyColor: '0,255,65', // rgb components, alpha is applied per glyph
+  bodyGlow: 3,
+  glowColor: '#00ff41',
+  fadeExponent: 1.6,
+  bodyAlpha: 0.85,
+  maxDt: 0.05, // seconds; keeps a stalled frame from teleporting the rain
+  phoneWidth: 640,
+  phoneFrameMs: 33, // phones draw at ~30 fps; motion stays time-based, so speed is identical
   backdrop: '#030504',
-  phoneColumnStep: 2, // half the columns on phones
-  resetChance: 0.975,
 };
