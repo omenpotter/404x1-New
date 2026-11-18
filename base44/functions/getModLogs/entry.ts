@@ -13,15 +13,17 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Caller-controlled page size, capped.
+    const take = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
     let logs;
     if (target_player_id) {
       logs = await base44.asServiceRole.entities.ModerationLog.filter(
         { target_player_id },
         '-created_date',
-        limit
+        take
       );
     } else {
-      logs = await base44.asServiceRole.entities.ModerationLog.list('-created_date', limit);
+      logs = await base44.asServiceRole.entities.ModerationLog.list('-created_date', take);
     }
     return Response.json({ success: true, logs });
   } catch (e) {

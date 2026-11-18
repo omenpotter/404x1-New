@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
@@ -49,9 +49,11 @@ Deno.serve(async (req) => {
                 else if (moderator.user_role === 'admin' && penalty > 20) penalty = 20;
 
                 rpChange = -Math.abs(penalty);
-                await base44.asServiceRole.entities.Player.update(target_player_id, {
-                    reputation_points: targetPlayer.reputation_points + rpChange
-                });
+                // Incremented in place so a concurrent reward on the same player survives.
+                await base44.asServiceRole.entities.Player.updateMany(
+                    { id: target_player_id },
+                    { $inc: { reputation_points: rpChange } }
+                );
                 actionResult = { penalty_applied: Math.abs(rpChange) };
                 break;
             }
@@ -65,12 +67,17 @@ Deno.serve(async (req) => {
                 muteUntil.setHours(muteUntil.getHours() + muteDuration);
                 rpChange = -10;
 
-                await base44.asServiceRole.entities.Player.update(target_player_id, {
-                    is_muted: true,
-                    muted_until: muteUntil.toISOString(),
-                    muted_by: moderator.id,
-                    reputation_points: targetPlayer.reputation_points + rpChange
-                });
+                await base44.asServiceRole.entities.Player.updateMany(
+                    { id: target_player_id },
+                    {
+                        $set: {
+                            is_muted: true,
+                            muted_until: muteUntil.toISOString(),
+                            muted_by: moderator.id
+                        },
+                        $inc: { reputation_points: rpChange }
+                    }
+                );
                 actionResult = { muted_until: muteUntil.toISOString(), penalty_applied: 10 };
                 break;
             }
@@ -98,9 +105,10 @@ Deno.serve(async (req) => {
                     deleted_by: moderator.id
                 });
                 rpChange = -5;
-                await base44.asServiceRole.entities.Player.update(target_player_id, {
-                    reputation_points: targetPlayer.reputation_points + rpChange
-                });
+                await base44.asServiceRole.entities.Player.updateMany(
+                    { id: target_player_id },
+                    { $inc: { reputation_points: rpChange } }
+                );
                 actionResult = { message_deleted: true, penalty_applied: 5 };
                 break;
             }

@@ -23,6 +23,9 @@ Deno.serve(async (req) => {
   const caller = await getSessionPlayer(base44, session_token);
   if (!caller) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
 
+  // Caller-controlled page size, capped so one request cannot enumerate the roster.
+  const take = Math.min(Math.max(Number(limit) || 12, 1), 50);
+
   if (!query || query.length < 2) {
     return Response.json({ success: true, players: [] });
   }
@@ -32,7 +35,7 @@ Deno.serve(async (req) => {
     const q = query.toLowerCase();
     const filtered = all
       .filter(p => p.username?.toLowerCase().includes(q))
-      .slice(0, limit)
+      .slice(0, take)
       .map(p => ({
         id: p.id,
         username: p.username,

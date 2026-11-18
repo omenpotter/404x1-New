@@ -30,6 +30,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Target player not found' }, { status: 404 });
         }
 
+        // The new role must be one this app actually knows. Otherwise a typo or a crafted
+        // value would be written into the role column and every later role check would
+        // silently treat that player as unprivileged or, worse, unrecognised.
+        if (!['member', 'trusted', 'moderator', 'admin', 'superuser'].includes(new_role)) {
+            return Response.json({ success: false, error: 'Invalid role' }, { status: 400 });
+        }
+
         const roleHierarchy = {
             'member': 1,
             'trusted': 2,

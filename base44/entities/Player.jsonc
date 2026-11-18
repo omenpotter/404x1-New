@@ -194,6 +194,15 @@
       "type": "string",
       "format": "date-time",
       "description": "When the session token expires"
+    },
+    "last_auth_nonce": {
+      "type": "string",
+      "description": "Nonce from the last wallet signature accepted for this player. A signature carrying the same nonce again is a replay and is refused."
+    },
+    "last_auth_nonce_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When that signature was accepted"
     }
   },
   "required": [

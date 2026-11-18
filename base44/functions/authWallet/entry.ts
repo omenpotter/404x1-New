@@ -100,6 +100,16 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Invalid wallet signature' }), { status: 200, headers });
         }
 
+        // A signed message is a single-use credential. Without the nonce, anything that
+        // captured one could replay it for the rest of its 30-minute window and mint a
+        // fresh session for that wallet. The nonce is inside the signed text, so the caller
+        // cannot invent one; the wallet has to sign it.
+        const nonceMatch = String(message).match(/Nonce: ([0-9a-fA-F]{16,64})/);
+        if (!nonceMatch) {
+            return new Response(JSON.stringify({ success: false, error: 'Signature format is out of date — refresh the page and connect again' }), { status: 200, headers });
+        }
+        const nonce = nonceMatch[1].toLowerCase();
+
         const base44 = createClientFromRequest(req);
 
         // O(1) indexed lookup
@@ -107,21 +117,26 @@ Deno.serve(async (req) => {
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
 
         if (existing) {
+            // Replaying a signature that already bought a session is refused outright.
+            if (existing.last_auth_nonce === nonce) {
+                return new Response(JSON.stringify({ success: false, error: 'This signature has already been used — connect again' }), { status: 200, headers });
+            }
+
             // Existing accounts keep the username they already hold, whatever it is: the
             // rules below only ever guard a new claim. The uniqueness key is filled in on
             // the way through so older rows join the case-insensitive set.
+            const loginPatch: Record<string, unknown> = {
+                last_seen: new Date().toISOString(),
+                last_auth_nonce: nonce,
+                last_auth_nonce_at: new Date().toISOString()
+            };
             if (!existing.username_key && existing.username) {
-                base44.asServiceRole.entities.Player.update(existing.id, {
-                    username_key: usernameKey(existing.username)
-                }).catch(() => {});
+                loginPatch.username_key = usernameKey(existing.username);
             }
+            base44.asServiceRole.entities.Player.update(existing.id, loginPatch).catch(() => {});
 
             // Issue a fresh session token on every login
             const session = await issueSession(base44, existing.id);
-
-            base44.asServiceRole.entities.Player.update(existing.id, {
-                last_seen: new Date().toISOString()
-            }).catch(() => {});
 
             return new Response(JSON.stringify({
                 success: true,
@@ -166,7 +181,9 @@ Deno.serve(async (req) => {
                 user_role: 'member',
                 last_seen: new Date().toISOString(),
                 is_verified: false,
-                verification_attempts: 0
+                verification_attempts: 0,
+                last_auth_nonce: nonce,
+                last_auth_nonce_at: new Date().toISOString()
             });
         } catch (createErr) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
