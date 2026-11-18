@@ -41,6 +41,21 @@ Deno.serve(async (req) => {
         const challenges = base44.asServiceRole.entities.VerificationChallenge;
 
         if (action === 'get_challenge') {
+            // Reuse a challenge issued seconds ago instead of minting a new row per click,
+            // so the endpoint cannot be used to fill the table.
+            const recent = await challenges
+                .filter({ player_id, consumed: false }, '-created_date', 1)
+                .catch(() => []);
+            const latest = (recent || [])[0];
+            if (latest && !isExpired(latest.expires_at) && Date.now() - new Date(latest.created_date || 0).getTime() < 10_000) {
+                return Response.json({
+                    challenge_id: latest.id,
+                    question: latest.question,
+                    expires_at: latest.expires_at,
+                    attempts_allowed: MAX_ATTEMPTS
+                });
+            }
+
             // Only the newest challenge stays live: anything still open for this player is
             // retired first, so an older question cannot be answered later out of a screenshot.
             try {
