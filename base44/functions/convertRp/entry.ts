@@ -24,6 +24,19 @@ Deno.serve(async (req) => {
     if (!player) return Response.json({ error: 'Unauthorized' }, { status: 401, headers });
     if (isBanned(player)) return Response.json({ error: 'Your account is suspended' }, { status: 403, headers });
 
+    // The conversion schedule is the one input this function cannot invent. Without a valid
+    // LAUNCH_DATE the halving rate is undefined, so conversions are switched off rather than
+    // priced against a guess. Checked before any balance is read or written.
+    const scheduleRaw = (Deno.env.get('LAUNCH_DATE') || '').trim();
+    const scheduleDate = scheduleRaw ? new Date(scheduleRaw) : null;
+    if (!scheduleDate || Number.isNaN(scheduleDate.getTime()) || scheduleDate.getTime() > Date.now()) {
+      return Response.json({
+        success: false,
+        disabled: true,
+        error: 'RP conversions are temporarily unavailable while the conversion schedule is finalized. No RP was spent.'
+      }, { status: 200, headers });
+    }
+
     const lockedRp = player.locked_rp || 0;
     let eligibleRp;
     if (player.is_404_holder) {
@@ -66,9 +79,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Weekly conversion cap of ${WEEKLY_CAP} RP reached` }, { status: 400, headers });
     }
 
-    const launchDateStr = Deno.env.get('LAUNCH_DATE') || '2025-01-01';
-    const launchDate = new Date(launchDateStr);
-    const yearsSinceLaunch = (now - launchDate) / (365.25 * 24 * 3600 * 1000);
+    // scheduleDate was validated above; the halving formula itself is unchanged.
+    const yearsSinceLaunch = (now.getTime() - scheduleDate.getTime()) / (365.25 * 24 * 3600 * 1000);
     const halvingRate = 1 / Math.pow(2, Math.floor(Math.max(0, yearsSinceLaunch) / 2));
     const rpxEarned = amount * halvingRate;
 

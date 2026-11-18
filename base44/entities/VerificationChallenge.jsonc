@@ -1,0 +1,61 @@
+{
+  "name": "VerificationChallenge",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "type": "string",
+      "description": "Player the challenge was issued to. A challenge is only ever valid for this player."
+    },
+    "question": {
+      "type": "string",
+      "description": "The question shown to the player"
+    },
+    "answer_hash": {
+      "type": "string",
+      "description": "SHA-256 of the normalized answer. The answer itself is never stored."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the challenge stops being accepted"
+    },
+    "consumed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set once the challenge is answered correctly, locked out, or replaced. A consumed challenge can never be submitted again."
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Wrong answers submitted against this challenge"
+    }
+  },
+  "required": [
+    "player_id",
+    "question",
+    "answer_hash",
+    "expires_at"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

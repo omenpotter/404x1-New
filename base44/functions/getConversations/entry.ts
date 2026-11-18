@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer } from '../../shared/session.ts';
+import { isVisibleTo } from '../../shared/conversations.ts';
 
 Deno.serve(async (req) => {
     try {
@@ -18,8 +19,12 @@ Deno.serve(async (req) => {
             50
         );
 
+        // Conversations this player removed are hidden from their list only. Everyone
+        // else's copy is untouched, and the participant check still applies.
+        const visible = conversations.filter(conv => isVisibleTo(conv, player_id));
+
         // Enrich with other_username and other_player_id
-        const enriched = conversations.map(conv => {
+        const enriched = visible.map(conv => {
             const myIdx = (conv.participant_ids || []).indexOf(player_id);
             const otherIdx = myIdx === 0 ? 1 : 0;
             const other_username = (conv.participant_usernames || [])[otherIdx] || 'Unknown';

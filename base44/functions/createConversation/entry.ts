@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
+import { withUnhiddenFor } from '../../shared/conversations.ts';
 
 Deno.serve(async (req) => {
     try {
@@ -41,7 +42,14 @@ Deno.serve(async (req) => {
         );
 
         if (existing.length > 0) {
-            return Response.json({ success: true, conversation: existing[0], is_existing: true });
+            // A hidden thread is resurrected for the caller who hid it — they are opening the
+            // conversation again deliberately. The other participant's visibility is untouched.
+            const conv = existing[0];
+            if ((conv.hidden_for || []).includes(from_player_id)) {
+                conv.hidden_for = withUnhiddenFor(conv, [from_player_id]);
+                await base44.asServiceRole.entities.Conversation.update(conv.id, { hidden_for: conv.hidden_for });
+            }
+            return Response.json({ success: true, conversation: conv, is_existing: true });
         }
 
         // Create new conversation

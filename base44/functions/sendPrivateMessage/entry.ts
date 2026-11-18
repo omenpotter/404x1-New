@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
 import { normalizeImageUrl, isOversizedImage } from '../../shared/images.ts';
+import { participantsOf, withUnhiddenFor } from '../../shared/conversations.ts';
 
 Deno.serve(async (req) => {
     try {
@@ -61,10 +62,13 @@ Deno.serve(async (req) => {
             read_by: [sender.id]
         });
 
+        // A new message brings the thread back for both sides: if either participant had
+        // hidden it, the message would otherwise be delivered into a list they cannot see.
         await base44.asServiceRole.entities.Conversation.update(conversation_id, {
             last_message: content.substring(0, 100),
             last_message_at: new Date().toISOString(),
-            last_message_sender_id: sender.id
+            last_message_sender_id: sender.id,
+            hidden_for: withUnhiddenFor(conversation, participantsOf(conversation))
         });
 
         return Response.json({ success: true, message });
