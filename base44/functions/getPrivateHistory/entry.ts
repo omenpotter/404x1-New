@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer } from '../../shared/session.ts';
+import { normalizeImageUrl } from '../../shared/images.ts';
 
 Deno.serve(async (req) => {
     try {
@@ -44,7 +45,9 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            messages: paginated,
+            // Message images are re-checked on the way out too, so a row written before
+            // the upload policy existed cannot make a reader's browser call a third party.
+            messages: paginated.map(m => ({ ...m, image_url: normalizeImageUrl(m.image_url) })),
             total: visible.length,
             conversation
         });
