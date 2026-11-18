@@ -117,23 +117,37 @@ Deno.serve(async (req) => {
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
 
         if (existing) {
-            // Replaying a signature that already bought a session is refused outright.
-            if (existing.last_auth_nonce === nonce) {
+            // A signature is single-use, and that has to be settled by the write, not by the
+            // read above: two requests replaying the same signature both read the old nonce,
+            // so only a conditional update can decide which one proceeds. The `$exists:false`
+            // branch keeps accounts that have never logged in since nonces were introduced
+            // able to authenticate.
+            const nonceClaim = await base44.asServiceRole.entities.Player.updateMany(
+                {
+                    id: existing.id,
+                    $or: [
+                        { last_auth_nonce: { $exists: false } },
+                        { last_auth_nonce: { $ne: nonce } }
+                    ]
+                },
+                { $set: {
+                    last_auth_nonce: nonce,
+                    last_auth_nonce_at: new Date().toISOString(),
+                    last_seen: new Date().toISOString()
+                } }
+            );
+            if (!nonceClaim.updated) {
                 return new Response(JSON.stringify({ success: false, error: 'This signature has already been used — connect again' }), { status: 200, headers });
             }
 
             // Existing accounts keep the username they already hold, whatever it is: the
             // rules below only ever guard a new claim. The uniqueness key is filled in on
             // the way through so older rows join the case-insensitive set.
-            const loginPatch: Record<string, unknown> = {
-                last_seen: new Date().toISOString(),
-                last_auth_nonce: nonce,
-                last_auth_nonce_at: new Date().toISOString()
-            };
             if (!existing.username_key && existing.username) {
-                loginPatch.username_key = usernameKey(existing.username);
+                await base44.asServiceRole.entities.Player.update(existing.id, {
+                    username_key: usernameKey(existing.username)
+                }).catch(() => {});
             }
-            base44.asServiceRole.entities.Player.update(existing.id, loginPatch).catch(() => {});
 
             // Issue a fresh session token on every login
             const session = await issueSession(base44, existing.id);

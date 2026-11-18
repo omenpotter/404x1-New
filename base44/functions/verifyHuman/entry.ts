@@ -14,6 +14,11 @@ import {
 // and can be consumed exactly once.
 const LOCKOUT_MS = 10 * 60 * 1000;
 const MAX_CHALLENGE_ID_LEN = 80;
+// Issuance is metered per player: minting a challenge is the cheapest thing this endpoint does,
+// so it is the thing that gets hammered. Rows older than the window are pruned as we go, so the
+// count only ever reflects recent use rather than lifetime calls.
+const ISSUE_WINDOW_MS = 10 * 60 * 1000;
+const ISSUE_LIMIT = 5;
 
 Deno.serve(async (req) => {
     try {
@@ -41,13 +46,28 @@ Deno.serve(async (req) => {
         const challenges = base44.asServiceRole.entities.VerificationChallenge;
 
         if (action === 'get_challenge') {
-            // Reuse a challenge issued seconds ago instead of minting a new row per click,
-            // so the endpoint cannot be used to fill the table.
-            const recent = await challenges
-                .filter({ player_id, consumed: false }, '-created_date', 1)
+            const recentRows = await challenges
+                .filter({ player_id }, '-created_date', 50)
                 .catch(() => []);
-            const latest = (recent || [])[0];
-            if (latest && !isExpired(latest.expires_at) && Date.now() - new Date(latest.created_date || 0).getTime() < 10_000) {
+            const windowStart = Date.now() - ISSUE_WINDOW_MS;
+            const issuedInWindow = (recentRows || []).filter(
+                c => new Date(c.created_date || 0).getTime() > windowStart
+            );
+
+            // Rate limit before anything is generated or written.
+            if (issuedInWindow.length >= ISSUE_LIMIT) {
+                const oldest = issuedInWindow[issuedInWindow.length - 1];
+                const retryMs = new Date(oldest.created_date || 0).getTime() + ISSUE_WINDOW_MS - Date.now();
+                return Response.json({
+                    success: false,
+                    rate_limited: true,
+                    error: `Too many verification requests. Try again in ${Math.max(1, Math.ceil(retryMs / 60000))} minute(s).`
+                }, { status: 429 });
+            }
+
+            // Reuse a challenge issued seconds ago instead of minting a new row per click.
+            const latest = (recentRows || [])[0];
+            if (latest && !latest.consumed && !isExpired(latest.expires_at) && Date.now() - new Date(latest.created_date || 0).getTime() < 10_000) {
                 return Response.json({
                     challenge_id: latest.id,
                     question: latest.question,
@@ -56,11 +76,15 @@ Deno.serve(async (req) => {
                 });
             }
 
-            // Only the newest challenge stays live: anything still open for this player is
-            // retired first, so an older question cannot be answered later out of a screenshot.
+            // Prune rows outside the window. Older open challenges no longer need deleting:
+            // submit_answer only honours the newest open one, so an earlier question cannot be
+            // answered later even if its row still exists.
             try {
-                await challenges.deleteMany({ player_id, consumed: false });
-            } catch { /* retiring old challenges is best effort */ }
+                await challenges.deleteMany({
+                    player_id,
+                    created_date: { $lt: new Date(windowStart).toISOString() }
+                });
+            } catch { /* pruning is best effort */ }
 
             const generated = generateChallenge();
             const record = await challenges.create({
@@ -98,6 +122,16 @@ Deno.serve(async (req) => {
                 return Response.json({ success: false, error: 'This challenge has already been used. Request a new one.' });
             }
             if (isExpired(challenge.expires_at)) {
+                return Response.json({ success: false, expired: true, error: 'This challenge expired. Request a new one.' });
+            }
+
+            // Only the newest open challenge may be answered, so a question captured from an
+            // earlier round carries no value even though its row is still open.
+            const newestOpen = await challenges
+                .filter({ player_id, consumed: false }, '-created_date', 1)
+                .catch(() => []);
+            const newest = (newestOpen || [])[0];
+            if (newest && newest.id !== challenge.id) {
                 return Response.json({ success: false, expired: true, error: 'This challenge expired. Request a new one.' });
             }
 

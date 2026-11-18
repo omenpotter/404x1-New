@@ -69,34 +69,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Claim weekly capacity with a conditional increment: it only lands while the stored counter
-    // still leaves room, so parallel conversions cannot share the same headroom.
-    const claim = await base44.asServiceRole.entities.Player.updateMany(
-      { id: player.id, conversion_week_rp: { $lte: WEEKLY_CAP - amount } },
-      { $inc: { conversion_week_rp: amount } }
-    );
-    if (!claim.updated) {
-      return Response.json({ error: `Weekly conversion cap of ${WEEKLY_CAP} RP reached` }, { status: 400, headers });
-    }
-
     // scheduleDate was validated above; the halving formula itself is unchanged.
     const yearsSinceLaunch = (now.getTime() - scheduleDate.getTime()) / (365.25 * 24 * 3600 * 1000);
     const halvingRate = 1 / Math.pow(2, Math.floor(Math.max(0, yearsSinceLaunch) / 2));
     const rpxEarned = amount * halvingRate;
 
-    // Debit RP and credit RPx/total in one conditional write: it only lands while the unlocked
-    // balance (including the 404 holder floor) still covers the conversion.
+    // Weekly capacity and balances move in ONE conditional write on one document. They used to
+    // be two writes with a compensating rollback in between, which meant a process dying after
+    // the claim held the week's headroom without spending a thing. Now RP cannot leave the
+    // balance unless the weekly counter rises with it, and there is no rollback write to lose.
     const floor = lockedRp + (player.is_404_holder ? 10000 : 0);
-    const debit = await base44.asServiceRole.entities.Player.updateMany(
-      { id: player.id, reputation_points: { $gte: floor + amount } },
-      { $inc: { reputation_points: -amount, rpx_balance: rpxEarned, total_rp_converted: amount } }
+    const conversion = await base44.asServiceRole.entities.Player.updateMany(
+      {
+        id: player.id,
+        conversion_week_rp: { $lte: WEEKLY_CAP - amount },
+        reputation_points: { $gte: floor + amount }
+      },
+      { $inc: {
+        conversion_week_rp: amount,
+        reputation_points: -amount,
+        rpx_balance: rpxEarned,
+        total_rp_converted: amount
+      } }
     );
-    if (!debit.updated) {
-      // Nothing was converted — hand the weekly headroom back before reporting failure.
-      await base44.asServiceRole.entities.Player.updateMany(
-        { id: player.id, conversion_week_rp: { $gte: amount } },
-        { $inc: { conversion_week_rp: -amount } }
-      );
+    if (!conversion.updated) {
+      // Nothing moved. Use the stored values to say which limit stopped it.
+      const fresh = await base44.asServiceRole.entities.Player.get(player.id).catch(() => player);
+      if ((fresh.conversion_week_rp || 0) > WEEKLY_CAP - amount) {
+        return Response.json({ error: `Weekly conversion cap of ${WEEKLY_CAP} RP reached` }, { status: 400, headers });
+      }
       return Response.json({ error: 'Insufficient eligible RP' }, { status: 400, headers });
     }
 
