@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 import { normalizeImageUrl } from '../../shared/images.ts';
 
@@ -32,15 +32,17 @@ Deno.serve(async (req) => {
         const visible = allMessages.filter(m => !m.is_deleted);
         const paginated = visible.slice(offset, offset + limit);
 
-        // Mark unread messages as delivered for this caller
-        const undelivered = paginated.filter(m =>
-            m.sender_id !== caller.id && !(m.delivered_to || []).includes(caller.id)
-        );
+        // Delivery is recorded with one atomic $addToSet rather than a read-modify-write per
+        // message, so two readers arriving together cannot overwrite each other's receipt.
+        const undeliveredIds = paginated
+            .filter(m => m.sender_id !== caller.id && !(m.delivered_to || []).includes(caller.id))
+            .map(m => m.id);
 
-        for (const msg of undelivered) {
-            await base44.asServiceRole.entities.PrivateMessage.update(msg.id, {
-                delivered_to: [...(msg.delivered_to || []), caller.id]
-            });
+        if (undeliveredIds.length) {
+            await base44.asServiceRole.entities.PrivateMessage.updateMany(
+                { id: { $in: undeliveredIds } },
+                { $addToSet: { delivered_to: caller.id } }
+            );
         }
 
         return Response.json({

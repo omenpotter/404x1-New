@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
 Deno.serve(async (req) => {
@@ -23,25 +23,15 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Access denied' }, { status: 403 });
         }
 
-        // Mark messages as read
-        const updates = [];
-        for (const message_id of message_ids) {
-            const msg = await base44.asServiceRole.entities.PrivateMessage.get(message_id);
-            if (msg && msg.conversation_id === conversation_id && !msg.read_by.includes(player_id)) {
-                updates.push(
-                    base44.asServiceRole.entities.PrivateMessage.update(message_id, {
-                        read_by: [...msg.read_by, player_id],
-                        delivered_to: msg.delivered_to.includes(player_id)
-                            ? msg.delivered_to
-                            : [...msg.delivered_to, player_id]
-                    })
-                );
-            }
-        }
+        // One conditional, idempotent write. The conversation check sits in the query, so an id
+        // from another thread can never be marked, and $addToSet cannot drop a concurrent
+        // participant's receipt the way a read-modify-write can.
+        await base44.asServiceRole.entities.PrivateMessage.updateMany(
+            { id: { $in: message_ids }, conversation_id },
+            { $addToSet: { read_by: player_id, delivered_to: player_id } }
+        );
 
-        await Promise.all(updates);
-
-        return Response.json({ success: true, marked_read: updates.length });
+        return Response.json({ success: true, marked_read: message_ids.length });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
