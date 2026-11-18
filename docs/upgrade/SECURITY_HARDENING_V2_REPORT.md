@@ -201,3 +201,30 @@ See `docs/upgrade/PRODUCTION_CLEANUP_PLAN.md`. Summary:
 4. Restore previous function versions from `main`; no entity field was removed or retyped, so no
    migration is required in either direction.
 5. If the cleanup has been executed by then, restore from the JSON exports taken beforehand.
+
+---
+
+## 9. Completion pass (final gate run)
+
+Changes made in this pass:
+
+| Change | Reason |
+| --- | --- |
+| `issueWarning` role-hierarchy guard | A moderator could warn a peer or a superior. It now refuses when the target's role is at or above the caller's, matching `moderateUser`. |
+| `getPrivateHistory` delivery receipts → one `updateMany` with `$addToSet` | The per-message read-modify-write could lose a concurrent reader's receipt. |
+| `privateReadReceipt` → one conditional `updateMany` with `$addToSet` | Same lost-update race; the conversation check now lives in the query instead of application code. |
+| `@base44/sdk` bumped to `0.8.60` in both functions above | The atomic operators they now use are the ones the other atomic functions already run. |
+
+Dependency audit: still **12 high, 0 critical**, and they are **one advisory** repeated across paths:
+"picomatch vulnerable to ReDoS through single-branch repeated extglobs", affected range `*`,
+`fixAvailable: false`. `npm view picomatch version` returns `4.0.7`, the newest published release,
+and the tree already pins `picomatch@2` → `2.3.2` and `picomatch@4` → `4.0.7` through overrides.
+There is no upstream fix to apply. The affected code is glob matching in build and test tooling; a
+search of the production bundle found no picomatch or extglob code, so nothing vulnerable ships to
+a browser.
+
+Known functional defect found while verifying receipts (not fixed, outside this scope):
+`getPrivateHistory` loads the oldest 200 messages of a thread and slices from there, so a
+conversation longer than 200 messages never shows its newest messages to either participant.
+
+Final gate results: 84/84 tests, `tsc -p jsconfig.json` 0 diagnostics, `vite build` exit 0.
