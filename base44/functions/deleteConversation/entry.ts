@@ -1,6 +1,11 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.60';
 import { getSessionPlayer } from '../../shared/session.ts';
 
+// Deleting a conversation is a personal action, not a shared one.
+//
+// The thread is hidden for the caller only: their own list stops showing it, while the other
+// participant keeps the conversation and every message in it. Nothing is destroyed, so no
+// participant can erase the other person's history — and a new message brings the thread back.
 Deno.serve(async (req) => {
     try {
         const { conversation_id, session_token } = await req.json();
@@ -16,23 +21,21 @@ Deno.serve(async (req) => {
         const player_id = player.id;
 
         // Verify conversation exists and player is a participant
-        const conversation = await base44.asServiceRole.entities.Conversation.get(conversation_id);
+        const conversation = await base44.asServiceRole.entities.Conversation.get(conversation_id).catch(() => null);
         if (!conversation) return Response.json({ error: 'Conversation not found' }, { status: 404 });
 
-        if (!conversation.participant_ids.includes(player_id)) {
+        if (!(conversation.participant_ids || []).includes(player_id)) {
             return Response.json({ error: 'Access denied' }, { status: 403 });
         }
 
-        // Delete all messages in conversation
-        const messages = await base44.asServiceRole.entities.PrivateMessage.filter({ conversation_id }, 'created_date', 500);
-        for (const msg of messages) {
-            await base44.asServiceRole.entities.PrivateMessage.delete(msg.id);
-        }
+        // $addToSet is atomic and idempotent: parallel deletes by the same player cannot
+        // duplicate the entry, and no other participant's visibility is touched.
+        await base44.asServiceRole.entities.Conversation.updateMany(
+            { id: conversation_id },
+            { $addToSet: { hidden_for: player_id } }
+        );
 
-        // Delete the conversation itself
-        await base44.asServiceRole.entities.Conversation.delete(conversation_id);
-
-        return Response.json({ success: true });
+        return Response.json({ success: true, hidden_for_self: true });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });

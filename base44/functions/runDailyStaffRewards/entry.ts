@@ -81,6 +81,18 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // One payout per staff member per day. A retry, or two overlapping scheduled runs,
+      // would otherwise pay the same member twice, so an existing grant for today skips.
+      const paidToday = await base44.asServiceRole.entities.RpGrant.filter(
+        { to_player_id: member.id, grant_type: 'daily_staff_reward', created_date: { $gte: `${todayLabel}T00:00:00.000Z` } },
+        '-created_date',
+        1
+      );
+      if ((paidToday || []).length > 0) {
+        report.push({ username: member.username, role, rp_awarded: 0, reason: 'Already rewarded today' });
+        continue;
+      }
+
       const myLogs = recentLogs.filter(l => l.moderator_id === member.id);
       let rp = cfg.base_active;
       const breakdown = [`base: +${cfg.base_active}`];
@@ -118,11 +130,11 @@ Deno.serve(async (req) => {
 
       rp = Math.min(rp, cfg.daily_cap);
 
-      await base44.asServiceRole.entities.Player.update(member.id, {
-        reputation_points: (member.reputation_points || 0) + rp
-      });
-
-      await base44.asServiceRole.entities.RpGrant.create({
+      // The check above cannot stop two overlapping runs that both read before either wrote,
+      // so the grant record itself is the claim: it is written first, the earliest record for
+      // the day wins, and every other run deletes its own row without paying anything. The
+      // balance is only touched after the claim is confirmed.
+      const claim = await base44.asServiceRole.entities.RpGrant.create({
         from_player_id: member.id,
         from_username:  'SYSTEM',
         to_player_id:   member.id,
@@ -131,6 +143,31 @@ Deno.serve(async (req) => {
         grant_type:     'daily_staff_reward',
         reason:         `Daily reward ${todayLabel}: ${breakdown.join(' | ')}`
       });
+
+      const todaysGrants = await base44.asServiceRole.entities.RpGrant.filter(
+        { to_player_id: member.id, grant_type: 'daily_staff_reward', created_date: { $gte: `${todayLabel}T00:00:00.000Z` } },
+        'created_date',
+        25
+      );
+      const earliest = (todaysGrants || []).slice().sort((a: any, b: any) => {
+        const at = new Date(a.created_date || 0).getTime();
+        const bt = new Date(b.created_date || 0).getTime();
+        if (at !== bt) return at - bt;
+        return String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0;
+      })[0];
+
+      if (!earliest || earliest.id !== claim.id) {
+        await base44.asServiceRole.entities.RpGrant.delete(claim.id).catch(() => {});
+        report.push({ username: member.username, role, rp_awarded: 0, reason: 'Already rewarded today' });
+        continue;
+      }
+
+      // Increment in place: writing back a balance read before the loop would erase any
+      // RP the member earned in the meantime.
+      await base44.asServiceRole.entities.Player.updateMany(
+        { id: member.id },
+        { $inc: { reputation_points: rp } }
+      );
 
       report.push({
         username:   member.username,

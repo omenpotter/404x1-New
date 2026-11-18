@@ -3,10 +3,18 @@ import { base44 } from '@/api/base44Client';
 
 function saveUser(u) { localStorage.setItem('404x1_user', JSON.stringify(u)); }
 
-// Ask the connected wallet to sign a timestamped auth message.
+// A signed message is single-use: the server records its nonce and refuses a second
+// submission, so a captured signature cannot be replayed to mint another session.
+function newNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Ask the connected wallet to sign a timestamped, nonce-bearing auth message.
 // Solana signatures are returned as hex; EVM signatures are 0x-prefixed hex.
 async function signAuthMessage(walletType, address) {
-  const message = `404x1 Authentication\nTimestamp: ${new Date().toISOString()}`;
+  const message = `404x1 Authentication\nTimestamp: ${new Date().toISOString()}\nNonce: ${newNonce()}`;
   if (walletType === 'metamask') {
     const signature = await window.ethereum.request({
       method: 'personal_sign',

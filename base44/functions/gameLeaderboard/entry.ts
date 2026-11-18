@@ -3,7 +3,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     try {
         const url = new URL(req.url);
-        const limit = parseInt(url.searchParams.get('limit') || '100');
+        // Capped: the query string is caller-controlled, and an unbounded limit would let
+        // one request pull an arbitrary slice of the player table.
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '100', 10) || 100, 1), 200);
         const sortBy = url.searchParams.get('sortBy') || 'total_score';
 
         const base44 = createClientFromRequest(req);

@@ -28,6 +28,14 @@
     "last_message_sender_id": {
       "type": "string",
       "description": "Player ID of last message sender"
+    },
+    "hidden_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Player IDs who removed this conversation from their own list. The conversation and its messages are kept for every other participant, and a new message brings it back."
     }
   },
   "required": [

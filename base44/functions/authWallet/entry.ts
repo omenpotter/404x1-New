@@ -4,11 +4,7 @@ import bs58 from 'npm:bs58@4.0.1';
 import { ethers } from 'npm:ethers@6.13.4';
 import { issueSession } from '../../shared/session.ts';
 import { corsHeaders } from '../../shared/cors.ts';
-
-const RESERVED_USERNAMES = [
-    'admin','mod','moderator','superuser','system','bot','staff',
-    '404x1','x1','owner','root','support','help','official','null','undefined'
-];
+import { usernameKey, validateUsername } from '../../shared/usernames.ts';
 
 // Signatures are valid for 30 minutes — gives users time to pick a username.
 const MAX_AGE_MS = 30 * 60 * 1000;
@@ -42,6 +38,30 @@ function verifySignature(address: string, message: string, signature: string): b
     } catch (e) {
         return false;
     }
+}
+
+// Is `key` already claimed by someone other than this wallet?
+// Rows written before username_key existed carry no key, so they are compared by their
+// stored username instead. That fallback is a bounded scan and drains as players return.
+async function usernameTaken(base44: any, key: string, walletAddress: string): Promise<boolean> {
+    const byKey = await base44.asServiceRole.entities.Player.filter({ username_key: key }, null, 50);
+    if ((byKey || []).some((p: any) => p.wallet_address !== walletAddress)) return true;
+
+    const existing = await base44.asServiceRole.entities.Player.filter({}, null, 1000);
+    return (existing || []).some((p: any) =>
+        !p.username_key &&
+        p.wallet_address !== walletAddress &&
+        usernameKey(p.username) === key
+    );
+}
+
+// Oldest record wins. created_date ties fall back to the id so both sides of a race
+// always reach the same verdict.
+function compareClaimOrder(a: any, b: any): number {
+    const at = new Date(a.created_date || 0).getTime();
+    const bt = new Date(b.created_date || 0).getTime();
+    if (at !== bt) return at - bt;
+    return String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0;
 }
 
 Deno.serve(async (req) => {
@@ -80,6 +100,16 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, error: 'Invalid wallet signature' }), { status: 200, headers });
         }
 
+        // A signed message is a single-use credential. Without the nonce, anything that
+        // captured one could replay it for the rest of its 30-minute window and mint a
+        // fresh session for that wallet. The nonce is inside the signed text, so the caller
+        // cannot invent one; the wallet has to sign it.
+        const nonceMatch = String(message).match(/Nonce: ([0-9a-fA-F]{16,64})/);
+        if (!nonceMatch) {
+            return new Response(JSON.stringify({ success: false, error: 'Signature format is out of date — refresh the page and connect again' }), { status: 200, headers });
+        }
+        const nonce = nonceMatch[1].toLowerCase();
+
         const base44 = createClientFromRequest(req);
 
         // O(1) indexed lookup
@@ -87,12 +117,26 @@ Deno.serve(async (req) => {
         const existing = existingPlayers.length > 0 ? existingPlayers[0] : null;
 
         if (existing) {
+            // Replaying a signature that already bought a session is refused outright.
+            if (existing.last_auth_nonce === nonce) {
+                return new Response(JSON.stringify({ success: false, error: 'This signature has already been used — connect again' }), { status: 200, headers });
+            }
+
+            // Existing accounts keep the username they already hold, whatever it is: the
+            // rules below only ever guard a new claim. The uniqueness key is filled in on
+            // the way through so older rows join the case-insensitive set.
+            const loginPatch: Record<string, unknown> = {
+                last_seen: new Date().toISOString(),
+                last_auth_nonce: nonce,
+                last_auth_nonce_at: new Date().toISOString()
+            };
+            if (!existing.username_key && existing.username) {
+                loginPatch.username_key = usernameKey(existing.username);
+            }
+            base44.asServiceRole.entities.Player.update(existing.id, loginPatch).catch(() => {});
+
             // Issue a fresh session token on every login
             const session = await issueSession(base44, existing.id);
-
-            base44.asServiceRole.entities.Player.update(existing.id, {
-                last_seen: new Date().toISOString()
-            }).catch(() => {});
 
             return new Response(JSON.stringify({
                 success: true,
@@ -114,20 +158,14 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ success: false, needs_username: true }), { status: 200, headers });
         }
 
-        if (username.length < 3 || username.length > 16) {
-            return new Response(JSON.stringify({ success: false, error: 'Username must be 3-16 characters' }), { status: 200, headers });
-        }
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            return new Response(JSON.stringify({ success: false, error: 'Username can only contain letters, numbers, and underscores' }), { status: 200, headers });
+        const invalid = validateUsername(username);
+        if (invalid) {
+            return new Response(JSON.stringify({ success: false, error: invalid }), { status: 200, headers });
         }
 
-        if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
-            return new Response(JSON.stringify({ success: false, error: 'This username is reserved. Please choose another.' }), { status: 200, headers });
-        }
+        const key = usernameKey(username);
 
-        const takenPlayers = await base44.asServiceRole.entities.Player.filter({ username }, null, 1);
-        const taken = takenPlayers.find(p => p.wallet_address !== wallet_address);
-        if (taken) {
+        if (await usernameTaken(base44, key, wallet_address)) {
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
 
@@ -136,15 +174,30 @@ Deno.serve(async (req) => {
             p = await base44.asServiceRole.entities.Player.create({
                 wallet_address,
                 username,
+                username_key: key,
                 reputation_points: 0,
                 total_score: 0,
                 games_played: 0,
                 user_role: 'member',
                 last_seen: new Date().toISOString(),
                 is_verified: false,
-                verification_attempts: 0
+                verification_attempts: 0,
+                last_auth_nonce: nonce,
+                last_auth_nonce_at: new Date().toISOString()
             });
         } catch (createErr) {
+            return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
+        }
+
+        // Two registrations can pass the check above at the same instant, and the schema
+        // has no unique index to settle it. So every claimant re-reads the name it just
+        // wrote: the earliest record keeps the name and each later one removes its own
+        // row. A claimant only ever deletes the record it created itself, and the same
+        // ordering is visible to both sides, so the two cannot both keep the name.
+        const holders = await base44.asServiceRole.entities.Player.filter({ username_key: key }, null, 50);
+        const winner = [...(holders || [])].sort(compareClaimOrder)[0];
+        if (winner && winner.id !== p.id) {
+            await base44.asServiceRole.entities.Player.delete(p.id).catch(() => {});
             return new Response(JSON.stringify({ success: false, error: 'Username already taken. Please choose another.' }), { status: 200, headers });
         }
 

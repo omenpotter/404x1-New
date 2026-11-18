@@ -12,6 +12,10 @@
       "description": "Unique username (3-16 characters)",
       "unique": true
     },
+    "username_key": {
+      "type": "string",
+      "description": "Lowercase form of username. Uniqueness is decided on this key, so names differing only by case cannot both be claimed."
+    },
     "bio": {
       "type": "string",
       "description": "Short user bio (max 300 chars)"
@@ -190,6 +194,15 @@
       "type": "string",
       "format": "date-time",
       "description": "When the session token expires"
+    },
+    "last_auth_nonce": {
+      "type": "string",
+      "description": "Nonce from the last wallet signature accepted for this player. A signature carrying the same nonce again is a replay and is refused."
+    },
+    "last_auth_nonce_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When that signature was accepted"
     }
   },
   "required": [

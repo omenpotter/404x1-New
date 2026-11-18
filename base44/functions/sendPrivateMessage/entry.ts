@@ -1,9 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { getSessionPlayer, isBanned } from '../../shared/session.ts';
+import { normalizeImageUrl, inspectStoredImage } from '../../shared/images.ts';
+import { participantsOf, withUnhiddenFor } from '../../shared/conversations.ts';
 
 Deno.serve(async (req) => {
     try {
-        const { conversation_id, content, message_type, image_url, session_token } = await req.json();
+        const { conversation_id, content, image_url, session_token } = await req.json();
 
         if (!conversation_id || !content) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -32,23 +34,42 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'You are not a participant in this conversation' }, { status: 403 });
         }
 
+        // Same rule as public chat: only a file this app uploaded may be attached. The
+        // message type is derived here too, so a client cannot label its own message
+        // "system" and slip a fabricated notice into the thread.
+        let attachedImage: string | null = null;
+        if (image_url) {
+            attachedImage = normalizeImageUrl(image_url);
+            if (!attachedImage) {
+                return Response.json({ error: 'External image links are not allowed — upload the image instead' }, { status: 400 });
+            }
+            const imageProblem = await inspectStoredImage(attachedImage);
+            if (imageProblem) {
+                return Response.json({ error: imageProblem }, { status: 400 });
+            }
+        }
+        const messageType = attachedImage ? 'image' : 'text';
+
         const message = await base44.asServiceRole.entities.PrivateMessage.create({
             conversation_id,
             sender_id: sender.id,
             sender_username: sender.username,
             content,
-            message_type: message_type || 'text',
-            image_url: image_url || null,
+            message_type: messageType,
+            image_url: attachedImage,
             is_deleted: false,
             is_edited: false,
             delivered_to: [sender.id],
             read_by: [sender.id]
         });
 
+        // A new message brings the thread back for both sides: if either participant had
+        // hidden it, the message would otherwise be delivered into a list they cannot see.
         await base44.asServiceRole.entities.Conversation.update(conversation_id, {
             last_message: content.substring(0, 100),
             last_message_at: new Date().toISOString(),
-            last_message_sender_id: sender.id
+            last_message_sender_id: sender.id,
+            hidden_for: withUnhiddenFor(conversation, participantsOf(conversation))
         });
 
         return Response.json({ success: true, message });
