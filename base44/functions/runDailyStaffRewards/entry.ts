@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { authorizeCronOrAdmin } from '../../shared/session.ts';
+import { escapeHtml } from '../../shared/telegram.ts';
 
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_CHAT_ID   = Deno.env.get('TELEGRAM_CHAT_ID');
@@ -187,7 +188,7 @@ Deno.serve(async (req) => {
       `📊 <b>DAILY STAFF REWARDS — ${todayLabel}</b>`,
       '',
       ...active.map(r =>
-        `${roleEmoji[r.role] || '👤'} <b>${r.username}</b> [${r.role.toUpperCase()}]\n` +
+        `${roleEmoji[r.role] || '👤'} <b>${escapeHtml(r.username)}</b> [${r.role.toUpperCase()}]\n` +
         `   +${r.rp_awarded} RP  |  ${r.actions} actions\n` +
         `   ${r.breakdown}`
       ),
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
 
     if (inactive.length > 0) {
       lines.push('');
-      lines.push(`😴 Inactive (0 RP): ${inactive.map(r => r.username).join(', ')}`);
+      lines.push(`😴 Inactive (0 RP): ${inactive.map(r => escapeHtml(r.username)).join(', ')}`);
     }
 
     lines.push('');
@@ -206,7 +207,7 @@ Deno.serve(async (req) => {
     return Response.json({ success: true, rewarded: report });
 
   } catch (error) {
-    await sendTelegram(`❌ Daily staff rewards error: ${error.message}`);
+    await sendTelegram(`❌ Daily staff rewards error: ${escapeHtml(error.message)}`);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
