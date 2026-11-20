@@ -3,9 +3,11 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import MatrixRain from '@/components/MatrixRain';
 import BrandMark from '@/components/BrandMark';
+import usePageMeta from '@/lib/seoMeta';
 
 export default function PageNotFound({}) {
     const location = useLocation();
+    usePageMeta(false); // noindex, nofollow and no canonical for unknown routes
     const pageName = location.pathname.substring(1);
 
     const { data: authData, isFetched } = useQuery({

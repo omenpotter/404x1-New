@@ -7,6 +7,7 @@ import BrandMark from '@/components/BrandMark';
 import MatrixRain from '@/components/MatrixRain';
 import { useNetworkStatus } from '@/lib/xchart/useNetworkStatus';
 import { FUNCTIONS_BASE } from '@/lib/api';
+import usePageMeta from '@/lib/seoMeta';
 
 const BASE_URL = FUNCTIONS_BASE;
 
@@ -20,6 +21,7 @@ function getCurrentUser() {
 }
 
 export default function Layout({ children, currentPageName }) {
+  usePageMeta();
   const [user, setUser] = useState(null);
   const [rp, setRp] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
