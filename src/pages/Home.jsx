@@ -128,6 +128,7 @@ export default function Home() {
           <code className="hm-ca-addr mono">{TOKEN_CA}</code>
           <Copy text={TOKEN_CA} />
           <a className="hm-ca-link mono" href={`https://explorer.mainnet.x1.xyz/address/${TOKEN_CA}`} target="_blank" rel="noopener noreferrer">Explorer ↗</a>
+          <a className="hm-ca-link mono" href={`https://x1space.xyz/TokenExplorer?mint=${TOKEN_CA}`} target="_blank" rel="noopener noreferrer">X1 Space ↗</a>
         </section>
 
         {/* ============ MARKET DASHBOARD ============ */}

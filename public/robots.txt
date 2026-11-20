@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /ModPanel
+Disallow: /ModerationLogs
+Disallow: /OAuthConsent
+
+Sitemap: https://404x1.xyz/sitemap.xml

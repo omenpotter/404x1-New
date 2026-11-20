@@ -1,0 +1,16 @@
+# 404X1
+
+> Community site for 404 ERROR, an experimental Token-2022 meme token on X1 mainnet (SVM-compatible layer-1). Token dashboard with live 404/XNT price from on-chain swaps, wallet sign-in, global chat, direct messages, an arcade game and reputation points. Built by ARKBS Labs.
+
+Verified on X1 mainnet (2026-11-20):
+- Mint: 4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2 (Token-2022, metadata name/symbol "404")
+- Decimals 9; mint authority null; freeze authority null; on-chain supply 404,402.63 at the recorded date
+- Market data is informational, not financial advice.
+
+## Pages
+- [Home](https://404x1.xyz/): contract address, live market, holders
+- [Docs](https://404x1.xyz/Docs): token, sign-in, reputation points, roles, rules
+- [Game](https://404x1.xyz/Game): arcade
+
+## Related
+- [404 on X1 Space](https://x1space.xyz/TokenExplorer?mint=4o4UheANLdqF4gSV4zWTbCTCercQNSaTm6nVcDetzPb2): explorer record
